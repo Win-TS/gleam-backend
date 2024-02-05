@@ -1,0 +1,4 @@
+DROP TABLE IF EXISTS friends;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS users_friends;
+DROP TABLE IF EXISTS friends_users;

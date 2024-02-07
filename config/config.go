@@ -9,11 +9,12 @@ import (
 
 type (
 	Config struct {
-		App    App
-		Db     Db
-		DbType DbType
-		Kafka  Kafka
-		Grpc   Grpc
+		App      App
+		Db       Db
+		DbType   DbType
+		Kafka    Kafka
+		Grpc     Grpc
+		Firebase Firebase
 	}
 
 	App struct {
@@ -40,11 +41,21 @@ type (
 		AuthUrl string
 		UserUrl string
 	}
+
+	Firebase struct {
+		ApiKey            string
+		ProjectId         string
+		StorageBucket     string
+		MessagingSenderId string
+		AppId             string
+		MeasurementId     string
+	}
 )
 
 func LoadConfig(path string) Config {
 	if err := godotenv.Load(path); err != nil {
 		log.Fatal("Error loading .env file")
+		log.Fatal(err.Error())
 	}
 
 	return Config{
@@ -67,6 +78,14 @@ func LoadConfig(path string) Config {
 		Grpc: Grpc{
 			AuthUrl: os.Getenv("GRPC_AUTH_URL"),
 			UserUrl: os.Getenv("GRPC_USER_URL"),
+		},
+		Firebase: Firebase{
+			ApiKey:            os.Getenv("FB_API_KEY"),
+			ProjectId:         os.Getenv("FB_PROJECT_ID"),
+			StorageBucket:     os.Getenv("FB_STORAGE_BUCKET"),
+			MessagingSenderId: os.Getenv("FB_MESSAGING_SENDER_ID"),
+			AppId:             os.Getenv("FB_APP_ID"),
+			MeasurementId:     os.Getenv("FB_MEASUREMENT_ID"),
 		},
 	}
 }

@@ -1,17 +1,17 @@
 package userRepository
 
-// import "context"
+import "context"
 
-// type (
-// 	UserRepositoryService interface{}
+type (
+	UserRepositoryService interface{}
 
-// 	userRepository struct{}
-// )
+	userRepository struct{}
+)
 
-// func NewUserRepository() UserRepositoryService {
-// 	return &userRepository{}
-// }
+func NewUserRepository() UserRepositoryService {
+	return &userRepository{}
+}
 
-// func (r *userRepository) userDbConn(pctx context.Context) {
-// 	return 
-// }
+func (r *userRepository) userDbConn(pctx context.Context) {
+	return 
+}

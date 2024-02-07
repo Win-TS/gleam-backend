@@ -15,13 +15,12 @@ import (
 	"github.com/Win-TS/gleam-backend.git/modules/middleware/middlewareUsecase"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	//"go.mongodb.org/mongo-driver/mongo"
 )
 
 type (
 	server struct {
 		app        *echo.Echo
-		db         any // *mongo.Client for MongoDB
+		db         any // *mongo.Client for MongoDB, *firebase.App for Firebase
 		cfg        *config.Config
 		middleware middlewareHandler.MiddlewareHandlerService
 	}
@@ -79,8 +78,8 @@ func Start(pctx context.Context, cfg *config.Config, db any) {
 
 	// Switch Repos
 	switch s.cfg.App.Name {
-	// case "auth":
-	// 	s.authService()
+	case "auth":
+		s.authService()
 	// case "user":
 	// 	s.userService()
 	}

@@ -22,4 +22,7 @@ migrateuserup:
 migrateuserdown:
 	migrate -path pkg/database/postgres/userdb/migrations -database "postgresql://root:123456@localhost:5432/user_db?sslmode=disable" -verbose down
 
-.PHONY: composeupdb composedowndb sqlc migrateuserdown migrateuserup createuserdb dropuserdb createusermigration
+runauth:
+	go run main.go ./env/dev/.env.auth
+
+.PHONY: composeupdb composedowndb sqlc migrateuserdown migrateuserup createuserdb dropuserdb createusermigration runauth

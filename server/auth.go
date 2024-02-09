@@ -11,10 +11,10 @@ import (
 
 func (s *server) authService() {
 	firebaseDB, ok := s.db.(*firebase.App)
-    if !ok {
-        log.Fatal("Unsupported database type")
-        return
-    }
+	if !ok {
+		log.Fatal("Unsupported database type")
+		return
+	}
 	repo := authRepository.NewAuthRepository(firebaseDB)
 	usecase := authUsecase.NewAuthUsecase(repo)
 	httpHandler := authHandler.NewAuthHttpHandler(s.cfg, usecase)
@@ -29,5 +29,14 @@ func (s *server) authService() {
 	// }()
 
 	_ = grpcHandler
-	_ = httpHandler
+
+	auth := s.app.Group("/auth_v1")
+
+	auth.GET("", s.healthCheckService)
+	auth.POST("/signup", httpHandler.RegisterUser)
+	auth.GET("/verify", httpHandler.VerifyToken)
+	auth.POST("/find/email", httpHandler.FindUserByEmail)
+	auth.POST("/find/phone", httpHandler.FindUserByPhoneNo)
+	auth.POST("/find/uid", httpHandler.FindUserByUID)
+
 }

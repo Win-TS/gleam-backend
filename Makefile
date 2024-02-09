@@ -25,4 +25,7 @@ migrateuserdown:
 runauth:
 	go run main.go ./env/dev/.env.auth
 
-.PHONY: composeupdb composedowndb sqlc migrateuserdown migrateuserup createuserdb dropuserdb createusermigration runauth
+runuser:
+	go run main.go ./env/dev/.env.user
+
+.PHONY: composeupdb composedowndb sqlc migrateuserdown migrateuserup createuserdb dropuserdb createusermigration runauth runuser

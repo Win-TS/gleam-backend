@@ -80,8 +80,8 @@ func Start(pctx context.Context, cfg *config.Config, db any) {
 	switch s.cfg.App.Name {
 	case "auth":
 		s.authService()
-	// case "user":
-	// 	s.userService()
+	case "user":
+		s.userService()
 	}
 
 	// Graceful Shutdown

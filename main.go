@@ -7,7 +7,7 @@ import (
 	"os"
 
 	firebase "firebase.google.com/go"
-	//dbuser "github.com/Win-TS/gleam-backend.git/pkg/database/postgres/userdb/sqlc"
+	_ "github.com/lib/pq"
 	"github.com/Win-TS/gleam-backend.git/config"
 	"github.com/Win-TS/gleam-backend.git/pkg/database/mongodb"
 	"github.com/Win-TS/gleam-backend.git/server"

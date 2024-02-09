@@ -1,11 +1,16 @@
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
-    username varchar NOT NULL,
-    email varchar NOT NULL,
-    firstname varchar NOT NULL,
-    lastname varchar NOT NULL,
-    phone_no varchar NOT NULL,
-    private_account boolean NOT NULL DEFAULT false,
+    username VARCHAR NOT NULL,
+    email VARCHAR NOT NULL,
+    firstname VARCHAR NOT NULL,
+    lastname VARCHAR NOT NULL,
+    phone_no VARCHAR NOT NULL,
+    private_account BOOLEAN NOT NULL DEFAULT false,
+    nationality VARCHAR,
+    age INTEGER,
+    birthday DATE,
+    gender VARCHAR,
+    photourl VARCHAR,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -13,7 +18,7 @@ CREATE TABLE friends (
     id SERIAL PRIMARY KEY,
     user_id1 INTEGER REFERENCES users(id),
     user_id2 INTEGER REFERENCES users(id),
-    status VARCHAR DEFAULT 'Pending', -- Pending, Accepted, Declined, etc.
+    status VARCHAR DEFAULT 'Pending',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

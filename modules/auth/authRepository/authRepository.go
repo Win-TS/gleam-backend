@@ -10,8 +10,11 @@ import (
 
 type (
 	AuthRepositoryService interface{
-		CreateUserWithEmailPhoneAndPassword(pctx context.Context, authClient *auth.Client, email, phoneNumber, password string) (*auth.UserRecord, error)
+		CreateUserWithEmailPhoneAndPassword(pctx context.Context, email, phoneNumber, password string) (*auth.UserRecord, error)
 		VerifyToken(pctx context.Context, token string) (*auth.Token, error)
+		FindUserByUID(ctx context.Context, uid string) (*auth.UserRecord, error)
+		FindUserByEmail(ctx context.Context, email string) (*auth.UserRecord, error)
+		FindUserByPhoneNo(ctx context.Context, phoneNo string) (*auth.UserRecord, error)
 	}
 	authRepository struct{
 		authClient *auth.Client
@@ -24,11 +27,11 @@ func NewAuthRepository(app *firebase.App) AuthRepositoryService {
 		log.Fatalf("Error - initializing Auth client: %v\n", err)
 		return nil
 	}
-	return &authRepository{authClient: authClient}
+	return &authRepository{authClient}
 }
 
 // CreateUserWithEmailPhoneAndPassword creates and authenticates a user using email, phone number, and password.
-func (r *authRepository) CreateUserWithEmailPhoneAndPassword(pctx context.Context, authClient *auth.Client, email, phoneNumber, password string) (*auth.UserRecord, error) {
+func (r *authRepository) CreateUserWithEmailPhoneAndPassword(pctx context.Context, email, phoneNumber, password string) (*auth.UserRecord, error) {
 	params := (&auth.UserToCreate{}).
 		Email(email).
 		PhoneNumber(phoneNumber).
@@ -46,4 +49,34 @@ func (r *authRepository) CreateUserWithEmailPhoneAndPassword(pctx context.Contex
 // VerifyToken verifies the authenticity and validity of the authentication token.
 func (r *authRepository) VerifyToken(pctx context.Context, token string) (*auth.Token, error) {
 	return r.authClient.VerifyIDToken(pctx, token)
+}
+
+// findUserByUID returns user record from uid string parameter.
+func (r *authRepository) FindUserByUID(ctx context.Context, uid string) (*auth.UserRecord, error) {
+    user, err := r.authClient.GetUser(ctx, uid)
+    if err != nil {
+        log.Printf("Error - finding user by UID: %v\n", err)
+        return nil, err
+    }
+    return user, nil
+}
+
+// findUserByEmail return user record from email string parameter.
+func (r *authRepository) FindUserByEmail(ctx context.Context, email string) (*auth.UserRecord, error) {
+    user, err := r.authClient.GetUserByEmail(ctx, email)
+    if err != nil {
+        log.Printf("Error - finding user by email: %v\n", err)
+        return nil, err
+    }
+    return user, nil
+}
+
+// findUserByPhoneNo return user record from phone number string parameter.
+func (r *authRepository) FindUserByPhoneNo(ctx context.Context, phoneNo string) (*auth.UserRecord, error) {
+    user, err := r.authClient.GetUserByPhoneNumber(ctx, phoneNo)
+    if err != nil {
+        log.Printf("Error - finding user by phone number: %v\n", err)
+        return nil, err
+    }
+    return user, nil
 }

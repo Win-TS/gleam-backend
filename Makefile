@@ -10,6 +10,12 @@ createuserdb:
 dropuserdb:
 	docker exec -it user-db dropdb --username=root user_db
 
+createuserdbci:
+	docker exec user-db createdb --username=root --owner=root user_db
+
+dropuserdbci:
+	docker exec user-db dropdb --username=root user_db
+
 createusermigration:
 	migrate create -ext sql -dir pkg/database/postgres/userdb/migrations -seq init_user_schema
 

@@ -13,9 +13,9 @@ import (
 )
 
 type UserUsecaseService interface {
-	GetUserProfile(ctx context.Context, id int) (user.UserProfile, error)
-	RegisterNewUser(pctx context.Context, payload *user.NewUserReq) (userdb.User, error)
-	SaveToFirebaseStorage(ctx context.Context, bucketName, objectPath, filename string, file io.Reader) (string, error)
+	GetUserProfile(pctx context.Context, id int) (user.UserProfile, error)
+	RegisterNewUser(pctx context.Context, payload *user.NewUserReq, photoUrl string) (userdb.User, error)
+	SaveToFirebaseStorage(pctx context.Context, bucketName, objectPath, filename string, file io.Reader) (string, error)
 }
 
 type userUsecase struct {
@@ -49,14 +49,14 @@ func (u *userUsecase) GetUserProfile(pctx context.Context, id int) (user.UserPro
 	}, nil
 }
 
-func (u *userUsecase) RegisterNewUser(pctx context.Context, payload *user.NewUserReq) (userdb.User, error) {
+func (u *userUsecase) RegisterNewUser(pctx context.Context, payload *user.NewUserReq, photoUrl string) (userdb.User, error) {
 
 	birthdayTime, err := time.Parse("2006-01-02", payload.Birthday)
 	if err != nil {
 		return userdb.User{}, err
 	}
 
-	sqlPhotoUrl := utils.ConvertStringToSqlNullString(payload.PhotoUrl)
+	sqlPhotoUrl := utils.ConvertStringToSqlNullString(photoUrl)
 
 	return u.store.CreateUser(pctx, userdb.CreateUserParams{
 		Username:    payload.Username,
@@ -70,14 +70,13 @@ func (u *userUsecase) RegisterNewUser(pctx context.Context, payload *user.NewUse
 		Gender:      payload.Gender,
 		Photourl:    sqlPhotoUrl,
 	})
-
 }
 
-func (u *userUsecase) SaveToFirebaseStorage(ctx context.Context, bucketName, objectPath, filename string, file io.Reader) (string, error) {
+func (u *userUsecase) SaveToFirebaseStorage(pctx context.Context, bucketName, objectPath, filename string, file io.Reader) (string, error) {
 	bucket, _ := u.storageClient.Bucket(bucketName)
 	obj := bucket.Object(objectPath + "/" + filename)
 
-	wc := obj.NewWriter(ctx)
+	wc := obj.NewWriter(pctx)
 	if _, err := io.Copy(wc, file); err != nil {
 		return "", err
 	}

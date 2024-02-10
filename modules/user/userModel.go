@@ -19,7 +19,7 @@ type (
 		Age         int    `json:"age" form:"age" validate:"required"`
 		Birthday    string `json:"birthday" form:"birthday" validate:"required,max=255"`
 		Gender      string `json:"gender" form:"gender" validate:"required,max=255"`
-		PhotoUrl    string `json:"photo_url" form:"photo_url" validate:"max=255"`
+		//PhotoUrl    string `json:"photo_url" form:"photo_url" validate:"max=255"`
 	}
 
 	NewUserRes struct {

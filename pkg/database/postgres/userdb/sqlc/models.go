@@ -6,6 +6,7 @@ package userdb
 
 import (
 	"database/sql"
+	"time"
 )
 
 type Friend struct {
@@ -17,12 +18,17 @@ type Friend struct {
 }
 
 type User struct {
-	ID             int32        `json:"id"`
-	Username       string       `json:"username"`
-	Email          string       `json:"email"`
-	Firstname      string       `json:"firstname"`
-	Lastname       string       `json:"lastname"`
-	PhoneNo        string       `json:"phone_no"`
-	PrivateAccount bool         `json:"private_account"`
-	CreatedAt      sql.NullTime `json:"created_at"`
+	ID             int32          `json:"id"`
+	Username       string         `json:"username"`
+	Email          string         `json:"email"`
+	Firstname      string         `json:"firstname"`
+	Lastname       string         `json:"lastname"`
+	PhoneNo        string         `json:"phone_no"`
+	PrivateAccount bool           `json:"private_account"`
+	Nationality    string         `json:"nationality"`
+	Age            int32          `json:"age"`
+	Birthday       time.Time      `json:"birthday"`
+	Gender         string         `json:"gender"`
+	Photourl       sql.NullString `json:"photourl"`
+	CreatedAt      sql.NullTime   `json:"created_at"`
 }

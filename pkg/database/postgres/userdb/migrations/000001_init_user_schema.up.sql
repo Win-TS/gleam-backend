@@ -6,10 +6,10 @@ CREATE TABLE users (
     lastname VARCHAR NOT NULL,
     phone_no VARCHAR NOT NULL,
     private_account BOOLEAN NOT NULL DEFAULT false,
-    nationality VARCHAR,
-    age INTEGER,
-    birthday DATE,
-    gender VARCHAR,
+    nationality VARCHAR NOT NULL,
+    age INTEGER NOT NULL,
+    birthday DATE NOT NULL,
+    gender VARCHAR NOT NULL,
     photourl VARCHAR,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

@@ -7,6 +7,8 @@ package userdb
 
 import (
 	"context"
+	"database/sql"
+	"time"
 )
 
 const createUser = `-- name: CreateUser :one
@@ -15,18 +17,28 @@ INSERT INTO users (
     firstname,
     lastname,
     phone_no,
-    email
+    email,
+    nationality,
+    age,
+    birthday,
+    gender,
+    photourl
 ) VALUES (
-    $1, $2, $3, $4, $5
-) RETURNING id, username, email, firstname, lastname, phone_no, private_account, created_at
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+) RETURNING id, username, email, firstname, lastname, phone_no, private_account, nationality, age, birthday, gender, photourl, created_at
 `
 
 type CreateUserParams struct {
-	Username  string `json:"username"`
-	Firstname string `json:"firstname"`
-	Lastname  string `json:"lastname"`
-	PhoneNo   string `json:"phone_no"`
-	Email     string `json:"email"`
+	Username    string         `json:"username"`
+	Firstname   string         `json:"firstname"`
+	Lastname    string         `json:"lastname"`
+	PhoneNo     string         `json:"phone_no"`
+	Email       string         `json:"email"`
+	Nationality string         `json:"nationality"`
+	Age         int32          `json:"age"`
+	Birthday    time.Time      `json:"birthday"`
+	Gender      string         `json:"gender"`
+	Photourl    sql.NullString `json:"photourl"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
@@ -36,6 +48,11 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		arg.Lastname,
 		arg.PhoneNo,
 		arg.Email,
+		arg.Nationality,
+		arg.Age,
+		arg.Birthday,
+		arg.Gender,
+		arg.Photourl,
 	)
 	var i User
 	err := row.Scan(
@@ -46,6 +63,11 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.Lastname,
 		&i.PhoneNo,
 		&i.PrivateAccount,
+		&i.Nationality,
+		&i.Age,
+		&i.Birthday,
+		&i.Gender,
+		&i.Photourl,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -61,7 +83,7 @@ func (q *Queries) DeleteUser(ctx context.Context, id int32) error {
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, username, email, firstname, lastname, phone_no, private_account, created_at FROM users
+SELECT id, username, email, firstname, lastname, phone_no, private_account, nationality, age, birthday, gender, photourl, created_at FROM users
 WHERE id = $1 LIMIT 1
 `
 
@@ -76,13 +98,18 @@ func (q *Queries) GetUser(ctx context.Context, id int32) (User, error) {
 		&i.Lastname,
 		&i.PhoneNo,
 		&i.PrivateAccount,
+		&i.Nationality,
+		&i.Age,
+		&i.Birthday,
+		&i.Gender,
+		&i.Photourl,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const getUserForUpdate = `-- name: GetUserForUpdate :one
-SELECT id, username, email, firstname, lastname, phone_no, private_account, created_at FROM users
+SELECT id, username, email, firstname, lastname, phone_no, private_account, nationality, age, birthday, gender, photourl, created_at FROM users
 WHERE id = $1 LIMIT 1 
 FOR NO KEY UPDATE
 `
@@ -98,13 +125,18 @@ func (q *Queries) GetUserForUpdate(ctx context.Context, id int32) (User, error) 
 		&i.Lastname,
 		&i.PhoneNo,
 		&i.PrivateAccount,
+		&i.Nationality,
+		&i.Age,
+		&i.Birthday,
+		&i.Gender,
+		&i.Photourl,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, username, email, firstname, lastname, phone_no, private_account, created_at FROM users
+SELECT id, username, email, firstname, lastname, phone_no, private_account, nationality, age, birthday, gender, photourl, created_at FROM users
 ORDER BY id
 LIMIT $1
 OFFSET $2
@@ -132,6 +164,11 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]User, e
 			&i.Lastname,
 			&i.PhoneNo,
 			&i.PrivateAccount,
+			&i.Nationality,
+			&i.Age,
+			&i.Birthday,
+			&i.Gender,
+			&i.Photourl,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err

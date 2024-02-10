@@ -11,11 +11,11 @@ SELECT * FROM friends
 WHERE user_id1 = $1 AND user_id2= $2
 LIMIT 1;
 
--- name: GetFriendsCountByID: one
+-- name: GetFriendsCountByID :one
 SELECT COUNT(*) FROM friends
 WHERE (user_id1 = $1 OR user_id2 = $1) AND status = 'Accepted';
 
--- name: GetFriendsListByID: many
+-- name: GetFriendsListByID :many
 SELECT
     CASE
         WHEN user_id1 = $1 THEN user_id2
@@ -24,7 +24,7 @@ SELECT
 FROM friends
 WHERE (user_id1 = $1 OR user_id2 = $1) AND status = 'Accepted';
 
--- name: GetFriendsPendingList: many
+-- name: GetFriendsPendingList :many
 SELECT * FROM friends
 WHERE user_id2 = $1 AND status = 'Pending';
 

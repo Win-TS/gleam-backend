@@ -9,7 +9,7 @@ type (
 		PhotoUrl     string `json:"photo_url"`
 	}
 
-	NewUser struct {
+	NewUserReq struct {
 		Username    string `json:"username" form:"username" validate:"required,max=30"`
 		Firstname   string `json:"firstname" form:"firstname" validate:"required,max=255"`
 		Lastname    string `json:"lastname" form:"lastname" validate:"required,max=255"`
@@ -19,5 +19,19 @@ type (
 		Age         int    `json:"age" form:"age" validate:"required"`
 		Birthday    string `json:"birthday" form:"birthday" validate:"required,max=255"`
 		Gender      string `json:"gender" form:"gender" validate:"required,max=255"`
+		PhotoUrl    string `json:"photo_url" form:"photo_url" validate:"max=255"`
+	}
+
+	NewUserRes struct {
+		User_id     int    `json:"user_id"`
+		Username    string `json:"username"`
+		Firstname   string `json:"firstname"`
+		Lastname    string `json:"lastname"`
+		PhoneNo     string `json:"phone_no"`
+		Email       string `json:"email"`
+		Nationality string `json:"nationality"`
+		Age         int    `json:"age"`
+		Birthday    string `json:"birthday"`
+		Gender      string `json:"gender"`
 	}
 )

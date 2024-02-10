@@ -85,6 +85,85 @@ func (q *Queries) GetFriendForUpdate(ctx context.Context, arg GetFriendForUpdate
 	return i, err
 }
 
+const getFriendsCountByID = `-- name: GetFriendsCountByID :one
+SELECT COUNT(*) FROM friends
+WHERE (user_id1 = $1 OR user_id2 = $1) AND status = 'Accepted'
+`
+
+func (q *Queries) GetFriendsCountByID(ctx context.Context, userId1 sql.NullInt32) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getFriendsCountByID, userId1)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const getFriendsListByID = `-- name: GetFriendsListByID :many
+SELECT
+    CASE
+        WHEN user_id1 = $1 THEN user_id2
+        ELSE user_id1
+    END AS friend_id
+FROM friends
+WHERE (user_id1 = $1 OR user_id2 = $1) AND status = 'Accepted'
+`
+
+func (q *Queries) GetFriendsListByID(ctx context.Context, userId1 sql.NullInt32) ([]interface{}, error) {
+	rows, err := q.db.QueryContext(ctx, getFriendsListByID, userId1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []interface{}{}
+	for rows.Next() {
+		var friend_id interface{}
+		if err := rows.Scan(&friend_id); err != nil {
+			return nil, err
+		}
+		items = append(items, friend_id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getFriendsPendingList = `-- name: GetFriendsPendingList :many
+SELECT id, user_id1, user_id2, status, created_at FROM friends
+WHERE user_id2 = $1 AND status = 'Pending'
+`
+
+func (q *Queries) GetFriendsPendingList(ctx context.Context, userId2 sql.NullInt32) ([]Friend, error) {
+	rows, err := q.db.QueryContext(ctx, getFriendsPendingList, userId2)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Friend{}
+	for rows.Next() {
+		var i Friend
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserId1,
+			&i.UserId2,
+			&i.Status,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listFriendsByUserId = `-- name: ListFriendsByUserId :many
 SELECT id, user_id1, user_id2, status, created_at FROM friends
 WHERE user_id1 = $1

@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"firebase.google.com/go/storage"
 	"github.com/Win-TS/gleam-backend.git/config"
 	"github.com/Win-TS/gleam-backend.git/modules/middleware/middlewareHandler"
 	"github.com/Win-TS/gleam-backend.git/modules/middleware/middlewareRepository"
@@ -20,7 +21,8 @@ import (
 type (
 	server struct {
 		app        *echo.Echo
-		db         any // *mongo.Client for MongoDB, *firebase.App for Firebase
+		db         any // *mongo.Client for MongoDB, *firebase.App for Firebase, db.Store for Postgres
+		storage    *storage.Client
 		cfg        *config.Config
 		middleware middlewareHandler.MiddlewareHandlerService
 	}
@@ -51,10 +53,11 @@ func (s *server) httpListening() {
 	}
 }
 
-func Start(pctx context.Context, cfg *config.Config, db any) {
+func Start(pctx context.Context, cfg *config.Config, db any, storage *storage.Client) {
 	s := &server{
 		app:        echo.New(),
 		db:         db,
+		storage:    storage,
 		cfg:        cfg,
 		middleware: newMiddleware(cfg),
 	}
@@ -68,7 +71,7 @@ func Start(pctx context.Context, cfg *config.Config, db any) {
 
 	// CORS
 	s.app.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-		Skipper: middleware.DefaultSkipper,
+		Skipper:      middleware.DefaultSkipper,
 		AllowOrigins: []string{"*"},
 		AllowMethods: []string{echo.GET, echo.POST, echo.PUT, echo.PATCH, echo.DELETE},
 	}))

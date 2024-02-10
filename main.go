@@ -7,10 +7,11 @@ import (
 	"os"
 
 	firebase "firebase.google.com/go"
-	_ "github.com/lib/pq"
 	"github.com/Win-TS/gleam-backend.git/config"
 	"github.com/Win-TS/gleam-backend.git/pkg/database/mongodb"
+	userdb "github.com/Win-TS/gleam-backend.git/pkg/database/postgres/userdb/sqlc"
 	"github.com/Win-TS/gleam-backend.git/server"
+	_ "github.com/lib/pq"
 	"google.golang.org/api/option"
 )
 
@@ -28,18 +29,23 @@ func main() {
 
 	var database interface{}
 
+	opt := option.WithCredentialsFile("config/gleam-firebase-6925b-firebase-adminsdk-qzvvk-11a1d6f129.json")
+	config := &firebase.Config{ProjectID: cfg.Firebase.ProjectId, StorageBucket: cfg.Firebase.StorageBucket}
+	fbApp, err := firebase.NewApp(context.Background(), config, opt)
+	if err != nil {
+		log.Fatalf("error initializing app: %v\n", err)
+	}
+	client, err := fbApp.Storage(context.Background())
+	if err != nil {
+		log.Fatalln(err)
+	}
+
 	if cfg.DbType.Type == "mongodb" {
 		client := mongodb.MongoConn(ctx, &cfg)
 		defer client.Disconnect(ctx)
 		database = client
 	} else if cfg.DbType.Type == "firebase" {
-		opt := option.WithCredentialsFile("config/gleam-firebase-6925b-firebase-adminsdk-qzvvk-11a1d6f129.json")
-		config := &firebase.Config{ProjectID: cfg.Firebase.ProjectId}
-		app, err := firebase.NewApp(context.Background(), config, opt)
-		if err != nil {
-			log.Fatalf("error initializing app: %v\n", err)
-		}
-		database = app
+		database = fbApp
 	} else if cfg.DbType.Type == "postgres" {
 		dbConn, err := sql.Open("postgres", cfg.Db.Url)
 		if err != nil {
@@ -49,8 +55,11 @@ func main() {
 		if err = dbConn.Ping(); err != nil {
 			log.Fatalf("Error connecting to the database: %v\n", err)
 		}
-		database = dbConn
+		switch cfg.App.Name {
+		case "user":
+			database = userdb.NewStore(dbConn)
+		}
 	}
 
-	server.Start(ctx, &cfg, database)
+	server.Start(ctx, &cfg, database, client)
 }

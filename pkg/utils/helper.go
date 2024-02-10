@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -26,4 +27,15 @@ func ConvertStringTimetoTime(t string) time.Time {
 
 	loc, _ := time.LoadLocation("Asia/Bangkok")
 	return result.In(loc)
+}
+
+func ConvertStringToSqlNullString(s string) sql.NullString {
+	var sqlNullString sql.NullString
+	if s != "" {
+		sqlNullString.String = s
+		sqlNullString.Valid = true
+	} else {
+		sqlNullString.Valid = false
+	}
+	return sqlNullString
 }

@@ -43,6 +43,7 @@ type (
 	}
 
 	Firebase struct {
+		Url               string
 		ApiKey            string
 		ProjectId         string
 		StorageBucket     string
@@ -80,6 +81,7 @@ func LoadConfig(path string) Config {
 			UserUrl: os.Getenv("GRPC_USER_URL"),
 		},
 		Firebase: Firebase{
+			Url:               os.Getenv("FB_URL"),
 			ApiKey:            os.Getenv("FB_API_KEY"),
 			ProjectId:         os.Getenv("FB_PROJECT_ID"),
 			StorageBucket:     os.Getenv("FB_STORAGE_BUCKET"),

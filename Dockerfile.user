@@ -1,0 +1,10 @@
+FROM golang:1.21
+
+WORKDIR /app
+
+COPY . .
+RUN go mod download && go mod verify
+
+RUN CGO_ENABLED=0 go build -o bin/app
+
+ENTRYPOINT ["go", "run", "main.go", "./env/prod/.env.user"]

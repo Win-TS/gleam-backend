@@ -4,6 +4,12 @@ composeupdb:
 composedowndb:
 	docker compose -f "docker-compose.db.yaml" down
 
+composeupimage:
+	docker compose -f docker-compose.image.yaml up -d
+
+composedownimage:
+	docker compose -f "docker-compose.image.yaml" down
+
 createuserdb:
 	docker exec -it user-db createdb --username=root --owner=root user_db
 
@@ -28,4 +34,4 @@ runauth:
 runuser:
 	go run main.go ./env/dev/.env.user
 
-.PHONY: composeupdb composedowndb sqlc migrateuserdown migrateuserup createuserdb dropuserdb createusermigration runauth runuser
+.PHONY: composeupdb composedowndb sqlc migrateuserdown migrateuserup createuserdb dropuserdb createusermigration runauth runuser composeupdb composedowndb

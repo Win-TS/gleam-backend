@@ -1,0 +1,28 @@
+// Version
+syntax = "proto3";
+
+// Package name
+option go_package = "github.com/Win-TS/gleam-backend";
+
+// Structure
+message GroupsJoinedSearchReq {
+    int32 userId = 1;
+}
+
+message GroupsJoinedSearchRes {
+    []int joinedGroupsId = 1;
+}
+
+message PostsSearchReq {
+    int32 userId = 1;
+}
+
+message PostsSearchRes {
+    []int PostsId = 1;
+}
+
+// Methods
+service AuthGrpcService {
+    rpc GroupsJoinedSearch(GroupsJoinedSearchReq) returns (GroupsJoinedSearchRes);
+    rpc PostsSearch(PostsSearchReq) returns (PostsSearchRes);
+}

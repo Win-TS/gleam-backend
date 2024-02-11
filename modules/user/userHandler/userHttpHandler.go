@@ -55,7 +55,7 @@ func (h *userHttpHandler) RegisterNewUser(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 
-	file, err := c.FormFile("photo")
+	file, _ := c.FormFile("photo")
 	var url string
 
 	if file != nil {

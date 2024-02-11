@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 )
 
@@ -38,4 +39,12 @@ func ConvertStringToSqlNullString(s string) sql.NullString {
 		sqlNullString.Valid = false
 	}
 	return sqlNullString
+}
+
+func GetFileExtension(fileName string) string {
+    parts := strings.Split(fileName, ".")
+    if len(parts) > 1 {
+        return parts[len(parts)-1]
+    }
+    return ""
 }

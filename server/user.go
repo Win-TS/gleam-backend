@@ -28,5 +28,9 @@ func (s *server) userService() {
 
 	user.POST("/createuser", httpHandler.RegisterNewUser)
 	user.GET("/userprofile", httpHandler.GetUserProfile)
-	//user.POST("/uploaduserphoto", httpHandler.UploadProfilePhoto)
+	user.POST("/uploaduserphoto", httpHandler.UploadProfilePhoto)
+	user.GET("/userinfo", httpHandler.GetUserInfo)
+	user.PATCH("/editusername", httpHandler.EditUsername)
+	user.PATCH("/changephoneno", httpHandler.EditPhoneNumber)
+	user.DELETE("/deleteuser", httpHandler.DeleteUser)
 }

@@ -11,6 +11,36 @@ import (
 	"time"
 )
 
+const changePhoneNo = `-- name: ChangePhoneNo :exec
+UPDATE users SET phone_no = $2
+WHERE id = $1
+`
+
+type ChangePhoneNoParams struct {
+	ID      int32  `json:"id"`
+	PhoneNo string `json:"phone_no"`
+}
+
+func (q *Queries) ChangePhoneNo(ctx context.Context, arg ChangePhoneNoParams) error {
+	_, err := q.db.ExecContext(ctx, changePhoneNo, arg.ID, arg.PhoneNo)
+	return err
+}
+
+const changeUsername = `-- name: ChangeUsername :exec
+UPDATE users SET username = $2
+WHERE id = $1
+`
+
+type ChangeUsernameParams struct {
+	ID       int32  `json:"id"`
+	Username string `json:"username"`
+}
+
+func (q *Queries) ChangeUsername(ctx context.Context, arg ChangeUsernameParams) error {
+	_, err := q.db.ExecContext(ctx, changeUsername, arg.ID, arg.Username)
+	return err
+}
+
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (
     username,
@@ -80,6 +110,17 @@ DELETE FROM users WHERE id = $1
 func (q *Queries) DeleteUser(ctx context.Context, id int32) error {
 	_, err := q.db.ExecContext(ctx, deleteUser, id)
 	return err
+}
+
+const getLatestId = `-- name: GetLatestId :one
+SELECT COALESCE(MAX(id), 0)::integer FROM users
+`
+
+func (q *Queries) GetLatestId(ctx context.Context) (int32, error) {
+	row := q.db.QueryRowContext(ctx, getLatestId)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
 }
 
 const getUser = `-- name: GetUser :one
@@ -182,4 +223,20 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]User, e
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateProfile = `-- name: UpdateProfile :exec
+UPDATE users SET username = $2 AND photourl = $3
+WHERE id = $1
+`
+
+type UpdateProfileParams struct {
+	ID       int32          `json:"id"`
+	Username string         `json:"username"`
+	Photourl sql.NullString `json:"photourl"`
+}
+
+func (q *Queries) UpdateProfile(ctx context.Context, arg UpdateProfileParams) error {
+	_, err := q.db.ExecContext(ctx, updateProfile, arg.ID, arg.Username, arg.Photourl)
+	return err
 }

@@ -14,7 +14,7 @@ $ go install \
 Database Docker Image
 ```bash
 # composing dbs in docker-compose.db.yaml file
-$ make composeup
+$ make composeupdb
 
 # user service database (postgresql)
 $ make createuserdb

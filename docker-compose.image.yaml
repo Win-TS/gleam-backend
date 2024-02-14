@@ -9,7 +9,7 @@ services:
       context: .
       dockerfile: Dockerfile.auth
     ports:
-      - "8081:1323"
+      - "9000:1323"
 
   user-api:
     container_name: gleam-user-api
@@ -17,7 +17,7 @@ services:
       context: .
       dockerfile: Dockerfile.user
     ports:
-      - "8080:1324"
+      - "9001:1324"
     depends_on:
       - user-db
 

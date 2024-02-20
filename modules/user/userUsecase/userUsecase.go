@@ -24,7 +24,7 @@ type UserUsecaseService interface {
 }
 
 type userUsecase struct {
-	store userdb.Store
+	store         userdb.Store
 	storageClient *storage.Client
 }
 

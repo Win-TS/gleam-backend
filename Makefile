@@ -40,10 +40,25 @@ migrategroupup:
 migrategroupdown:
 	migrate -path pkg/database/postgres/groupdb/migrations -database "postgresql://root:123456@localhost:5433/group_db?sslmode=disable" -verbose down
 
+migrateuserupdocker:
+	migrate -path pkg/database/postgres/userdb/migrations -database "postgresql://root:123456@user-db:5432/user_db?sslmode=disable" -verbose up
+
+migrateuserdowndocker:
+	migrate -path pkg/database/postgres/userdb/migrations -database "postgresql://root:123456@user-db:5432/user_db?sslmode=disable" -verbose down
+
+migrategroupupdocker:
+	migrate -path pkg/database/postgres/groupdb/migrations -database "postgresql://root:123456@group-db:5433/group_db?sslmode=disable" -verbose up
+
+migrategroupdowndocker:
+	migrate -path pkg/database/postgres/groupdb/migrations -database "postgresql://root:123456@group-db:5433/group_db?sslmode=disable" -verbose down
+
 runauth:
 	go run main.go ./env/dev/.env.auth
 
 runuser:
 	go run main.go ./env/dev/.env.user
 
-.PHONY: composeupdb composedowndb sqlc migrateuserdown migrateuserup createuserdb dropuserdb createusermigration runauth runuser composeupdb composedowndb
+rungroup:
+	go run main.go ./env/dev/.env.group
+
+.PHONY: composeupdb composedowndb migrateuserdown migrateuserup createuserdb dropuserdb createusermigration runauth runuser composeupdb composedowndb migrateuserupdocker migrateuserdowndocker migrategroupupdocker migrategroupdowndocker

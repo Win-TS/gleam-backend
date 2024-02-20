@@ -22,7 +22,7 @@ message PostsSearchRes {
 }
 
 // Methods
-service AuthGrpcService {
+service UserGrpcService {
     rpc GroupsJoinedSearch(GroupsJoinedSearchReq) returns (GroupsJoinedSearchRes);
     rpc PostsSearch(PostsSearchReq) returns (PostsSearchRes);
 }

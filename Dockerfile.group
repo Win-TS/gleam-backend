@@ -7,4 +7,7 @@ RUN go mod download && go mod verify
 
 RUN CGO_ENABLED=0 go build -o bin/app
 
+RUN curl -L https://github.com/golang-migrate/migrate/releases/download/v4.17.0/migrate.linux-amd64.tar.gz | tar xvz
+RUN mv migrate /usr/bin/migrate
+
 ENTRYPOINT ["go", "run", "main.go", "./env/prod/.env.group"]

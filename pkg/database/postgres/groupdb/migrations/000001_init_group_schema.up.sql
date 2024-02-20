@@ -2,13 +2,14 @@ CREATE TABLE "groups" (
   "group_id" serial PRIMARY KEY,
   "group_name" varchar UNIQUE NOT NULL,
   "group_creator_id" integer NOT NULL,
+  "photo_url" varchar,
   "created_at" timestamp DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE "group_members" (
   "group_id" serial NOT NULL,
   "member_id" integer NOT NULL,
-  "role" varchar NOT NULL DEFAULT 'member',
+  "role" varchar NOT NULL,
   "created_at" timestamp DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY ("group_id", "member_id")
 );

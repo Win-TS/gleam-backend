@@ -3,6 +3,26 @@ version: '3.9'
 name: gleam-backend-container
 
 services:
+  user-db:
+    image: postgres
+    container_name: user-db
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: 123456
+      POSTGRES_DB: user_db
+
+  group-db:
+    image: postgres
+    container_name: group-db
+    ports:
+      - 5433:5432
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: 123456
+      POSTGRES_DB: group_db
+
   auth-api:
     container_name: gleam-auth-api
     build:
@@ -21,17 +41,12 @@ services:
     depends_on:
       - user-db
 
-  user-db:
-    image: postgres
-    container_name: user-db
+  group-api:
+    container_name: gleam-group-api
+    build:
+      context: .
+      dockerfile: Dockerfile.group
     ports:
-      - 5432:5432
-    environment:
-      POSTGRES_USER: root
-      POSTGRES_PASSWORD: 123456
-      POSTGRES_DB: user_db
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U root"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - "9002:1325"
+    depends_on:
+      - group-db

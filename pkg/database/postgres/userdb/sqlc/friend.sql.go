@@ -37,6 +37,36 @@ func (q *Queries) CreateFriend(ctx context.Context, arg CreateFriendParams) (Fri
 	return i, err
 }
 
+const editFriendStatusAccepted = `-- name: EditFriendStatusAccepted :exec
+UPDATE friends SET status = 'Accepted'
+WHERE user_id1 = $1 AND user_id2 = $2
+`
+
+type EditFriendStatusAcceptedParams struct {
+	UserId1 sql.NullInt32 `json:"user_id1"`
+	UserId2 sql.NullInt32 `json:"user_id2"`
+}
+
+func (q *Queries) EditFriendStatusAccepted(ctx context.Context, arg EditFriendStatusAcceptedParams) error {
+	_, err := q.db.ExecContext(ctx, editFriendStatusAccepted, arg.UserId1, arg.UserId2)
+	return err
+}
+
+const editFriendStatusDeclined = `-- name: EditFriendStatusDeclined :exec
+UPDATE friends SET status = 'Declined'
+WHERE user_id1 = $1 AND user_id2 = $2
+`
+
+type EditFriendStatusDeclinedParams struct {
+	UserId1 sql.NullInt32 `json:"user_id1"`
+	UserId2 sql.NullInt32 `json:"user_id2"`
+}
+
+func (q *Queries) EditFriendStatusDeclined(ctx context.Context, arg EditFriendStatusDeclinedParams) error {
+	_, err := q.db.ExecContext(ctx, editFriendStatusDeclined, arg.UserId1, arg.UserId2)
+	return err
+}
+
 const getFriend = `-- name: GetFriend :one
 SELECT id, user_id1, user_id2, status, created_at FROM friends
 WHERE user_id1 = $1 AND user_id2= $2
@@ -165,9 +195,15 @@ func (q *Queries) GetFriendsPendingList(ctx context.Context, userId2 sql.NullInt
 }
 
 const listFriendsByUserId = `-- name: ListFriendsByUserId :many
-SELECT id, user_id1, user_id2, status, created_at FROM friends
-WHERE user_id1 = $1
-ORDER BY id
+SELECT 
+    CASE
+        WHEN user_id1 = $1 THEN user_id2
+        ELSE user_id1
+    END AS friend_id
+FROM friends
+WHERE (user_id1 = $1 OR user_id2 = $1)
+AND status = 'Accepted'
+ORDER BY friend_id
 LIMIT $2
 OFFSET $3
 `
@@ -178,25 +214,19 @@ type ListFriendsByUserIdParams struct {
 	Offset  int32         `json:"offset"`
 }
 
-func (q *Queries) ListFriendsByUserId(ctx context.Context, arg ListFriendsByUserIdParams) ([]Friend, error) {
+func (q *Queries) ListFriendsByUserId(ctx context.Context, arg ListFriendsByUserIdParams) ([]interface{}, error) {
 	rows, err := q.db.QueryContext(ctx, listFriendsByUserId, arg.UserId1, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Friend{}
+	items := []interface{}{}
 	for rows.Next() {
-		var i Friend
-		if err := rows.Scan(
-			&i.ID,
-			&i.UserId1,
-			&i.UserId2,
-			&i.Status,
-			&i.CreatedAt,
-		); err != nil {
+		var friend_id interface{}
+		if err := rows.Scan(&friend_id); err != nil {
 			return nil, err
 		}
-		items = append(items, i)
+		items = append(items, friend_id)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err

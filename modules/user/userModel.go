@@ -34,4 +34,14 @@ type (
 		Birthday    string `json:"birthday"`
 		Gender      string `json:"gender"`
 	}
+
+	CreateFriendReq struct {
+		User_id1 int `json:"user_id1"`
+		User_id2 int `json:"user_id2"`
+	}
+
+	EditFriendStatusAcceptedReq struct {
+		User_id1 int `json:"user_id1"`
+		User_id2 int `json:"user_id2"`
+	}
 )

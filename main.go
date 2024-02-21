@@ -9,6 +9,7 @@ import (
 	firebase "firebase.google.com/go"
 	"github.com/Win-TS/gleam-backend.git/config"
 	"github.com/Win-TS/gleam-backend.git/pkg/database/mongodb"
+	groupdb "github.com/Win-TS/gleam-backend.git/pkg/database/postgres/groupdb/sqlc"
 	userdb "github.com/Win-TS/gleam-backend.git/pkg/database/postgres/userdb/sqlc"
 	"github.com/Win-TS/gleam-backend.git/server"
 	_ "github.com/lib/pq"
@@ -58,6 +59,8 @@ func main() {
 		switch cfg.App.Name {
 		case "user":
 			database = userdb.NewStore(dbConn)
+		case "group":
+			database = groupdb.NewStore(dbConn)
 		}
 	}
 

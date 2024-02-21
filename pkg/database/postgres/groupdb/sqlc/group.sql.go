@@ -41,19 +41,21 @@ func (q *Queries) AddGroupMember(ctx context.Context, arg AddGroupMemberParams) 
 const createGroup = `-- name: CreateGroup :one
 INSERT INTO groups (
     group_name,
-    group_creator_id
+    group_creator_id,
+    photo_url
 ) VALUES (
-    $1, $2
+    $1, $2, $3
 ) RETURNING group_id, group_name, group_creator_id, photo_url, created_at
 `
 
 type CreateGroupParams struct {
-	GroupName      string `json:"group_name"`
-	GroupCreatorID int32  `json:"group_creator_id"`
+	GroupName      string         `json:"group_name"`
+	GroupCreatorID int32          `json:"group_creator_id"`
+	PhotoUrl       sql.NullString `json:"photo_url"`
 }
 
 func (q *Queries) CreateGroup(ctx context.Context, arg CreateGroupParams) (Group, error) {
-	row := q.db.QueryRowContext(ctx, createGroup, arg.GroupName, arg.GroupCreatorID)
+	row := q.db.QueryRowContext(ctx, createGroup, arg.GroupName, arg.GroupCreatorID, arg.PhotoUrl)
 	var i Group
 	err := row.Scan(
 		&i.GroupID,
@@ -206,6 +208,17 @@ func (q *Queries) GetGroupByID(ctx context.Context, groupID int32) (Group, error
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const getGroupLatestId = `-- name: GetGroupLatestId :one
+SELECT COALESCE(MAX(group_id), 0)::integer FROM groups
+`
+
+func (q *Queries) GetGroupLatestId(ctx context.Context) (int32, error) {
+	row := q.db.QueryRowContext(ctx, getGroupLatestId)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
 }
 
 const getMembersByGroupID = `-- name: GetMembersByGroupID :many

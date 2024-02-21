@@ -145,18 +145,17 @@ func (q *Queries) EditComment(ctx context.Context, arg EditCommentParams) error 
 }
 
 const editPost = `-- name: EditPost :exec
-UPDATE posts SET description = $2 AND photo_url = $3
+UPDATE posts SET description = $2
 WHERE post_id = $1
 `
 
 type EditPostParams struct {
 	PostID      int32          `json:"post_id"`
 	Description sql.NullString `json:"description"`
-	PhotoUrl    sql.NullString `json:"photo_url"`
 }
 
 func (q *Queries) EditPost(ctx context.Context, arg EditPostParams) error {
-	_, err := q.db.ExecContext(ctx, editPost, arg.PostID, arg.Description, arg.PhotoUrl)
+	_, err := q.db.ExecContext(ctx, editPost, arg.PostID, arg.Description)
 	return err
 }
 
@@ -238,6 +237,17 @@ func (q *Queries) GetPostByPostID(ctx context.Context, postID int32) (Post, erro
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const getPostLatestId = `-- name: GetPostLatestId :one
+SELECT COALESCE(MAX(post_id), 0)::integer FROM posts
+`
+
+func (q *Queries) GetPostLatestId(ctx context.Context) (int32, error) {
+	row := q.db.QueryRowContext(ctx, getPostLatestId)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
 }
 
 const getPostsByGroupAndMemberID = `-- name: GetPostsByGroupAndMemberID :many

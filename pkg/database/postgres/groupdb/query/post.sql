@@ -68,7 +68,7 @@ SELECT COUNT(*) FROM post_comments
 WHERE post_id = $1;
 
 -- name: EditPost :exec
-UPDATE posts SET description = $2 AND photo_url = $3
+UPDATE posts SET description = $2
 WHERE post_id = $1;
 
 -- name: EditReaction :exec
@@ -90,3 +90,6 @@ WHERE reaction_id = $1;
 -- name: DeleteComment :exec
 DELETE FROM post_comments
 WHERE comment_id = $1;
+
+-- name: GetPostLatestId :one
+SELECT COALESCE(MAX(post_id), 0)::integer FROM posts;

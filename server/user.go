@@ -18,7 +18,6 @@ func (s *server) userService() {
 	httpHandler := userHandler.NewUserHttpHandler(s.cfg, usecase)
 	grpcHandler := userHandler.NewUserGrpcHandler(usecase)
 
-	_ = httpHandler
 	_ = grpcHandler
 
 	user := s.app.Group("/user_v1")
@@ -35,7 +34,7 @@ func (s *server) userService() {
 	user.DELETE("/deleteuser", httpHandler.DeleteUser)
 
 	friend := s.app.Group("/friend_v1")
-	
+
 	friend.GET("/", httpHandler.FriendInfo)
 	friend.GET("/list", httpHandler.FriendListById)
 	friend.GET("/count", httpHandler.FriendsCount)

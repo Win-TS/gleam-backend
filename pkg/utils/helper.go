@@ -55,7 +55,7 @@ func ConvertIntToSqlNullInt32(s int) sql.NullInt32 {
 func GetFileExtension(fileName string) string {
     parts := strings.Split(fileName, ".")
     if len(parts) > 1 {
-        return parts[len(parts)-1]
+        return ("." + parts[len(parts)-1])
     }
     return ""
 }

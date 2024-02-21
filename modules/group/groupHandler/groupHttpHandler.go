@@ -6,10 +6,12 @@ import (
 	"strconv"
 
 	"github.com/Win-TS/gleam-backend.git/config"
+	"github.com/Win-TS/gleam-backend.git/modules/group"
 	"github.com/Win-TS/gleam-backend.git/modules/group/groupUsecase"
 	groupdb "github.com/Win-TS/gleam-backend.git/pkg/database/postgres/groupdb/sqlc"
 	"github.com/Win-TS/gleam-backend.git/pkg/request"
 	"github.com/Win-TS/gleam-backend.git/pkg/response"
+	"github.com/Win-TS/gleam-backend.git/pkg/utils"
 	"github.com/labstack/echo/v4"
 )
 
@@ -21,6 +23,7 @@ type (
 		GetGroupMembersByGroupId(c echo.Context) error
 		ListGroups(c echo.Context) error
 		EditGroupName(c echo.Context) error
+		EditGroupPhoto(c echo.Context) error
 		EditMemberRole(c echo.Context) error
 		DeleteGroup(c echo.Context) error
 		DeleteGroupMember(c echo.Context) error
@@ -58,12 +61,43 @@ func (h *groupHttpHandler) CreateNewGroup(c echo.Context) error {
 	ctx := context.Background()
 	wrapper := request.ContextWrapper(c)
 
-	req := new(groupdb.CreateGroupParams)
+	req := new(group.NewGroupReq)
 	if err := wrapper.Bind(req); err != nil {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 
-	newGroup, err := h.groupUsecase.CreateNewGroup(ctx, *req)
+	file, _ := c.FormFile("photo")
+	var url string
+
+	fileid, err := h.groupUsecase.GetGroupLatestId(ctx)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+	fileidStr := strconv.Itoa(fileid)
+
+	if file != nil {
+		src, err := file.Open()
+		if err != nil {
+			return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+		}
+		defer src.Close()
+
+		bucketName := h.cfg.Firebase.StorageBucket
+		objectPath := "groupphoto"
+
+		url, err = h.groupUsecase.SaveToFirebaseStorage(c.Request().Context(), bucketName, objectPath, (fileidStr + utils.GetFileExtension(file.Filename)), src)
+		if err != nil {
+			return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+		}
+	}
+
+	args := &groupdb.CreateGroupParams{
+		GroupName: req.GroupName,
+		GroupCreatorID: int32(req.GroupCreatorId),
+		PhotoUrl: utils.ConvertStringToSqlNullString(url),
+	}
+
+	newGroup, err := h.groupUsecase.CreateNewGroup(ctx, *args)
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
@@ -95,7 +129,6 @@ func (h *groupHttpHandler) GetGroupById(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 	
-
 	groupInfo, err := h.groupUsecase.GetGroupById(ctx, groupId)
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
@@ -153,6 +186,46 @@ func (h *groupHttpHandler) EditGroupName(c echo.Context) error {
 	return response.SuccessResponse(c, http.StatusOK, "Success: group name edited")
 }
 
+
+func (h *groupHttpHandler) EditGroupPhoto(c echo.Context) error {
+	ctx := context.Background()
+	fileidStr := c.FormValue("group_id")
+	groupId, err := strconv.Atoi(fileidStr)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	file, _ := c.FormFile("photo")
+	var url string
+
+	if file != nil {
+		src, err := file.Open()
+		if err != nil {
+			return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+		}
+		defer src.Close()
+
+		bucketName := h.cfg.Firebase.StorageBucket
+		objectPath := "groupphoto"
+
+		url, err = h.groupUsecase.SaveToFirebaseStorage(c.Request().Context(), bucketName, objectPath, (fileidStr + utils.GetFileExtension(file.Filename)), src)
+		if err != nil {
+			return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+		}
+	}
+
+	req := &groupdb.EditGroupPhotoParams{
+		GroupID: int32(groupId),
+		PhotoUrl: utils.ConvertStringToSqlNullString(url),
+	}
+
+	if err := h.groupUsecase.EditGroupPhoto(ctx, *req); err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	return response.SuccessResponse(c, http.StatusOK, "Success: group photo edited")
+}
+
 func (h *groupHttpHandler) EditMemberRole(c echo.Context) error {
 	ctx := context.Background()
 	wrapper := request.ContextWrapper(c)
@@ -204,12 +277,43 @@ func (h *groupHttpHandler) CreatePost(c echo.Context) error {
 	ctx := context.Background()
 	wrapper := request.ContextWrapper(c)
 
-	req := new(groupdb.CreatePostParams)
+	req := new(group.NewPostReq)
 	if err := wrapper.Bind(req); err != nil {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 
-	newPost, err := h.groupUsecase.CreatePost(ctx, *req)
+	file, _ := c.FormFile("photo")
+	var url string
+
+	fileid, err := h.groupUsecase.GetPostLatestId(ctx)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+	fileidStr := strconv.Itoa(fileid)
+
+	if file != nil {
+		src, err := file.Open()
+		if err != nil {
+			return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+		}
+		defer src.Close()
+
+		bucketName := h.cfg.Firebase.StorageBucket
+		objectPath := "postphoto"
+
+		url, err = h.groupUsecase.SaveToFirebaseStorage(c.Request().Context(), bucketName, objectPath, (fileidStr + utils.GetFileExtension(file.Filename)), src)
+		if err != nil {
+			return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+		}
+	}
+
+	args := &groupdb.CreatePostParams{
+		MemberID: int32(req.MemberID),
+		GroupID: int32(req.GroupID),
+		PhotoUrl: utils.ConvertStringToSqlNullString(url),
+	}
+
+	newPost, err := h.groupUsecase.CreatePost(ctx, *args)
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}

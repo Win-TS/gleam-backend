@@ -16,6 +16,7 @@ type (
 		GetGroupMembersByGroupId(pctx context.Context, groupId int) ([]groupdb.GroupMember, error)
 		ListGroups(pctx context.Context, args groupdb.ListGroupsParams) ([]groupdb.Group, error)
 		EditGroupName(pctx context.Context, args groupdb.EditGroupNameParams) error
+		EditGroupPhoto(pctx context.Context, args groupdb.EditGroupPhotoParams) error
 		EditMemberRole(pctx context.Context, args groupdb.EditMemberRoleParams) error
 		DeleteGroup(pctx context.Context, groupId int) error
 		DeleteGroupMember(pctx context.Context, args groupdb.DeleteMemberParams) error
@@ -38,6 +39,8 @@ type (
 		EditComment(pctx context.Context, args groupdb.EditCommentParams) error
 		DeleteComment(pctx context.Context, commentId int) error
 		SaveToFirebaseStorage(pctx context.Context, bucketName, objectPath, filename string, file io.Reader) (string, error)
+		GetGroupLatestId(pctx context.Context) (int, error)
+		GetPostLatestId(pctx context.Context) (int, error)
 	}
 
 	groupUsecase struct {
@@ -102,6 +105,13 @@ func (u *groupUsecase) ListGroups(pctx context.Context, args groupdb.ListGroupsP
 
 func (u *groupUsecase) EditGroupName(pctx context.Context, args groupdb.EditGroupNameParams) error {
 	if err := u.store.EditGroupName(pctx, args); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (u *groupUsecase) EditGroupPhoto(pctx context.Context, args groupdb.EditGroupPhotoParams) error {
+	if err := u.store.EditGroupPhoto(pctx, args); err != nil {
 		return err
 	}
 	return nil
@@ -281,4 +291,20 @@ func (u *groupUsecase) SaveToFirebaseStorage(pctx context.Context, bucketName, o
 	url := "https://firebasestorage.googleapis.com/v0/b/" + bucketName + "/o/" + objectPath + "%" + "2F" + filename + "?alt=media"
 
 	return url, nil
+}
+
+func (u *groupUsecase) GetGroupLatestId(pctx context.Context) (int, error) {
+	latest, err := u.store.GetGroupLatestId(pctx)
+	if err != nil {
+		return -1, err
+	}
+	return int(latest), nil
+}
+
+func (u *groupUsecase) GetPostLatestId(pctx context.Context) (int, error) {
+	latest, err := u.store.GetPostLatestId(pctx)
+	if err != nil {
+		return -1, err
+	}
+	return int(latest), nil
 }

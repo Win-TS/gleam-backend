@@ -1,9 +1,10 @@
 -- name: CreateGroup :one
 INSERT INTO groups (
     group_name,
-    group_creator_id
+    group_creator_id,
+    photo_url
 ) VALUES (
-    $1, $2
+    $1, $2, $3
 ) RETURNING *;
 
 -- name: AddGroupMember :one
@@ -60,3 +61,6 @@ WHERE group_id = $1;
 -- name: DeleteMember :exec
 DELETE FROM group_members 
 WHERE member_id = $1 AND group_id = $2;
+
+-- name: GetGroupLatestId :one
+SELECT COALESCE(MAX(group_id), 0)::integer FROM groups;

@@ -7,7 +7,7 @@ CREATE TABLE "groups" (
 );
 
 CREATE TABLE "group_members" (
-  "group_id" serial NOT NULL,
+  "group_id" serial REFERENCES "groups" ("group_id") ON DELETE CASCADE,
   "member_id" integer NOT NULL,
   "role" varchar NOT NULL,
   "created_at" timestamp DEFAULT CURRENT_TIMESTAMP,
@@ -35,4 +35,4 @@ CREATE TABLE "post_comments" (
   "post_id" integer NOT NULL,
   "comment" varchar NOT NULL,
   "created_at" timestamp DEFAULT CURRENT_TIMESTAMP
-);
+)

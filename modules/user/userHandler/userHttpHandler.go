@@ -2,6 +2,7 @@ package userHandler
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -25,6 +26,12 @@ type (
 		EditUsername(c echo.Context) error
 		EditPhoneNumber(c echo.Context) error
 		DeleteUser(c echo.Context) error
+		FriendInfo(c echo.Context) error
+		FriendListById(c echo.Context) error
+		FriendsCount(c echo.Context) error
+		FriendsPendingList(c echo.Context) error
+		AddFriend(c echo.Context) error
+		FriendAccept(c echo.Context) error
 	}
 
 	userHttpHandler struct {
@@ -191,4 +198,114 @@ func (h *userHttpHandler) DeleteUser(c echo.Context) error {
 	}
 
 	return response.SuccessResponse(c, http.StatusOK, fmt.Sprintf("Successfully deleted user id: %v", userId))
+}
+
+// get friend info between 2 users
+func (h *userHttpHandler) FriendInfo(c echo.Context) error {
+	userID1Str := c.QueryParam("user_id1")
+	userID1, err := strconv.Atoi(userID1Str)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, "Invalid user ID1")
+	}
+
+	userID2Str := c.QueryParam("user_id2")
+	userID2, err := strconv.Atoi(userID2Str)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, "Invalid user ID2")
+	}
+
+	arg := userdb.GetFriendParams{
+		UserId1: sql.NullInt32{Int32: int32(userID1), Valid: true},
+		UserId2: sql.NullInt32{Int32: int32(userID2), Valid: true},
+	}
+
+	friends, err := h.userUsecase.FriendInfo(c.Request().Context(), arg)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, "Failed to fetch friends")
+	}
+
+	return response.SuccessResponse(c, http.StatusOK, friends)
+}
+
+// List friends by user ID.
+func (h *userHttpHandler) FriendListById(c echo.Context) error {
+	userIDStr := c.QueryParam("user_id")
+	userID, err := strconv.Atoi(userIDStr)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, "Invalid user ID")
+	}
+	friends, err := h.userUsecase.FriendListById(c.Request().Context(), userID)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, "Failed to fetch friends")
+	}
+
+	return response.SuccessResponse(c, http.StatusOK, friends)
+}
+
+// Count of accepted friends for a given user ID.
+func (h *userHttpHandler) FriendsCount(c echo.Context) error {
+	userIDStr := c.QueryParam("user_id")
+	userID, err := strconv.Atoi(userIDStr)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, "Invalid user ID")
+	}
+
+	count, err := h.userUsecase.FriendsCount(c.Request().Context(), sql.NullInt32{Int32: int32(userID), Valid: true})
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, "Failed to get friends count")
+	}
+
+	return response.SuccessResponse(c, http.StatusOK, count)
+}
+
+// GetFriendsPendingList returns a list of pending friend requests for a given user ID.
+func (h *userHttpHandler) FriendsPendingList(c echo.Context) error {
+	ctx := context.Background()
+	userIDStr := c.QueryParam("user_id2")
+	userID, err := strconv.Atoi(userIDStr)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, "Invalid user ID")
+	}
+	pendingFriends, err := h.userUsecase.FriendsPendingList(ctx, sql.NullInt32{Int32: int32(userID), Valid: true})
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, "Failed to fetch pending friend requests")
+	}
+
+	return response.SuccessResponse(c, http.StatusOK, pendingFriends)
+}
+
+// Create a friendship between two users.
+func (h *userHttpHandler) AddFriend(c echo.Context) error {
+	ctx := context.Background()
+	wrapper := request.ContextWrapper(c)
+
+	args := new(user.CreateFriendReq)
+	if err := wrapper.Bind(args); err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	// Dereference the pointer when passing it to AddFriend
+	createdFriend, err := h.userUsecase.AddFriend(ctx, *args)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, "Failed to create friendship")
+	}
+
+	return response.SuccessResponse(c, http.StatusCreated, createdFriend)
+}
+
+func (h *userHttpHandler) FriendAccept(c echo.Context) error {
+	ctx := context.Background()
+	wrapper := request.ContextWrapper(c)
+
+	args := new(user.EditFriendStatusAcceptedReq)
+	if err := wrapper.Bind(args); err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	err := h.userUsecase.FriendAccept(ctx, *args)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	return response.SuccessResponse(c, http.StatusOK, "Friend status updated successfully")
 }

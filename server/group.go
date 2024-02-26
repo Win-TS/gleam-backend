@@ -24,6 +24,7 @@ func (s *server) groupService() {
 	post := s.app.Group("/post_v1")
 	reaction := s.app.Group("/reaction_v1")
 	comment := s.app.Group("/comment_v1")
+	tag := s.app.Group("/tag_v1")
 
 	// Health Check
 	group.GET("", s.healthCheckService)
@@ -63,4 +64,12 @@ func (s *server) groupService() {
 	comment.GET("/postcommentcount", httpHandler.GetCommentCountByPostId)
 	comment.PATCH("/comment", httpHandler.EditComment)
 	comment.DELETE("/comment", httpHandler.DeleteComment)
+
+	// Tag Endpoints
+	tag.POST("/tag", httpHandler.CreateTag)
+	tag.POST("/addonetag", httpHandler.AddOneTagToGroup)
+	tag.POST("/addmultipletags", httpHandler.AddMultipleTagsToGroup)
+	tag.GET("/alltags", httpHandler.GetAvailableTags)
+	tag.GET("/groupswithtag", httpHandler.GetGroupsByTagName)
+	tag.GET("/tagsofgroup", httpHandler.GetTagsByGroupId)
 }

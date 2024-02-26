@@ -11,17 +11,19 @@ INSERT INTO posts (
 -- name: CreateReaction :one
 INSERT INTO post_reactions (
     post_id,
+    member_id,
     reaction
 ) VALUES (
-    $1, $2
+    $1, $2, $3
 ) RETURNING *;
 
 -- name: CreateComment :one
 INSERT INTO post_comments (
     post_id,
+    member_id,
     comment
 ) VALUES (
-    $1, $2
+    $1, $2, $3
 ) RETURNING *;
 
 -- name: GetPostByPostID :one

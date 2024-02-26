@@ -5,6 +5,7 @@ import (
 	"io"
 
 	"firebase.google.com/go/storage"
+	"github.com/Win-TS/gleam-backend.git/modules/group"
 	groupdb "github.com/Win-TS/gleam-backend.git/pkg/database/postgres/groupdb/sqlc"
 )
 
@@ -12,7 +13,7 @@ type (
 	GroupUsecaseService interface{
 		CreateNewGroup(pctx context.Context, args groupdb.CreateGroupParams) (groupdb.Group, error)
 		NewGroupMember(pctx context.Context, args groupdb.AddGroupMemberParams) (groupdb.GroupMember, error)
-		GetGroupById(pctx context.Context, groupId int) (groupdb.Group, error)
+		GetGroupById(pctx context.Context, groupId int) (group.GroupWithTagsRes, error)
 		GetGroupMembersByGroupId(pctx context.Context, groupId int) ([]groupdb.GroupMember, error)
 		ListGroups(pctx context.Context, args groupdb.ListGroupsParams) ([]groupdb.Group, error)
 		EditGroupName(pctx context.Context, args groupdb.EditGroupNameParams) error
@@ -41,6 +42,12 @@ type (
 		SaveToFirebaseStorage(pctx context.Context, bucketName, objectPath, filename string, file io.Reader) (string, error)
 		GetGroupLatestId(pctx context.Context) (int, error)
 		GetPostLatestId(pctx context.Context) (int, error)
+		CreateNewTag(pctx context.Context, args groupdb.CreateNewTagParams) (groupdb.Tag, error)
+		AddOneTagToGroup(pctx context.Context, args groupdb.AddGroupTagParams) (groupdb.GroupTag, error)
+		AddMultipleTagsToGroup(pctx context.Context, args groupdb.AddMultipleTagsToGroupParams) ([]groupdb.GroupTag, error)
+		GetAvailableTags(pctx context.Context) ([]groupdb.Tag, error)
+		GetGroupsByTagName(pctx context.Context, groupName string) ([]groupdb.Group, error)
+		GetTagsByGroupId(pctx context.Context, groupId int) ([]groupdb.Tag, error)
 	}
 
 	groupUsecase struct {
@@ -71,6 +78,14 @@ func (u *groupUsecase) CreateNewGroup(pctx context.Context, args groupdb.CreateG
 	return newGroup, nil
 }
 
+func (u *groupUsecase) CreateNewGroupWithTags(pctx context.Context, args groupdb.CreateGroupWithTagsParams) (groupdb.CreateGroupWithTagsRes, error) {
+	newGroup, err := u.store.CreateGroupWithTags(pctx, args)
+	if err != nil {
+		return groupdb.CreateGroupWithTagsRes{}, err
+	}
+	return newGroup, nil
+}
+
 func (u *groupUsecase) NewGroupMember(pctx context.Context, args groupdb.AddGroupMemberParams) (groupdb.GroupMember, error) {
 	newMember, err := u.store.AddGroupMember(pctx, args)
 	if err != nil {
@@ -79,12 +94,25 @@ func (u *groupUsecase) NewGroupMember(pctx context.Context, args groupdb.AddGrou
 	return newMember, nil
 }
 
-func (u *groupUsecase) GetGroupById(pctx context.Context, groupId int) (groupdb.Group, error) {
+func (u *groupUsecase) GetGroupById(pctx context.Context, groupId int) (group.GroupWithTagsRes, error) {
 	groupData, err := u.store.GetGroupByID(pctx, int32(groupId))
 	if err != nil {
-		return groupdb.Group{}, err
+		return group.GroupWithTagsRes{}, err
 	}
-	return groupData, nil
+
+	groupTags, err := u.store.GetTagsByGroupID(pctx, int32(groupId))
+	if err != nil {
+		return group.GroupWithTagsRes{}, err
+	}
+
+	return group.GroupWithTagsRes{
+		GroupID:        int(groupData.GroupID),
+		GroupName:      groupData.GroupName,
+		GroupCreatorID: int(groupData.GroupCreatorID),
+		PhotoUrl:       groupData.PhotoUrl,
+		Tags:           groupTags,
+		CreatedAt:      groupData.CreatedAt,
+	}, nil
 }
 
 func (u *groupUsecase) GetGroupMembersByGroupId(pctx context.Context, groupId int) ([]groupdb.GroupMember, error) {
@@ -186,7 +214,7 @@ func (u *groupUsecase) EditPost(pctx context.Context, args groupdb.EditPostParam
 }
 
 func (u *groupUsecase) DeletePost(pctx context.Context, postId int) error {
-	if err := u.store.DeleteGroup(pctx, int32(postId)); err != nil {
+	if err := u.store.DeletePost(pctx, int32(postId)); err != nil {
 		return err
 	}
 	return nil
@@ -307,4 +335,52 @@ func (u *groupUsecase) GetPostLatestId(pctx context.Context) (int, error) {
 		return -1, err
 	}
 	return int(latest), nil
+}
+
+func (u *groupUsecase) CreateNewTag(pctx context.Context, args groupdb.CreateNewTagParams) (groupdb.Tag, error) {
+	newTag, err := u.store.CreateNewTag(pctx, args)
+	if err != nil {
+		return groupdb.Tag{}, err
+	}
+	return newTag, nil
+}
+
+func (u *groupUsecase) AddOneTagToGroup(pctx context.Context, args groupdb.AddGroupTagParams) (groupdb.GroupTag, error) {
+	newTag, err := u.store.AddGroupTag(pctx, args)
+	if err != nil {
+		return groupdb.GroupTag{}, err
+	}
+	return newTag, nil
+}
+
+func (u *groupUsecase) AddMultipleTagsToGroup(pctx context.Context, args groupdb.AddMultipleTagsToGroupParams) ([]groupdb.GroupTag, error) {
+	newTags, err := u.store.AddMultipleTagsToGroup(pctx, args)
+	if err != nil {
+		return []groupdb.GroupTag{}, err
+	}
+	return newTags, nil
+}
+
+func (u *groupUsecase) GetAvailableTags(pctx context.Context) ([]groupdb.Tag, error) {
+	tags, err := u.store.GetAvailableTags(pctx)
+	if err != nil {
+		return []groupdb.Tag{}, err
+	}
+	return tags, nil
+}
+
+func (u *groupUsecase) GetGroupsByTagName(pctx context.Context, groupName string) ([]groupdb.Group, error) {
+	groups, err := u.store.GetGroupsByTagName(pctx, groupName)
+	if err != nil {
+		return []groupdb.Group{}, err
+	}
+	return groups, nil
+}
+
+func (u *groupUsecase) GetTagsByGroupId(pctx context.Context, groupId int) ([]groupdb.Tag, error) {
+	tags, err := u.store.GetTagsByGroupID(pctx, int32(groupId))
+	if err != nil {
+		return []groupdb.Tag{}, err
+	}
+	return tags, nil
 }

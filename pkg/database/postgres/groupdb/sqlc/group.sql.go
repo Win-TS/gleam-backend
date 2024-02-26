@@ -8,6 +8,9 @@ package groupdb
 import (
 	"context"
 	"database/sql"
+	"time"
+
+	"github.com/lib/pq"
 )
 
 const addGroupMember = `-- name: AddGroupMember :one
@@ -38,6 +41,64 @@ func (q *Queries) AddGroupMember(ctx context.Context, arg AddGroupMemberParams) 
 	return i, err
 }
 
+const addGroupTag = `-- name: AddGroupTag :one
+INSERT INTO group_tags (
+    group_id,
+    tag_id
+) VALUES (
+    $1, $2
+) RETURNING group_id, tag_id
+`
+
+type AddGroupTagParams struct {
+	GroupID int32 `json:"group_id"`
+	TagID   int32 `json:"tag_id"`
+}
+
+func (q *Queries) AddGroupTag(ctx context.Context, arg AddGroupTagParams) (GroupTag, error) {
+	row := q.db.QueryRowContext(ctx, addGroupTag, arg.GroupID, arg.TagID)
+	var i GroupTag
+	err := row.Scan(&i.GroupID, &i.TagID)
+	return i, err
+}
+
+const addMultipleTagsToGroup = `-- name: AddMultipleTagsToGroup :many
+INSERT INTO group_tags (
+    group_id,
+    tag_id
+) VALUES (
+    $1, unnest($2::integer[])
+) RETURNING group_id, tag_id
+`
+
+type AddMultipleTagsToGroupParams struct {
+	GroupID int32   `json:"group_id"`
+	Column2 []int32 `json:"column_2"`
+}
+
+func (q *Queries) AddMultipleTagsToGroup(ctx context.Context, arg AddMultipleTagsToGroupParams) ([]GroupTag, error) {
+	rows, err := q.db.QueryContext(ctx, addMultipleTagsToGroup, arg.GroupID, pq.Array(arg.Column2))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GroupTag{}
+	for rows.Next() {
+		var i GroupTag
+		if err := rows.Scan(&i.GroupID, &i.TagID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const createGroup = `-- name: CreateGroup :one
 INSERT INTO groups (
     group_name,
@@ -64,6 +125,27 @@ func (q *Queries) CreateGroup(ctx context.Context, arg CreateGroupParams) (Group
 		&i.PhotoUrl,
 		&i.CreatedAt,
 	)
+	return i, err
+}
+
+const createNewTag = `-- name: CreateNewTag :one
+INSERT INTO tags (
+    tag_name,
+    icon_url
+) VALUES (
+    $1, $2
+) RETURNING tag_id, tag_name, icon_url
+`
+
+type CreateNewTagParams struct {
+	TagName string         `json:"tag_name"`
+	IconUrl sql.NullString `json:"icon_url"`
+}
+
+func (q *Queries) CreateNewTag(ctx context.Context, arg CreateNewTagParams) (Tag, error) {
+	row := q.db.QueryRowContext(ctx, createNewTag, arg.TagName, arg.IconUrl)
+	var i Tag
+	err := row.Scan(&i.TagID, &i.TagName, &i.IconUrl)
 	return i, err
 }
 
@@ -138,6 +220,34 @@ func (q *Queries) EditMemberRole(ctx context.Context, arg EditMemberRoleParams) 
 	return err
 }
 
+const getAvailableTags = `-- name: GetAvailableTags :many
+SELECT tag_id, tag_name, icon_url FROM tags
+ORDER BY tag_id
+`
+
+func (q *Queries) GetAvailableTags(ctx context.Context) ([]Tag, error) {
+	rows, err := q.db.QueryContext(ctx, getAvailableTags)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Tag{}
+	for rows.Next() {
+		var i Tag
+		if err := rows.Scan(&i.TagID, &i.TagName, &i.IconUrl); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getGroupAndMemberByID = `-- name: GetGroupAndMemberByID :many
 SELECT groups.group_id,
     groups.group_name,
@@ -146,8 +256,7 @@ SELECT groups.group_id,
     group_members.member_id,
     group_members.role,
     group_members.created_at
-FROM groups
-    JOIN group_members ON groups.group_id = group_members.group_id
+FROM groups JOIN group_members ON groups.group_id = group_members.group_id
 WHERE groups.group_id = $1
 `
 
@@ -155,10 +264,10 @@ type GetGroupAndMemberByIDRow struct {
 	GroupID     int32          `json:"group_id"`
 	GroupName   string         `json:"group_name"`
 	PhotoUrl    sql.NullString `json:"photo_url"`
-	CreatedAt   sql.NullTime   `json:"created_at"`
+	CreatedAt   time.Time      `json:"created_at"`
 	MemberID    int32          `json:"member_id"`
 	Role        string         `json:"role"`
-	CreatedAt_2 sql.NullTime   `json:"created_at_2"`
+	CreatedAt_2 time.Time      `json:"created_at_2"`
 }
 
 func (q *Queries) GetGroupAndMemberByID(ctx context.Context, groupID int32) ([]GetGroupAndMemberByIDRow, error) {
@@ -221,6 +330,42 @@ func (q *Queries) GetGroupLatestId(ctx context.Context) (int32, error) {
 	return column_1, err
 }
 
+const getGroupsByTagName = `-- name: GetGroupsByTagName :many
+SELECT groups.group_id, groups.group_name, groups.group_creator_id, groups.photo_url, groups.created_at FROM groups
+JOIN group_tags ON groups.group_id = group_tags.group_id
+JOIN tags ON group_tags.tag_id = tags.tag_id
+WHERE tags.tag_name = $1
+`
+
+func (q *Queries) GetGroupsByTagName(ctx context.Context, tagName string) ([]Group, error) {
+	rows, err := q.db.QueryContext(ctx, getGroupsByTagName, tagName)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Group{}
+	for rows.Next() {
+		var i Group
+		if err := rows.Scan(
+			&i.GroupID,
+			&i.GroupName,
+			&i.GroupCreatorID,
+			&i.PhotoUrl,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getMembersByGroupID = `-- name: GetMembersByGroupID :many
 SELECT group_id, member_id, role, created_at FROM group_members
 WHERE group_id = $1
@@ -241,6 +386,35 @@ func (q *Queries) GetMembersByGroupID(ctx context.Context, groupID int32) ([]Gro
 			&i.Role,
 			&i.CreatedAt,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getTagsByGroupID = `-- name: GetTagsByGroupID :many
+SELECT tags.tag_id, tags.tag_name, tags.icon_url FROM tags
+JOIN group_tags ON tags.tag_id = group_tags.tag_id
+WHERE group_tags.group_id = $1
+`
+
+func (q *Queries) GetTagsByGroupID(ctx context.Context, groupID int32) ([]Tag, error) {
+	rows, err := q.db.QueryContext(ctx, getTagsByGroupID, groupID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Tag{}
+	for rows.Next() {
+		var i Tag
+		if err := rows.Scan(&i.TagID, &i.TagName, &i.IconUrl); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

@@ -45,6 +45,12 @@ type (
 		GetCommentCountByPostId(c echo.Context) error
 		EditComment(c echo.Context) error
 		DeleteComment(c echo.Context) error
+		CreateTag(c echo.Context) error
+		AddOneTagToGroup(c echo.Context) error
+		AddMultipleTagsToGroup(c echo.Context) error
+		GetAvailableTags(c echo.Context) error
+		GetGroupsByTagName(c echo.Context) error
+		GetTagsByGroupId(c echo.Context) error
 	}
 
 	groupHttpHandler struct {
@@ -92,9 +98,9 @@ func (h *groupHttpHandler) CreateNewGroup(c echo.Context) error {
 	}
 
 	args := &groupdb.CreateGroupParams{
-		GroupName: req.GroupName,
+		GroupName:      req.GroupName,
 		GroupCreatorID: int32(req.GroupCreatorId),
-		PhotoUrl: utils.ConvertStringToSqlNullString(url),
+		PhotoUrl:       utils.ConvertStringToSqlNullString(url),
 	}
 
 	newGroup, err := h.groupUsecase.CreateNewGroup(ctx, *args)
@@ -128,7 +134,7 @@ func (h *groupHttpHandler) GetGroupById(c echo.Context) error {
 	if err != nil {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
-	
+
 	groupInfo, err := h.groupUsecase.GetGroupById(ctx, groupId)
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
@@ -143,7 +149,6 @@ func (h *groupHttpHandler) GetGroupMembersByGroupId(c echo.Context) error {
 	if err != nil {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
-	
 
 	groupMembers, err := h.groupUsecase.GetGroupMembersByGroupId(ctx, groupId)
 	if err != nil {
@@ -186,7 +191,6 @@ func (h *groupHttpHandler) EditGroupName(c echo.Context) error {
 	return response.SuccessResponse(c, http.StatusOK, "Success: group name edited")
 }
 
-
 func (h *groupHttpHandler) EditGroupPhoto(c echo.Context) error {
 	ctx := context.Background()
 	fileidStr := c.FormValue("group_id")
@@ -215,7 +219,7 @@ func (h *groupHttpHandler) EditGroupPhoto(c echo.Context) error {
 	}
 
 	req := &groupdb.EditGroupPhotoParams{
-		GroupID: int32(groupId),
+		GroupID:  int32(groupId),
 		PhotoUrl: utils.ConvertStringToSqlNullString(url),
 	}
 
@@ -248,7 +252,6 @@ func (h *groupHttpHandler) DeleteGroup(c echo.Context) error {
 	if err != nil {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
-	
 
 	if err := h.groupUsecase.DeleteGroup(ctx, groupId); err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
@@ -308,9 +311,10 @@ func (h *groupHttpHandler) CreatePost(c echo.Context) error {
 	}
 
 	args := &groupdb.CreatePostParams{
-		MemberID: int32(req.MemberID),
-		GroupID: int32(req.GroupID),
-		PhotoUrl: utils.ConvertStringToSqlNullString(url),
+		MemberID:    int32(req.MemberID),
+		GroupID:     int32(req.GroupID),
+		Description: utils.ConvertStringToSqlNullString(req.Description),
+		PhotoUrl:    utils.ConvertStringToSqlNullString(url),
 	}
 
 	newPost, err := h.groupUsecase.CreatePost(ctx, *args)
@@ -327,7 +331,6 @@ func (h *groupHttpHandler) GetPostByPostId(c echo.Context) error {
 	if err != nil {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
-	
 
 	postInfo, err := h.groupUsecase.GetPostByPostId(ctx, postId)
 	if err != nil {
@@ -343,7 +346,6 @@ func (h *groupHttpHandler) GetPostsByGroupId(c echo.Context) error {
 	if err != nil {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
-	
 
 	postsInGroup, err := h.groupUsecase.GetPostsByGroupId(ctx, groupId)
 	if err != nil {
@@ -359,7 +361,6 @@ func (h *groupHttpHandler) GetPostsByUserId(c echo.Context) error {
 	if err != nil {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
-	
 
 	userPosts, err := h.groupUsecase.GetPostsByUserId(ctx, userId)
 	if err != nil {
@@ -390,12 +391,17 @@ func (h *groupHttpHandler) EditPost(c echo.Context) error {
 	ctx := context.Background()
 	wrapper := request.ContextWrapper(c)
 
-	req := new(groupdb.EditPostParams)
+	req := new(group.EditPostReq)
 	if err := wrapper.Bind(req); err != nil {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 
-	if err := h.groupUsecase.EditPost(ctx, *req); err != nil {
+	args := &groupdb.EditPostParams{
+		PostID:      int32(req.PostID),
+		Description: utils.ConvertStringToSqlNullString(req.Description),
+	}
+
+	if err := h.groupUsecase.EditPost(ctx, *args); err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
 
@@ -408,7 +414,7 @@ func (h *groupHttpHandler) DeletePost(c echo.Context) error {
 	if err != nil {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
-	
+
 	if err := h.groupUsecase.DeletePost(ctx, postId); err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
@@ -454,7 +460,6 @@ func (h *groupHttpHandler) GetReactionsByPostId(c echo.Context) error {
 	if err != nil {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
-	
 
 	reactions, err := h.groupUsecase.GetReactionsByPostId(ctx, postId)
 	if err != nil {
@@ -470,7 +475,6 @@ func (h *groupHttpHandler) GetReactionsCountByPostId(c echo.Context) error {
 	if err != nil {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
-	
 
 	reactionsCount, err := h.groupUsecase.GetReactionsCountByPostId(ctx, postId)
 	if err != nil {
@@ -502,7 +506,7 @@ func (h *groupHttpHandler) DeleteReaction(c echo.Context) error {
 	if err != nil {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
-	
+
 	if err := h.groupUsecase.DeleteReaction(ctx, reactionId); err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
@@ -533,7 +537,6 @@ func (h *groupHttpHandler) GetCommentsByPostId(c echo.Context) error {
 	if err != nil {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
-	
 
 	comments, err := h.groupUsecase.GetCommentsByPostId(ctx, postId)
 	if err != nil {
@@ -549,7 +552,6 @@ func (h *groupHttpHandler) GetCommentCountByPostId(c echo.Context) error {
 	if err != nil {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
-	
 
 	commentCount, err := h.groupUsecase.GetCommentCountByPostId(ctx, postId)
 	if err != nil {
@@ -581,10 +583,106 @@ func (h *groupHttpHandler) DeleteComment(c echo.Context) error {
 	if err != nil {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
-	
+
 	if err := h.groupUsecase.DeleteComment(ctx, commentId); err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
 
 	return response.SuccessResponse(c, http.StatusOK, "Success: comment deleted")
+}
+
+func (h *groupHttpHandler) CreateTag(c echo.Context) error {
+	ctx := context.Background()
+	wrapper := request.ContextWrapper(c)
+
+	req := new(group.NewTagReq)
+	if err := wrapper.Bind(req); err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	newTag, err := h.groupUsecase.CreateNewTag(ctx, groupdb.CreateNewTagParams{
+		TagName: req.TagName,
+		IconUrl: utils.ConvertStringToSqlNullString(req.IconUrl),
+	})
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	return response.SuccessResponse(c, http.StatusCreated, newTag)
+}
+
+func (h *groupHttpHandler) AddOneTagToGroup(c echo.Context) error {
+	ctx := context.Background()
+	wrapper := request.ContextWrapper(c)
+
+	req := new(groupdb.AddGroupTagParams)
+	if err := wrapper.Bind(req); err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	newTag, err := h.groupUsecase.AddOneTagToGroup(ctx, *req)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	return response.SuccessResponse(c, http.StatusCreated, newTag)
+}
+
+func (h *groupHttpHandler) AddMultipleTagsToGroup(c echo.Context) error {
+	ctx := context.Background()
+	wrapper := request.ContextWrapper(c)
+
+	req := new(group.AddMultipleTagsReq)
+	if err := wrapper.Bind(req); err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	newTags, err := h.groupUsecase.AddMultipleTagsToGroup(ctx, groupdb.AddMultipleTagsToGroupParams{
+		GroupID: req.GroupID,
+		Column2: req.TagIDs,
+	})
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	return response.SuccessResponse(c, http.StatusCreated, newTags)
+}
+
+func (h *groupHttpHandler) GetAvailableTags(c echo.Context) error {
+	ctx := context.Background()
+
+	tags, err := h.groupUsecase.GetAvailableTags(ctx)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	return response.SuccessResponse(c, http.StatusOK, tags)
+}
+
+func (h *groupHttpHandler) GetGroupsByTagName(c echo.Context) error {
+	ctx := context.Background()
+
+	tagName := c.QueryParam("tag_name")
+
+	groups, err := h.groupUsecase.GetGroupsByTagName(ctx, tagName)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	return response.SuccessResponse(c, http.StatusOK, groups)
+}
+
+func (h *groupHttpHandler) GetTagsByGroupId(c echo.Context) error {
+	ctx := context.Background()
+	groupId, err := strconv.Atoi(c.QueryParam("group_id"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	tags, err := h.groupUsecase.GetTagsByGroupId(ctx, groupId)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	return response.SuccessResponse(c, http.StatusOK, tags)
 }

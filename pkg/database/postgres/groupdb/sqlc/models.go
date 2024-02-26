@@ -6,6 +6,7 @@ package groupdb
 
 import (
 	"database/sql"
+	"time"
 )
 
 type Group struct {
@@ -13,14 +14,19 @@ type Group struct {
 	GroupName      string         `json:"group_name"`
 	GroupCreatorID int32          `json:"group_creator_id"`
 	PhotoUrl       sql.NullString `json:"photo_url"`
-	CreatedAt      sql.NullTime   `json:"created_at"`
+	CreatedAt      time.Time      `json:"created_at"`
 }
 
 type GroupMember struct {
-	GroupID   int32        `json:"group_id"`
-	MemberID  int32        `json:"member_id"`
-	Role      string       `json:"role"`
-	CreatedAt sql.NullTime `json:"created_at"`
+	GroupID   int32     `json:"group_id"`
+	MemberID  int32     `json:"member_id"`
+	Role      string    `json:"role"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type GroupTag struct {
+	GroupID int32 `json:"group_id"`
+	TagID   int32 `json:"tag_id"`
 }
 
 type Post struct {
@@ -29,19 +35,27 @@ type Post struct {
 	GroupID     int32          `json:"group_id"`
 	PhotoUrl    sql.NullString `json:"photo_url"`
 	Description sql.NullString `json:"description"`
-	CreatedAt   sql.NullTime   `json:"created_at"`
+	CreatedAt   time.Time      `json:"created_at"`
 }
 
 type PostComment struct {
-	CommentID int32        `json:"comment_id"`
-	PostID    int32        `json:"post_id"`
-	Comment   string       `json:"comment"`
-	CreatedAt sql.NullTime `json:"created_at"`
+	CommentID int32     `json:"comment_id"`
+	PostID    int32     `json:"post_id"`
+	MemberID  int32     `json:"member_id"`
+	Comment   string    `json:"comment"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 type PostReaction struct {
-	ReactionID int32        `json:"reaction_id"`
-	PostID     int32        `json:"post_id"`
-	Reaction   string       `json:"reaction"`
-	CreatedAt  sql.NullTime `json:"created_at"`
+	ReactionID int32     `json:"reaction_id"`
+	PostID     int32     `json:"post_id"`
+	MemberID   int32     `json:"member_id"`
+	Reaction   string    `json:"reaction"`
+	CreatedAt  time.Time `json:"created_at"`
+}
+
+type Tag struct {
+	TagID   int32          `json:"tag_id"`
+	TagName string         `json:"tag_name"`
+	IconUrl sql.NullString `json:"icon_url"`
 }

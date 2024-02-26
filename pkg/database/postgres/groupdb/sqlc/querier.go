@@ -10,8 +10,11 @@ import (
 
 type Querier interface {
 	AddGroupMember(ctx context.Context, arg AddGroupMemberParams) (GroupMember, error)
+	AddGroupTag(ctx context.Context, arg AddGroupTagParams) (GroupTag, error)
+	AddMultipleTagsToGroup(ctx context.Context, arg AddMultipleTagsToGroupParams) ([]GroupTag, error)
 	CreateComment(ctx context.Context, arg CreateCommentParams) (PostComment, error)
 	CreateGroup(ctx context.Context, arg CreateGroupParams) (Group, error)
+	CreateNewTag(ctx context.Context, arg CreateNewTagParams) (Tag, error)
 	CreatePost(ctx context.Context, arg CreatePostParams) (Post, error)
 	CreateReaction(ctx context.Context, arg CreateReactionParams) (PostReaction, error)
 	DeleteComment(ctx context.Context, commentID int32) error
@@ -25,11 +28,13 @@ type Querier interface {
 	EditMemberRole(ctx context.Context, arg EditMemberRoleParams) error
 	EditPost(ctx context.Context, arg EditPostParams) error
 	EditReaction(ctx context.Context, arg EditReactionParams) error
+	GetAvailableTags(ctx context.Context) ([]Tag, error)
 	GetCommentsByPostID(ctx context.Context, postID int32) ([]PostComment, error)
 	GetCommentsCountByPostID(ctx context.Context, postID int32) (int64, error)
 	GetGroupAndMemberByID(ctx context.Context, groupID int32) ([]GetGroupAndMemberByIDRow, error)
 	GetGroupByID(ctx context.Context, groupID int32) (Group, error)
 	GetGroupLatestId(ctx context.Context) (int32, error)
+	GetGroupsByTagName(ctx context.Context, tagName string) ([]Group, error)
 	GetMembersByGroupID(ctx context.Context, groupID int32) ([]GroupMember, error)
 	GetPostByPostID(ctx context.Context, postID int32) (Post, error)
 	GetPostLatestId(ctx context.Context) (int32, error)
@@ -39,6 +44,7 @@ type Querier interface {
 	GetPostsForFeedByMemberID(ctx context.Context, memberID int32) ([]Post, error)
 	GetReactionsByPostID(ctx context.Context, postID int32) ([]PostReaction, error)
 	GetReactionsCountByPostID(ctx context.Context, postID int32) (int64, error)
+	GetTagsByGroupID(ctx context.Context, groupID int32) ([]Tag, error)
 	ListGroups(ctx context.Context, arg ListGroupsParams) ([]Group, error)
 }
 

@@ -13,23 +13,26 @@ import (
 const createComment = `-- name: CreateComment :one
 INSERT INTO post_comments (
     post_id,
+    member_id,
     comment
 ) VALUES (
-    $1, $2
-) RETURNING comment_id, post_id, comment, created_at
+    $1, $2, $3
+) RETURNING comment_id, post_id, member_id, comment, created_at
 `
 
 type CreateCommentParams struct {
-	PostID  int32  `json:"post_id"`
-	Comment string `json:"comment"`
+	PostID   int32  `json:"post_id"`
+	MemberID int32  `json:"member_id"`
+	Comment  string `json:"comment"`
 }
 
 func (q *Queries) CreateComment(ctx context.Context, arg CreateCommentParams) (PostComment, error) {
-	row := q.db.QueryRowContext(ctx, createComment, arg.PostID, arg.Comment)
+	row := q.db.QueryRowContext(ctx, createComment, arg.PostID, arg.MemberID, arg.Comment)
 	var i PostComment
 	err := row.Scan(
 		&i.CommentID,
 		&i.PostID,
+		&i.MemberID,
 		&i.Comment,
 		&i.CreatedAt,
 	)
@@ -76,23 +79,26 @@ func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) (Post, e
 const createReaction = `-- name: CreateReaction :one
 INSERT INTO post_reactions (
     post_id,
+    member_id,
     reaction
 ) VALUES (
-    $1, $2
-) RETURNING reaction_id, post_id, reaction, created_at
+    $1, $2, $3
+) RETURNING reaction_id, post_id, member_id, reaction, created_at
 `
 
 type CreateReactionParams struct {
 	PostID   int32  `json:"post_id"`
+	MemberID int32  `json:"member_id"`
 	Reaction string `json:"reaction"`
 }
 
 func (q *Queries) CreateReaction(ctx context.Context, arg CreateReactionParams) (PostReaction, error) {
-	row := q.db.QueryRowContext(ctx, createReaction, arg.PostID, arg.Reaction)
+	row := q.db.QueryRowContext(ctx, createReaction, arg.PostID, arg.MemberID, arg.Reaction)
 	var i PostReaction
 	err := row.Scan(
 		&i.ReactionID,
 		&i.PostID,
+		&i.MemberID,
 		&i.Reaction,
 		&i.CreatedAt,
 	)
@@ -175,7 +181,7 @@ func (q *Queries) EditReaction(ctx context.Context, arg EditReactionParams) erro
 }
 
 const getCommentsByPostID = `-- name: GetCommentsByPostID :many
-SELECT comment_id, post_id, comment, created_at FROM post_comments
+SELECT comment_id, post_id, member_id, comment, created_at FROM post_comments
 WHERE post_id = $1
 ORDER BY created_at DESC
 `
@@ -192,6 +198,7 @@ func (q *Queries) GetCommentsByPostID(ctx context.Context, postID int32) ([]Post
 		if err := rows.Scan(
 			&i.CommentID,
 			&i.PostID,
+			&i.MemberID,
 			&i.Comment,
 			&i.CreatedAt,
 		); err != nil {
@@ -401,7 +408,7 @@ func (q *Queries) GetPostsForFeedByMemberID(ctx context.Context, memberID int32)
 }
 
 const getReactionsByPostID = `-- name: GetReactionsByPostID :many
-SELECT reaction_id, post_id, reaction, created_at FROM post_reactions
+SELECT reaction_id, post_id, member_id, reaction, created_at FROM post_reactions
 WHERE post_id = $1
 ORDER BY created_at DESC
 `
@@ -418,6 +425,7 @@ func (q *Queries) GetReactionsByPostID(ctx context.Context, postID int32) ([]Pos
 		if err := rows.Scan(
 			&i.ReactionID,
 			&i.PostID,
+			&i.MemberID,
 			&i.Reaction,
 			&i.CreatedAt,
 		); err != nil {

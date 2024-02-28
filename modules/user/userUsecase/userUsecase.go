@@ -3,13 +3,16 @@ package userUsecase
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"io"
+	"math/rand"
 	"time"
 
 	"firebase.google.com/go/storage"
 	"github.com/Win-TS/gleam-backend.git/modules/user"
 	userdb "github.com/Win-TS/gleam-backend.git/pkg/database/postgres/userdb/sqlc"
 	"github.com/Win-TS/gleam-backend.git/pkg/utils"
+	"github.com/jaswdr/faker"
 )
 
 type UserUsecaseService interface {
@@ -27,6 +30,7 @@ type UserUsecaseService interface {
 	FriendsPendingList(pctx context.Context, userId2 sql.NullInt32) ([]userdb.Friend, error)
 	AddFriend(pctx context.Context, args user.CreateFriendReq) (userdb.Friend, error)
 	FriendAccept(pctx context.Context, args user.EditFriendStatusAcceptedReq) error
+	UserMockData(pctx context.Context, args int16) error
 }
 
 type userUsecase struct {
@@ -211,5 +215,50 @@ func (u *userUsecase) FriendAccept(pctx context.Context, args user.EditFriendSta
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+func (u *userUsecase) UserMockData(pctx context.Context, count int16) error {
+	for i := int16(0); i < count; i++ {
+		var userData userdb.CreateUserParams
+
+		fake := faker.NewWithSeed(rand.NewSource(time.Now().UnixNano() + int64(i)))
+
+		userData.Nationality = "Thai"
+		userData.Age = int32(rand.Intn(40-10+1) + 10)
+
+		userData.Gender = fake.Person().Gender()
+
+		phoneNumber := fmt.Sprintf("%010d", rand.Intn(10000000000)) // Random 10-digit number
+		userData.PhoneNo = phoneNumber
+		userData.Email = fake.Internet().Email()
+
+		firstName := fake.Person().FirstName()
+		lastName := fake.Person().LastName()
+		username := firstName + lastName
+		userData.Firstname = firstName
+		userData.Lastname = lastName
+		userData.Username = username
+
+		time.Sleep(time.Millisecond * 100)
+
+		fakeBirthdayString := fake.Time().UnixDate(time.Now())
+		fakeBirthday, err := time.Parse(time.UnixDate, fakeBirthdayString)
+		if err != nil {
+			return err
+		}
+		userData.Birthday = fakeBirthday
+
+		fakeImageFile := fake.Image().Image(200, 200)
+		filename := fakeImageFile.Name()
+		userData.Photourl = sql.NullString{String: filename, Valid: true}
+
+		_, err = u.store.CreateUser(pctx, userData)
+		if err != nil {
+			return err
+		}
+
+	}
+
 	return nil
 }

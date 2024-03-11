@@ -44,6 +44,8 @@ func (s *server) groupService() {
 	group.DELETE("/group", httpHandler.DeleteGroup)
 	group.DELETE("/groupmember", httpHandler.DeleteGroupMember)
 
+	// Post Mock data
+	post.POST("/mock", httpHandler.PostMockData)
 	// Post Endpoints
 	post.POST("/post", httpHandler.CreatePost)
 	post.GET("/post", httpHandler.GetPostByPostId)

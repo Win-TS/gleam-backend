@@ -394,14 +394,15 @@ func (u *groupUsecase) GroupMockData(pctx context.Context, count int) error {
 	// Step 1: Create tags
 	tagNames := []string{"Music", "Workout", "Movie", "Reading", "Sport"} // You can define your tag names here
 	tagIDs := make([]int32, len(tagNames))
+	existingTags := make(map[string]int32)
+
+	// Create or fetch tags
 	for i, tagName := range tagNames {
-		tag, err := u.store.CreateNewTag(ctx, groupdb.CreateNewTagParams{
-			TagName: tagName,
-		})
+		tagID, err := u.createOrGetTagByName(ctx, tagName, existingTags)
 		if err != nil {
 			return err
 		}
-		tagIDs[i] = tag.TagID
+		tagIDs[i] = tagID
 	}
 
 	// Step 2: Create groups and add members and tags
@@ -412,7 +413,6 @@ func (u *groupUsecase) GroupMockData(pctx context.Context, count int) error {
 		group, err := u.store.CreateGroup(ctx, groupdb.CreateGroupParams{
 			GroupName:      groupName,
 			GroupCreatorID: 1, // Assuming the creator ID is 1, update accordingly
-			// PhotoUrl:       "https://picsum.photos/200/300", // You can provide a photo URL if needed
 		})
 		if err != nil {
 			return err
@@ -425,12 +425,21 @@ func (u *groupUsecase) GroupMockData(pctx context.Context, count int) error {
 			memberID := rand.Intn(10) + 1 // Assuming member IDs range from 1 to 10
 			role := "member"              // Default role is member
 
+			// Check if the member already exists in the group
+			exists, err := u.memberExistsInGroup(ctx, group.GroupID, int32(memberID))
+			if err != nil {
+				return err
+			}
+			if exists {
+				continue // Skip adding duplicate member
+			}
+
 			// Check if the current index matches the admin index
 			if j == adminIndex {
 				role = "admin"
 			}
 
-			_, err := u.store.AddGroupMember(ctx, groupdb.AddGroupMemberParams{
+			_, err = u.store.AddGroupMember(ctx, groupdb.AddGroupMemberParams{
 				GroupID:  group.GroupID,
 				MemberID: int32(memberID),
 				Role:     role,
@@ -440,32 +449,49 @@ func (u *groupUsecase) GroupMockData(pctx context.Context, count int) error {
 			}
 		}
 
-		// Randomly choose to add one tag or multiple tags to the group
-		if rand.Intn(2) == 0 {
-			tagIndex := rand.Intn(len(tagIDs))
-			_, err := u.store.AddGroupTag(ctx, groupdb.AddGroupTagParams{
-				GroupID: group.GroupID,
-				TagID:   tagIDs[tagIndex],
-			})
-			if err != nil {
-				return err
-			}
-		} else {
-			numTagsToAdd := rand.Intn(len(tagIDs)) + 1 // Add at least one tag
-			tagIndices := rand.Perm(len(tagIDs))[:numTagsToAdd]
-			tagIDsToAdd := make([]int32, numTagsToAdd)
-			for i, idx := range tagIndices {
-				tagIDsToAdd[i] = tagIDs[idx]
-			}
-			_, err := u.store.AddMultipleTagsToGroup(ctx, groupdb.AddMultipleTagsToGroupParams{
-				GroupID: group.GroupID,
-				Column2: tagIDsToAdd,
-			})
-			if err != nil {
-				return err
-			}
+		// Randomly choose to add one tag to the group
+		tagIndex := rand.Intn(len(tagIDs))
+		_, err = u.store.AddGroupTag(ctx, groupdb.AddGroupTagParams{
+			GroupID: group.GroupID,
+			TagID:   tagIDs[tagIndex],
+		})
+		if err != nil {
+			return err
 		}
 	}
 
 	return nil
+}
+
+func (u *groupUsecase) memberExistsInGroup(ctx context.Context, groupID, memberID int32) (bool, error) {
+	members, err := u.store.GetMembersByGroupID(ctx, groupID)
+	if err != nil {
+		return false, err
+	}
+	for _, member := range members {
+		if member.MemberID == memberID {
+			return true, nil // Member already exists
+		}
+	}
+	return false, nil // Member does not exist
+}
+
+func (u *groupUsecase) createOrGetTagByName(ctx context.Context, tagName string, existingTags map[string]int32) (int32, error) {
+	// Check if the tag already exists
+	tagID, ok := existingTags[tagName]
+	if ok {
+		return tagID, nil
+	}
+
+	// Tag doesn't exist, create a new one
+	newTag, err := u.store.CreateNewTag(ctx, groupdb.CreateNewTagParams{
+		TagName: tagName,
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	// Store the newly created tag ID
+	existingTags[tagName] = newTag.TagID
+	return newTag.TagID, nil
 }

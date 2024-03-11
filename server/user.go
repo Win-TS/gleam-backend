@@ -24,6 +24,8 @@ func (s *server) userService() {
 
 	// Health Check
 	user.GET("", s.healthCheckService)
+	// Fill mock data
+	user.POST("/mock", httpHandler.UserMockData)
 
 	user.POST("/createuser", httpHandler.RegisterNewUser)
 	user.GET("/userprofile", httpHandler.GetUserProfile)

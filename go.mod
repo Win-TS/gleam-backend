@@ -5,6 +5,12 @@ go 1.21.3
 require firebase.google.com/go v3.13.0+incompatible
 
 require (
+	github.com/bxcodec/faker v2.0.1+incompatible // indirect
+	github.com/bxcodec/faker/v3 v3.8.1 // indirect
+	github.com/jaswdr/faker v1.19.1 // indirect
+)
+
+require (
 	cloud.google.com/go v0.112.0 // indirect
 	cloud.google.com/go/compute v1.23.3 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect

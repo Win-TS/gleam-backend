@@ -3,13 +3,18 @@ package userUsecase
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"io"
+	"math/rand"
 	"time"
+
+	"strconv"
 
 	"firebase.google.com/go/storage"
 	"github.com/Win-TS/gleam-backend.git/modules/user"
 	userdb "github.com/Win-TS/gleam-backend.git/pkg/database/postgres/userdb/sqlc"
 	"github.com/Win-TS/gleam-backend.git/pkg/utils"
+	"github.com/jaswdr/faker"
 )
 
 type UserUsecaseService interface {
@@ -27,6 +32,7 @@ type UserUsecaseService interface {
 	FriendsPendingList(pctx context.Context, userId2 sql.NullInt32) ([]userdb.Friend, error)
 	AddFriend(pctx context.Context, args user.CreateFriendReq) (userdb.Friend, error)
 	FriendAccept(pctx context.Context, args user.EditFriendStatusAcceptedReq) error
+	UserMockData(ctx context.Context, count int16) error
 }
 
 type userUsecase struct {
@@ -164,7 +170,6 @@ func (u *userUsecase) FriendListById(pctx context.Context, id int) ([]int64, err
 	}
 
 	return friendIDs, nil
-	// return friends, nil
 }
 
 func (u *userUsecase) FriendsCount(pctx context.Context, userId1 sql.NullInt32) (int64, error) {
@@ -211,5 +216,96 @@ func (u *userUsecase) FriendAccept(pctx context.Context, args user.EditFriendSta
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+func (u *userUsecase) UserMockData(ctx context.Context, count int16) error {
+	createdUsers := make([]userdb.User, 0, count)
+	for i := int16(0); i < count; i++ {
+		userData, err := u.createUser(ctx, i)
+		if err != nil {
+			return err
+		}
+		createdUsers = append(createdUsers, userData)
+	}
+	for _, user := range createdUsers {
+		if err := u.createFakeFriends(ctx, user.ID, int32(count)); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (u *userUsecase) createUser(ctx context.Context, seed int16) (userdb.User, error) {
+	var userData userdb.CreateUserParams
+
+	fake := faker.NewWithSeed(rand.NewSource(time.Now().UnixNano() + int64(seed)))
+
+	userData.Nationality = "Thai"
+	userData.Age = int32(rand.Intn(40-10+1) + 10)
+	userData.Gender = fake.Person().Gender()
+
+	phoneNumber := fmt.Sprintf("%010d", rand.Intn(10000000000))
+	userData.PhoneNo = phoneNumber
+	userData.Email = fake.Internet().Email()
+
+	firstName := fake.Person().FirstName()
+	lastName := fake.Person().LastName()
+	username := firstName + lastName + strconv.Itoa(int(seed))
+	userData.Firstname = firstName
+	userData.Lastname = lastName
+	userData.Username = username
+
+	fakeBirthdayString := fake.Time().UnixDate(time.Now())
+	fakeBirthday, err := time.Parse(time.UnixDate, fakeBirthdayString)
+	if err != nil {
+		return userdb.User{}, err
+	}
+	userData.Birthday = fakeBirthday
+
+	fakeImageFile := fake.Image().Image(200, 200)
+	filename := fakeImageFile.Name()
+	userData.Photourl = sql.NullString{String: filename, Valid: true}
+
+	createdUser, err := u.store.CreateUser(ctx, userData)
+	if err != nil {
+		return userdb.User{}, err
+	}
+
+	return createdUser, nil
+}
+
+func (u *userUsecase) createFakeFriends(ctx context.Context, userID int32, totalUsers int32) error {
+	existingUserIDs := make([]int32, 0, totalUsers)
+	for i := int32(1); i <= totalUsers; i++ {
+		if i != userID { // Exclude the current user
+			existingUserIDs = append(existingUserIDs, i)
+		}
+	}
+	createdFriendships := make(map[[2]int32]struct{})
+	numFriends := rand.Intn(int(totalUsers))
+	for i := 0; i < numFriends; i++ {
+		friendID := existingUserIDs[rand.Intn(len(existingUserIDs))]
+
+		user1, user2 := userID, friendID
+		if userID > friendID {
+			user1, user2 = friendID, userID
+		}
+		friendship := [2]int32{user1, user2}
+		if _, exists := createdFriendships[friendship]; exists {
+			continue
+		}
+		_, err := u.store.CreateFriend(ctx, userdb.CreateFriendParams{
+			UserId1: utils.ConvertIntToSqlNullInt32(int(user1)),
+			UserId2: utils.ConvertIntToSqlNullInt32(int(user2)),
+		})
+		if err != nil {
+			return err
+		}
+
+		createdFriendships[friendship] = struct{}{}
+	}
+
 	return nil
 }

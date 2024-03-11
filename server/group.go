@@ -29,6 +29,9 @@ func (s *server) groupService() {
 	// Health Check
 	group.GET("", s.healthCheckService)
 
+	//Mock data
+	group.POST("/mock", httpHandler.GroupMockData)
+
 	// Group Endpoints
 	group.POST("/group", httpHandler.CreateNewGroup)
 	group.POST("/newmember", httpHandler.NewGroupMember)

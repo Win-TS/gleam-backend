@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"strconv"
+	"fmt"
 
 	"github.com/Win-TS/gleam-backend.git/config"
 	"github.com/Win-TS/gleam-backend.git/modules/group"
@@ -51,6 +52,7 @@ type (
 		GetAvailableTags(c echo.Context) error
 		GetGroupsByTagName(c echo.Context) error
 		GetTagsByGroupId(c echo.Context) error
+		GroupMockData(c echo.Context) error
 	}
 
 	groupHttpHandler struct {
@@ -685,4 +687,24 @@ func (h *groupHttpHandler) GetTagsByGroupId(c echo.Context) error {
 	}
 
 	return response.SuccessResponse(c, http.StatusOK, tags)
+}
+
+func (h *groupHttpHandler) GroupMockData(c echo.Context) error {
+	ctx := context.Background()
+	wrapper := request.ContextWrapper(c)
+
+	req := struct {
+		Count int `json:"count"`
+	}{}
+
+	if err := wrapper.Bind(&req); err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	err := h.groupUsecase.GroupMockData(ctx, req.Count)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	return response.SuccessResponse(c, http.StatusOK, fmt.Sprintf("%d group data created", req.Count))
 }

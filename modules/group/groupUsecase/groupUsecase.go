@@ -2,7 +2,9 @@ package groupUsecase
 
 import (
 	"context"
+	"fmt"
 	"io"
+	"math/rand"
 
 	"firebase.google.com/go/storage"
 	"github.com/Win-TS/gleam-backend.git/modules/group"
@@ -10,7 +12,7 @@ import (
 )
 
 type (
-	GroupUsecaseService interface{
+	GroupUsecaseService interface {
 		CreateNewGroup(pctx context.Context, args groupdb.CreateGroupParams) (groupdb.Group, error)
 		NewGroupMember(pctx context.Context, args groupdb.AddGroupMemberParams) (groupdb.GroupMember, error)
 		GetGroupById(pctx context.Context, groupId int) (group.GroupWithTagsRes, error)
@@ -48,6 +50,7 @@ type (
 		GetAvailableTags(pctx context.Context) ([]groupdb.Tag, error)
 		GetGroupsByTagName(pctx context.Context, groupName string) ([]groupdb.Group, error)
 		GetTagsByGroupId(pctx context.Context, groupId int) ([]groupdb.Tag, error)
+		GroupMockData(pctx context.Context, count int) error
 	}
 
 	groupUsecase struct {
@@ -383,4 +386,86 @@ func (u *groupUsecase) GetTagsByGroupId(pctx context.Context, groupId int) ([]gr
 		return []groupdb.Tag{}, err
 	}
 	return tags, nil
+}
+
+func (u *groupUsecase) GroupMockData(pctx context.Context, count int) error {
+	ctx := context.Background()
+
+	// Step 1: Create tags
+	tagNames := []string{"Music", "Workout", "Movie", "Reading", "Sport"} // You can define your tag names here
+	tagIDs := make([]int32, len(tagNames))
+	for i, tagName := range tagNames {
+		tag, err := u.store.CreateNewTag(ctx, groupdb.CreateNewTagParams{
+			TagName: tagName,
+		})
+		if err != nil {
+			return err
+		}
+		tagIDs[i] = tag.TagID
+	}
+
+	// Step 2: Create groups and add members and tags
+	for i := 0; i < count; i++ {
+		groupName := fmt.Sprintf("Group %d", i+1)
+
+		// Create group
+		group, err := u.store.CreateGroup(ctx, groupdb.CreateGroupParams{
+			GroupName:      groupName,
+			GroupCreatorID: 1, // Assuming the creator ID is 1, update accordingly
+			// PhotoUrl:       "https://picsum.photos/200/300", // You can provide a photo URL if needed
+		})
+		if err != nil {
+			return err
+		}
+
+		// Add members to the group (randomly)
+		adminIndex := rand.Intn(10)
+
+		for j := 0; j < 10; j++ {
+			memberID := rand.Intn(10) + 1 // Assuming member IDs range from 1 to 10
+			role := "member"              // Default role is member
+
+			// Check if the current index matches the admin index
+			if j == adminIndex {
+				role = "admin"
+			}
+
+			_, err := u.store.AddGroupMember(ctx, groupdb.AddGroupMemberParams{
+				GroupID:  group.GroupID,
+				MemberID: int32(memberID),
+				Role:     role,
+			})
+			if err != nil {
+				return err
+			}
+		}
+
+		// Randomly choose to add one tag or multiple tags to the group
+		if rand.Intn(2) == 0 {
+			tagIndex := rand.Intn(len(tagIDs))
+			_, err := u.store.AddGroupTag(ctx, groupdb.AddGroupTagParams{
+				GroupID: group.GroupID,
+				TagID:   tagIDs[tagIndex],
+			})
+			if err != nil {
+				return err
+			}
+		} else {
+			numTagsToAdd := rand.Intn(len(tagIDs)) + 1 // Add at least one tag
+			tagIndices := rand.Perm(len(tagIDs))[:numTagsToAdd]
+			tagIDsToAdd := make([]int32, numTagsToAdd)
+			for i, idx := range tagIndices {
+				tagIDsToAdd[i] = tagIDs[idx]
+			}
+			_, err := u.store.AddMultipleTagsToGroup(ctx, groupdb.AddMultipleTagsToGroupParams{
+				GroupID: group.GroupID,
+				Column2: tagIDsToAdd,
+			})
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }

@@ -30,7 +30,7 @@ func (s *server) groupService() {
 	group.GET("", s.healthCheckService)
 
 	//Mock data
-	group.POST("/mock", httpHandler.GroupMockData)
+	// group.POST("/mock", httpHandler.GroupMockData)
 
 	// Group Endpoints
 	group.POST("/group", httpHandler.CreateNewGroup)
@@ -45,7 +45,7 @@ func (s *server) groupService() {
 	group.DELETE("/groupmember", httpHandler.DeleteGroupMember)
 
 	// Post Mock data
-	post.POST("/mock", httpHandler.PostMockData)
+	// post.POST("/mock", httpHandler.PostMockData)
 	// Post Endpoints
 	post.POST("/post", httpHandler.CreatePost)
 	post.GET("/post", httpHandler.GetPostByPostId)
@@ -72,9 +72,6 @@ func (s *server) groupService() {
 
 	// Tag Endpoints
 	tag.POST("/tag", httpHandler.CreateTag)
-	tag.POST("/addonetag", httpHandler.AddOneTagToGroup)
-	tag.POST("/addmultipletags", httpHandler.AddMultipleTagsToGroup)
 	tag.GET("/alltags", httpHandler.GetAvailableTags)
-	tag.GET("/groupswithtag", httpHandler.GetGroupsByTagName)
-	tag.GET("/tagsofgroup", httpHandler.GetTagsByGroupId)
+	tag.GET("/groupswithtag", httpHandler.GetGroupsByTagID)
 }

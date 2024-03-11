@@ -1,54 +1,78 @@
 CREATE TABLE "groups" (
-  "group_id" serial PRIMARY KEY,
+  "group_id" SERIAL PRIMARY KEY,
   "group_name" varchar UNIQUE NOT NULL,
   "group_creator_id" integer NOT NULL,
   "photo_url" varchar,
-  "created_at" timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL
+  "tag_id" integer NOT NULL,
+  "frequency" integer,
+  "created_at" timestamp NOT NULL DEFAULT (CURRENT_TIMESTAMP)
 );
 
 CREATE TABLE "group_members" (
-  "group_id" serial REFERENCES "groups" ("group_id") ON DELETE CASCADE,
+  "group_id" SERIAL NOT NULL,
   "member_id" integer NOT NULL,
   "role" varchar NOT NULL,
-  "created_at" timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  "created_at" timestamp NOT NULL DEFAULT (CURRENT_TIMESTAMP),
   PRIMARY KEY ("group_id", "member_id")
 );
 
 CREATE TABLE "posts" (
-  "post_id" serial PRIMARY KEY,
+  "post_id" SERIAL PRIMARY KEY,
   "member_id" integer NOT NULL,
-  "group_id" serial NOT NULL REFERENCES "groups" ("group_id") ON DELETE CASCADE,
+  "group_id" SERIAL NOT NULL,
   "photo_url" varchar,
   "description" varchar,
-  "created_at" timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL
+  "created_at" timestamp NOT NULL DEFAULT (CURRENT_TIMESTAMP)
 );
 
 CREATE TABLE "post_reactions" (
-  "reaction_id" serial PRIMARY KEY,
-  "post_id" serial NOT NULL REFERENCES "posts" ("post_id") ON DELETE CASCADE,
+  "reaction_id" SERIAL PRIMARY KEY,
+  "post_id" SERIAL NOT NULL,
   "member_id" integer NOT NULL,
   "reaction" varchar NOT NULL,
-  "created_at" timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL
+  "created_at" timestamp NOT NULL DEFAULT (CURRENT_TIMESTAMP)
 );
 
 CREATE TABLE "post_comments" (
-  "comment_id" serial PRIMARY KEY,
-  "post_id" integer NOT NULL REFERENCES "posts" ("post_id") ON DELETE CASCADE,
+  "comment_id" SERIAL PRIMARY KEY,
+  "post_id" integer NOT NULL,
   "member_id" integer NOT NULL,
   "comment" varchar NOT NULL,
-  "created_at" timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL
+  "created_at" timestamp NOT NULL DEFAULT (CURRENT_TIMESTAMP)
 );
 
 CREATE TABLE "tags" (
-    "tag_id" serial PRIMARY KEY,
-    "tag_name" varchar UNIQUE NOT NULL,
-    "icon_url" varchar
+  "tag_id" SERIAL PRIMARY KEY,
+  "tag_name" varchar UNIQUE NOT NULL,
+  "icon_url" varchar
 );
 
-CREATE TABLE "group_tags" (
-    "group_id" integer NOT NULL,
-    "tag_id" integer NOT NULL,
-    PRIMARY KEY ("group_id", "tag_id"),
-    FOREIGN KEY ("group_id") REFERENCES "groups" ("group_id"),
-    FOREIGN KEY ("tag_id") REFERENCES "tags" ("tag_id")
+CREATE TABLE "streak_set" (
+  "streak_set_id" SERIAL PRIMARY KEY,
+  "group_id" INTEGER NOT NULL,
+  "user_id" INTEGER NOT NULL,
+  "streak_count" INTEGER,
+  "ended" BOOLEAN NOT NULL DEFAULT true
 );
+
+CREATE TABLE "streaks" (
+  "streak_id" SERIAL PRIMARY KEY,
+  "streak_set_id" INTEGER NOT NULL,
+  "post_id" INTEGER NOT NULL,
+  "streak_count" INTEGER,
+  "created_at" TIMESTAMP NOT NULL DEFAULT (CURRENT_TIMESTAMP)
+);
+
+ALTER TABLE "group_members" ADD FOREIGN KEY ("group_id") REFERENCES "groups" ("group_id") ON DELETE CASCADE;
+
+ALTER TABLE "posts" ADD FOREIGN KEY ("group_id") REFERENCES "groups" ("group_id") ON DELETE CASCADE;
+
+ALTER TABLE "post_reactions" ADD FOREIGN KEY ("post_id") REFERENCES "posts" ("post_id") ON DELETE CASCADE;
+
+ALTER TABLE "post_comments" ADD FOREIGN KEY ("post_id") REFERENCES "posts" ("post_id") ON DELETE CASCADE;
+
+ALTER TABLE "groups" ADD FOREIGN KEY ("tag_id") REFERENCES "tags" ("tag_id");
+
+ALTER TABLE "posts" ADD FOREIGN KEY ("post_id") REFERENCES "streaks" ("post_id") ON DELETE CASCADE;
+
+ALTER TABLE "streaks" ADD FOREIGN KEY ("streak_set_id") REFERENCES "streak_set" ("streak_set_id");

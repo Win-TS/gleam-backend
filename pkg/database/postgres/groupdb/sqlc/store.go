@@ -5,14 +5,12 @@ import (
 	"database/sql"
 	"fmt"
 	"time"
-
-	"github.com/Win-TS/gleam-backend.git/pkg/utils"
 )
 
 // Store provides all functions to execute db queries and transactions
 type Store interface {
 	Querier
-	CreateGroupWithTags(ctx context.Context, args CreateGroupWithTagsParams) (CreateGroupWithTagsRes, error)
+	// CreateGroupWithTags(ctx context.Context, args CreateGroupWithTagsParams) (CreateGroupWithTagsRes, error)
 }
 
 // SQLStore provides all functions to execute SQL queries and transactions
@@ -61,50 +59,50 @@ func (store *SQLStore) execTx(ctx context.Context, fn func(*Queries) error) erro
 	return tx.Commit()
 }
 
-// CreateGroupWithTags creates a new group with tags
-func (store *SQLStore) CreateGroupWithTags(ctx context.Context, args CreateGroupWithTagsParams) (CreateGroupWithTagsRes, error) {
-	var groupInfo Group
+// // CreateGroupWithTags creates a new group with tags
+// func (store *SQLStore) CreateGroupWithTags(ctx context.Context, args CreateGroupWithTagsParams) (CreateGroupWithTagsRes, error) {
+// 	var groupInfo Group
 
-	err := store.execTx(ctx, func(q *Queries) error {
-		var err error
+// 	err := store.execTx(ctx, func(q *Queries) error {
+// 		var err error
 
-		groupInfo, err = q.CreateGroup(ctx, CreateGroupParams{
-			GroupName:      args.GroupName,
-			GroupCreatorID: int32(args.GroupCreatorId),
-			PhotoUrl:       utils.ConvertStringToSqlNullString(args.PhotoUrl),
-		})
-		if err != nil {
-			return err
-		}
+// 		groupInfo, err = q.CreateGroup(ctx, CreateGroupParams{
+// 			GroupName:      args.GroupName,
+// 			GroupCreatorID: int32(args.GroupCreatorId),
+// 			PhotoUrl:       utils.ConvertStringToSqlNullString(args.PhotoUrl),
+// 		})
+// 		if err != nil {
+// 			return err
+// 		}
 
-		arg := AddGroupMemberParams{
-			GroupID:  int32(groupInfo.GroupID),
-			MemberID: int32(groupInfo.GroupCreatorID),
-			Role:     "creator",
-		}
-		_, err = store.AddGroupMember(ctx, arg)
-		if err != nil {
-			return err
-		}
+// 		arg := AddGroupMemberParams{
+// 			GroupID:  int32(groupInfo.GroupID),
+// 			MemberID: int32(groupInfo.GroupCreatorID),
+// 			Role:     "creator",
+// 		}
+// 		_, err = store.AddGroupMember(ctx, arg)
+// 		if err != nil {
+// 			return err
+// 		}
 
-		for _, tagID := range args.TagIDs {
-			_, err := q.AddGroupTag(ctx, AddGroupTagParams{
-				GroupID: groupInfo.GroupID,
-				TagID:   int32(tagID),
-			})
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	})
+// 		for _, tagID := range args.TagIDs {
+// 			_, err := q.AddGroupTag(ctx, AddGroupTagParams{
+// 				GroupID: groupInfo.GroupID,
+// 				TagID:   int32(tagID),
+// 			})
+// 			if err != nil {
+// 				return err
+// 			}
+// 		}
+// 		return nil
+// 	})
 
-	return CreateGroupWithTagsRes{
-		GroupID:        int(groupInfo.GroupID),
-		GroupName:      groupInfo.GroupName,
-		GroupCreatorId: int(groupInfo.GroupCreatorID),
-		PhotoUrl:       groupInfo.PhotoUrl.String,
-		TagIDs:         args.TagIDs,
-		CreatedAt:      groupInfo.CreatedAt,
-	}, err
-}
+// 	return CreateGroupWithTagsRes{
+// 		GroupID:        int(groupInfo.GroupID),
+// 		GroupName:      groupInfo.GroupName,
+// 		GroupCreatorId: int(groupInfo.GroupCreatorID),
+// 		PhotoUrl:       groupInfo.PhotoUrl.String,
+// 		TagIDs:         args.TagIDs,
+// 		CreatedAt:      groupInfo.CreatedAt,
+// 	}, err
+// }

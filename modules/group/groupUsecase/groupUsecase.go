@@ -3,12 +3,10 @@ package groupUsecase
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"io"
 	"math/rand"
 
 	"firebase.google.com/go/storage"
-	"github.com/Win-TS/gleam-backend.git/modules/group"
 	groupdb "github.com/Win-TS/gleam-backend.git/pkg/database/postgres/groupdb/sqlc"
 	"github.com/jaswdr/faker"
 )
@@ -17,7 +15,7 @@ type (
 	GroupUsecaseService interface {
 		CreateNewGroup(pctx context.Context, args groupdb.CreateGroupParams) (groupdb.Group, error)
 		NewGroupMember(pctx context.Context, args groupdb.AddGroupMemberParams) (groupdb.GroupMember, error)
-		GetGroupById(pctx context.Context, groupId int) (group.GroupWithTagsRes, error)
+		GetGroupById(pctx context.Context, groupId int) (groupdb.GetGroupByIDRow, error)
 		GetGroupMembersByGroupId(pctx context.Context, groupId int) ([]groupdb.GroupMember, error)
 		ListGroups(pctx context.Context, args groupdb.ListGroupsParams) ([]groupdb.Group, error)
 		EditGroupName(pctx context.Context, args groupdb.EditGroupNameParams) error
@@ -47,13 +45,10 @@ type (
 		GetGroupLatestId(pctx context.Context) (int, error)
 		GetPostLatestId(pctx context.Context) (int, error)
 		CreateNewTag(pctx context.Context, args groupdb.CreateNewTagParams) (groupdb.Tag, error)
-		AddOneTagToGroup(pctx context.Context, args groupdb.AddGroupTagParams) (groupdb.GroupTag, error)
-		AddMultipleTagsToGroup(pctx context.Context, args groupdb.AddMultipleTagsToGroupParams) ([]groupdb.GroupTag, error)
 		GetAvailableTags(pctx context.Context) ([]groupdb.Tag, error)
-		GetGroupsByTagName(pctx context.Context, groupName string) ([]groupdb.Group, error)
-		GetTagsByGroupId(pctx context.Context, groupId int) ([]groupdb.Tag, error)
-		GroupMockData(pctx context.Context, count int) error
-		PostMockData(ctx context.Context, count int) error
+		GetGroupsByTagID(pctx context.Context, tagId int) ([]groupdb.Group, error)
+		// GroupMockData(pctx context.Context, count int) error
+		// PostMockData(ctx context.Context, count int) error
 	}
 
 	groupUsecase struct {
@@ -84,14 +79,6 @@ func (u *groupUsecase) CreateNewGroup(pctx context.Context, args groupdb.CreateG
 	return newGroup, nil
 }
 
-func (u *groupUsecase) CreateNewGroupWithTags(pctx context.Context, args groupdb.CreateGroupWithTagsParams) (groupdb.CreateGroupWithTagsRes, error) {
-	newGroup, err := u.store.CreateGroupWithTags(pctx, args)
-	if err != nil {
-		return groupdb.CreateGroupWithTagsRes{}, err
-	}
-	return newGroup, nil
-}
-
 func (u *groupUsecase) NewGroupMember(pctx context.Context, args groupdb.AddGroupMemberParams) (groupdb.GroupMember, error) {
 	newMember, err := u.store.AddGroupMember(pctx, args)
 	if err != nil {
@@ -100,25 +87,12 @@ func (u *groupUsecase) NewGroupMember(pctx context.Context, args groupdb.AddGrou
 	return newMember, nil
 }
 
-func (u *groupUsecase) GetGroupById(pctx context.Context, groupId int) (group.GroupWithTagsRes, error) {
+func (u *groupUsecase) GetGroupById(pctx context.Context, groupId int) (groupdb.GetGroupByIDRow, error) {
 	groupData, err := u.store.GetGroupByID(pctx, int32(groupId))
 	if err != nil {
-		return group.GroupWithTagsRes{}, err
+		return groupdb.GetGroupByIDRow{}, err
 	}
-
-	groupTags, err := u.store.GetTagsByGroupID(pctx, int32(groupId))
-	if err != nil {
-		return group.GroupWithTagsRes{}, err
-	}
-
-	return group.GroupWithTagsRes{
-		GroupID:        int(groupData.GroupID),
-		GroupName:      groupData.GroupName,
-		GroupCreatorID: int(groupData.GroupCreatorID),
-		PhotoUrl:       groupData.PhotoUrl,
-		Tags:           groupTags,
-		CreatedAt:      groupData.CreatedAt,
-	}, nil
+	return groupData, nil
 }
 
 func (u *groupUsecase) GetGroupMembersByGroupId(pctx context.Context, groupId int) ([]groupdb.GroupMember, error) {
@@ -351,22 +325,6 @@ func (u *groupUsecase) CreateNewTag(pctx context.Context, args groupdb.CreateNew
 	return newTag, nil
 }
 
-func (u *groupUsecase) AddOneTagToGroup(pctx context.Context, args groupdb.AddGroupTagParams) (groupdb.GroupTag, error) {
-	newTag, err := u.store.AddGroupTag(pctx, args)
-	if err != nil {
-		return groupdb.GroupTag{}, err
-	}
-	return newTag, nil
-}
-
-func (u *groupUsecase) AddMultipleTagsToGroup(pctx context.Context, args groupdb.AddMultipleTagsToGroupParams) ([]groupdb.GroupTag, error) {
-	newTags, err := u.store.AddMultipleTagsToGroup(pctx, args)
-	if err != nil {
-		return []groupdb.GroupTag{}, err
-	}
-	return newTags, nil
-}
-
 func (u *groupUsecase) GetAvailableTags(pctx context.Context) ([]groupdb.Tag, error) {
 	tags, err := u.store.GetAvailableTags(pctx)
 	if err != nil {
@@ -375,89 +333,81 @@ func (u *groupUsecase) GetAvailableTags(pctx context.Context) ([]groupdb.Tag, er
 	return tags, nil
 }
 
-func (u *groupUsecase) GetGroupsByTagName(pctx context.Context, groupName string) ([]groupdb.Group, error) {
-	groups, err := u.store.GetGroupsByTagName(pctx, groupName)
+func (u *groupUsecase) GetGroupsByTagID(pctx context.Context, tagId int) ([]groupdb.Group, error) {
+	groups, err := u.store.GetGroupsByTagID(pctx, int32(tagId))
 	if err != nil {
 		return []groupdb.Group{}, err
 	}
 	return groups, nil
 }
 
-func (u *groupUsecase) GetTagsByGroupId(pctx context.Context, groupId int) ([]groupdb.Tag, error) {
-	tags, err := u.store.GetTagsByGroupID(pctx, int32(groupId))
-	if err != nil {
-		return []groupdb.Tag{}, err
-	}
-	return tags, nil
-}
+// func (u *groupUsecase) GroupMockData(pctx context.Context, count int) error {
+// 	ctx := context.Background()
 
-func (u *groupUsecase) GroupMockData(pctx context.Context, count int) error {
-	ctx := context.Background()
+// 	tagNames := []string{"Music", "Workout", "Movie", "Reading", "Sport"}
+// 	tagIDs := make([]int32, len(tagNames))
+// 	existingTags := make(map[string]int32)
 
-	tagNames := []string{"Music", "Workout", "Movie", "Reading", "Sport"}
-	tagIDs := make([]int32, len(tagNames))
-	existingTags := make(map[string]int32)
+// 	for i, tagName := range tagNames {
+// 		tagID, err := u.createOrGetTagByName(ctx, tagName, existingTags)
+// 		if err != nil {
+// 			return err
+// 		}
+// 		tagIDs[i] = tagID
+// 	}
 
-	for i, tagName := range tagNames {
-		tagID, err := u.createOrGetTagByName(ctx, tagName, existingTags)
-		if err != nil {
-			return err
-		}
-		tagIDs[i] = tagID
-	}
+// 	for i := 0; i < count; i++ {
+// 		groupName := fmt.Sprintf("Group %d", i+1)
 
-	for i := 0; i < count; i++ {
-		groupName := fmt.Sprintf("Group %d", i+1)
+// 		// Create group
+// 		group, err := u.store.CreateGroup(ctx, groupdb.CreateGroupParams{
+// 			GroupName:      groupName,
+// 			GroupCreatorID: 1,
+// 		})
+// 		if err != nil {
+// 			return err
+// 		}
 
-		// Create group
-		group, err := u.store.CreateGroup(ctx, groupdb.CreateGroupParams{
-			GroupName:      groupName,
-			GroupCreatorID: 1,
-		})
-		if err != nil {
-			return err
-		}
+// 		adminIndex := rand.Intn(10)
 
-		adminIndex := rand.Intn(10)
+// 		for j := 0; j < 10; j++ {
+// 			memberID := rand.Intn(10) + 1
+// 			role := "member"
 
-		for j := 0; j < 10; j++ {
-			memberID := rand.Intn(10) + 1
-			role := "member"
+// 			exists, err := u.memberExistsInGroup(ctx, group.GroupID, int32(memberID))
+// 			if err != nil {
+// 				return err
+// 			}
+// 			if exists {
+// 				continue
+// 			}
 
-			exists, err := u.memberExistsInGroup(ctx, group.GroupID, int32(memberID))
-			if err != nil {
-				return err
-			}
-			if exists {
-				continue
-			}
+// 			if j == adminIndex {
+// 				role = "admin"
+// 			}
 
-			if j == adminIndex {
-				role = "admin"
-			}
+// 			_, err = u.store.AddGroupMember(ctx, groupdb.AddGroupMemberParams{
+// 				GroupID:  group.GroupID,
+// 				MemberID: int32(memberID),
+// 				Role:     role,
+// 			})
+// 			if err != nil {
+// 				return err
+// 			}
+// 		}
 
-			_, err = u.store.AddGroupMember(ctx, groupdb.AddGroupMemberParams{
-				GroupID:  group.GroupID,
-				MemberID: int32(memberID),
-				Role:     role,
-			})
-			if err != nil {
-				return err
-			}
-		}
+// 		tagIndex := rand.Intn(len(tagIDs))
+// 		_, err = u.store.AddGroupTag(ctx, groupdb.AddGroupTagParams{
+// 			GroupID: group.GroupID,
+// 			TagID:   tagIDs[tagIndex],
+// 		})
+// 		if err != nil {
+// 			return err
+// 		}
+// 	}
 
-		tagIndex := rand.Intn(len(tagIDs))
-		_, err = u.store.AddGroupTag(ctx, groupdb.AddGroupTagParams{
-			GroupID: group.GroupID,
-			TagID:   tagIDs[tagIndex],
-		})
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
+// 	return nil
+// }
 
 func (u *groupUsecase) memberExistsInGroup(ctx context.Context, groupID, memberID int32) (bool, error) {
 	members, err := u.store.GetMembersByGroupID(ctx, groupID)

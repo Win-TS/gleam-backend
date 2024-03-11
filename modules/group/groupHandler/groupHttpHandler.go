@@ -2,7 +2,6 @@ package groupHandler
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -47,13 +46,10 @@ type (
 		EditComment(c echo.Context) error
 		DeleteComment(c echo.Context) error
 		CreateTag(c echo.Context) error
-		AddOneTagToGroup(c echo.Context) error
-		AddMultipleTagsToGroup(c echo.Context) error
 		GetAvailableTags(c echo.Context) error
-		GetGroupsByTagName(c echo.Context) error
-		GetTagsByGroupId(c echo.Context) error
-		GroupMockData(c echo.Context) error
-		PostMockData(c echo.Context) error
+		GetGroupsByTagID(c echo.Context) error
+		// GroupMockData(c echo.Context) error
+		// PostMockData(c echo.Context) error
 	}
 
 	groupHttpHandler struct {
@@ -614,43 +610,6 @@ func (h *groupHttpHandler) CreateTag(c echo.Context) error {
 	return response.SuccessResponse(c, http.StatusCreated, newTag)
 }
 
-func (h *groupHttpHandler) AddOneTagToGroup(c echo.Context) error {
-	ctx := context.Background()
-	wrapper := request.ContextWrapper(c)
-
-	req := new(groupdb.AddGroupTagParams)
-	if err := wrapper.Bind(req); err != nil {
-		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
-	}
-
-	newTag, err := h.groupUsecase.AddOneTagToGroup(ctx, *req)
-	if err != nil {
-		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
-	}
-
-	return response.SuccessResponse(c, http.StatusCreated, newTag)
-}
-
-func (h *groupHttpHandler) AddMultipleTagsToGroup(c echo.Context) error {
-	ctx := context.Background()
-	wrapper := request.ContextWrapper(c)
-
-	req := new(group.AddMultipleTagsReq)
-	if err := wrapper.Bind(req); err != nil {
-		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
-	}
-
-	newTags, err := h.groupUsecase.AddMultipleTagsToGroup(ctx, groupdb.AddMultipleTagsToGroupParams{
-		GroupID: req.GroupID,
-		Column2: req.TagIDs,
-	})
-	if err != nil {
-		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
-	}
-
-	return response.SuccessResponse(c, http.StatusCreated, newTags)
-}
-
 func (h *groupHttpHandler) GetAvailableTags(c echo.Context) error {
 	ctx := context.Background()
 
@@ -662,12 +621,15 @@ func (h *groupHttpHandler) GetAvailableTags(c echo.Context) error {
 	return response.SuccessResponse(c, http.StatusOK, tags)
 }
 
-func (h *groupHttpHandler) GetGroupsByTagName(c echo.Context) error {
+func (h *groupHttpHandler) GetGroupsByTagID(c echo.Context) error {
 	ctx := context.Background()
 
-	tagName := c.QueryParam("tag_name")
+	tagId, err := strconv.Atoi(c.QueryParam("tag_id"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
 
-	groups, err := h.groupUsecase.GetGroupsByTagName(ctx, tagName)
+	groups, err := h.groupUsecase.GetGroupsByTagID(ctx, tagId)
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
@@ -675,58 +637,43 @@ func (h *groupHttpHandler) GetGroupsByTagName(c echo.Context) error {
 	return response.SuccessResponse(c, http.StatusOK, groups)
 }
 
-func (h *groupHttpHandler) GetTagsByGroupId(c echo.Context) error {
-	ctx := context.Background()
-	groupId, err := strconv.Atoi(c.QueryParam("group_id"))
-	if err != nil {
-		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
-	}
+// func (h *groupHttpHandler) GroupMockData(c echo.Context) error {
+// 	ctx := context.Background()
+// 	wrapper := request.ContextWrapper(c)
 
-	tags, err := h.groupUsecase.GetTagsByGroupId(ctx, groupId)
-	if err != nil {
-		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
-	}
+// 	req := struct {
+// 		Count int `json:"count"`
+// 	}{}
 
-	return response.SuccessResponse(c, http.StatusOK, tags)
-}
+// 	if err := wrapper.Bind(&req); err != nil {
+// 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+// 	}
 
-func (h *groupHttpHandler) GroupMockData(c echo.Context) error {
-	ctx := context.Background()
-	wrapper := request.ContextWrapper(c)
+// 	err := h.groupUsecase.GroupMockData(ctx, req.Count)
+// 	if err != nil {
+// 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+// 	}
 
-	req := struct {
-		Count int `json:"count"`
-	}{}
+// 	return response.SuccessResponse(c, http.StatusOK, fmt.Sprintf("%d group data created", req.Count))
 
-	if err := wrapper.Bind(&req); err != nil {
-		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
-	}
+// }
 
-	err := h.groupUsecase.GroupMockData(ctx, req.Count)
-	if err != nil {
-		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
-	}
+// func (h *groupHttpHandler) PostMockData(c echo.Context) error {
+// 	ctx := context.Background()
+// 	wrapper := request.ContextWrapper(c)
 
-	return response.SuccessResponse(c, http.StatusOK, fmt.Sprintf("%d group data created", req.Count))
+// 	req := struct {
+// 		Count int `json:"count"`
+// 	}{}
 
-}
+// 	if err := wrapper.Bind(&req); err != nil {
+// 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+// 	}
 
-func (h *groupHttpHandler) PostMockData(c echo.Context) error {
-	ctx := context.Background()
-	wrapper := request.ContextWrapper(c)
+// 	err := h.groupUsecase.PostMockData(ctx, req.Count)
+// 	if err != nil {
+// 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+// 	}
 
-	req := struct {
-		Count int `json:"count"`
-	}{}
-
-	if err := wrapper.Bind(&req); err != nil {
-		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
-	}
-
-	err := h.groupUsecase.PostMockData(ctx, req.Count)
-	if err != nil {
-		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
-	}
-
-	return response.SuccessResponse(c, http.StatusOK, fmt.Sprintf("%d Post data created", req.Count))
-}
+// 	return response.SuccessResponse(c, http.StatusOK, fmt.Sprintf("%d Post data created", req.Count))
+// }

@@ -14,6 +14,8 @@ type Group struct {
 	GroupName      string         `json:"group_name"`
 	GroupCreatorID int32          `json:"group_creator_id"`
 	PhotoUrl       sql.NullString `json:"photo_url"`
+	TagID          int32          `json:"tag_id"`
+	Frequency      sql.NullInt32  `json:"frequency"`
 	CreatedAt      time.Time      `json:"created_at"`
 }
 
@@ -22,11 +24,6 @@ type GroupMember struct {
 	MemberID  int32     `json:"member_id"`
 	Role      string    `json:"role"`
 	CreatedAt time.Time `json:"created_at"`
-}
-
-type GroupTag struct {
-	GroupID int32 `json:"group_id"`
-	TagID   int32 `json:"tag_id"`
 }
 
 type Post struct {
@@ -52,6 +49,22 @@ type PostReaction struct {
 	MemberID   int32     `json:"member_id"`
 	Reaction   string    `json:"reaction"`
 	CreatedAt  time.Time `json:"created_at"`
+}
+
+type Streak struct {
+	StreakID    int32         `json:"streak_id"`
+	StreakSetID int32         `json:"streak_set_id"`
+	PostID      int32         `json:"post_id"`
+	StreakCount sql.NullInt32 `json:"streak_count"`
+	CreatedAt   time.Time     `json:"created_at"`
+}
+
+type StreakSet struct {
+	StreakSetID int32         `json:"streak_set_id"`
+	GroupID     int32         `json:"group_id"`
+	UserID      int32         `json:"user_id"`
+	StreakCount sql.NullInt32 `json:"streak_count"`
+	Ended       bool          `json:"ended"`
 }
 
 type Tag struct {

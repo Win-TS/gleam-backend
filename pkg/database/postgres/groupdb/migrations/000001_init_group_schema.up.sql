@@ -47,21 +47,21 @@ CREATE TABLE "tags" (
   "icon_url" varchar
 );
 
-CREATE TABLE "streak_set" (
-  "streak_set_id" SERIAL PRIMARY KEY,
-  "group_id" INTEGER NOT NULL,
-  "user_id" INTEGER NOT NULL,
-  "streak_count" INTEGER,
-  "ended" BOOLEAN NOT NULL DEFAULT true
-);
+-- CREATE TABLE "streak_set" (
+--   "streak_set_id" SERIAL PRIMARY KEY,
+--   "group_id" INTEGER NOT NULL,
+--   "user_id" INTEGER NOT NULL,
+--   "streak_count" INTEGER,
+--   "ended" BOOLEAN NOT NULL DEFAULT true
+-- );
 
-CREATE TABLE "streaks" (
-  "streak_id" SERIAL PRIMARY KEY,
-  "streak_set_id" INTEGER NOT NULL,
-  "post_id" INTEGER NOT NULL,
-  "streak_count" INTEGER,
-  "created_at" TIMESTAMP NOT NULL DEFAULT (CURRENT_TIMESTAMP)
-);
+-- CREATE TABLE "streaks" (
+--   "streak_id" SERIAL PRIMARY KEY,
+--   "streak_set_id" INTEGER NOT NULL,
+--   "post_id" INTEGER NOT NULL,
+--   "streak_count" INTEGER,
+--   "created_at" TIMESTAMP NOT NULL DEFAULT (CURRENT_TIMESTAMP)
+-- );
 
 ALTER TABLE "group_members" ADD FOREIGN KEY ("group_id") REFERENCES "groups" ("group_id") ON DELETE CASCADE;
 
@@ -73,6 +73,6 @@ ALTER TABLE "post_comments" ADD FOREIGN KEY ("post_id") REFERENCES "posts" ("pos
 
 ALTER TABLE "groups" ADD FOREIGN KEY ("tag_id") REFERENCES "tags" ("tag_id");
 
-ALTER TABLE "posts" ADD FOREIGN KEY ("post_id") REFERENCES "streaks" ("post_id") ON DELETE CASCADE;
+-- ALTER TABLE "posts" ADD FOREIGN KEY ("post_id") REFERENCES "streaks" ("post_id") ON DELETE CASCADE;
 
-ALTER TABLE "streaks" ADD FOREIGN KEY ("streak_set_id") REFERENCES "streak_set" ("streak_set_id");
+-- ALTER TABLE "streaks" ADD FOREIGN KEY ("streak_set_id") REFERENCES "streak_set" ("streak_set_id");

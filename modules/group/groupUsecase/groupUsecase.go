@@ -3,6 +3,7 @@ package groupUsecase
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"io"
 	"math/rand"
 
@@ -47,8 +48,8 @@ type (
 		CreateNewTag(pctx context.Context, args groupdb.CreateNewTagParams) (groupdb.Tag, error)
 		GetAvailableTags(pctx context.Context) ([]groupdb.Tag, error)
 		GetGroupsByTagID(pctx context.Context, tagId int) ([]groupdb.Group, error)
-		// GroupMockData(pctx context.Context, count int) error
-		// PostMockData(ctx context.Context, count int) error
+		GroupMockData(pctx context.Context, count int) error
+		PostMockData(ctx context.Context, count int) error
 	}
 
 	groupUsecase struct {
@@ -341,73 +342,74 @@ func (u *groupUsecase) GetGroupsByTagID(pctx context.Context, tagId int) ([]grou
 	return groups, nil
 }
 
-// func (u *groupUsecase) GroupMockData(pctx context.Context, count int) error {
-// 	ctx := context.Background()
+func (u *groupUsecase) GroupMockData(pctx context.Context, count int) error {
+	ctx := context.Background()
 
-// 	tagNames := []string{"Music", "Workout", "Movie", "Reading", "Sport"}
-// 	tagIDs := make([]int32, len(tagNames))
-// 	existingTags := make(map[string]int32)
+	tagNames := []string{"Music", "Workout", "Movie", "Reading", "Sport"}
 
-// 	for i, tagName := range tagNames {
-// 		tagID, err := u.createOrGetTagByName(ctx, tagName, existingTags)
-// 		if err != nil {
-// 			return err
-// 		}
-// 		tagIDs[i] = tagID
-// 	}
+	tagIDs := make([]int32, len(tagNames))
+	tagIndex := rand.Intn(len(tagIDs))
+	existingTags := make(map[string]int32)
 
-// 	for i := 0; i < count; i++ {
-// 		groupName := fmt.Sprintf("Group %d", i+1)
+	for i, tagName := range tagNames {
+		tagID, err := u.createOrGetTagByName(ctx, tagName, existingTags)
+		if err != nil {
+			return err
+		}
+		tagIDs[i] = tagID
+	}
 
-// 		// Create group
-// 		group, err := u.store.CreateGroup(ctx, groupdb.CreateGroupParams{
-// 			GroupName:      groupName,
-// 			GroupCreatorID: 1,
-// 		})
-// 		if err != nil {
-// 			return err
-// 		}
+	for i := 0; i < count; i++ {
+		groupName := fmt.Sprintf("Group %d", i+1)
+		group, err := u.store.CreateGroup(ctx, groupdb.CreateGroupParams{
+			GroupName:      groupName,
+			GroupCreatorID: 1,
+			TagID:          tagIDs[tagIndex],
+		})
+		if err != nil {
+			return err
+		}
 
-// 		adminIndex := rand.Intn(10)
+		adminIndex := rand.Intn(10)
 
-// 		for j := 0; j < 10; j++ {
-// 			memberID := rand.Intn(10) + 1
-// 			role := "member"
+		for j := 0; j < 10; j++ {
+			memberID := rand.Intn(10) + 1
+			role := "member"
 
-// 			exists, err := u.memberExistsInGroup(ctx, group.GroupID, int32(memberID))
-// 			if err != nil {
-// 				return err
-// 			}
-// 			if exists {
-// 				continue
-// 			}
+			exists, err := u.memberExistsInGroup(ctx, group.GroupID, int32(memberID))
+			if err != nil {
+				return err
+			}
+			if exists {
+				continue
+			}
 
-// 			if j == adminIndex {
-// 				role = "admin"
-// 			}
+			if j == adminIndex {
+				role = "admin"
+			}
 
-// 			_, err = u.store.AddGroupMember(ctx, groupdb.AddGroupMemberParams{
-// 				GroupID:  group.GroupID,
-// 				MemberID: int32(memberID),
-// 				Role:     role,
-// 			})
-// 			if err != nil {
-// 				return err
-// 			}
-// 		}
+			_, err = u.store.AddGroupMember(ctx, groupdb.AddGroupMemberParams{
+				GroupID:  group.GroupID,
+				MemberID: int32(memberID),
+				Role:     role,
+			})
+			if err != nil {
+				return err
+			}
+		}
 
-// 		tagIndex := rand.Intn(len(tagIDs))
-// 		_, err = u.store.AddGroupTag(ctx, groupdb.AddGroupTagParams{
-// 			GroupID: group.GroupID,
-// 			TagID:   tagIDs[tagIndex],
-// 		})
-// 		if err != nil {
-// 			return err
-// 		}
-// 	}
+		// tagIndex := rand.Intn(len(tagIDs))
+		// _, err = u.store.AddGroupTag(ctx, groupdb.AddGroupTagParams{
+		// 	GroupID: group.GroupID,
+		// 	TagID:   tagIDs[tagIndex],
+		// })
+		// if err != nil {
+		// 	return err
+		// }
+	}
 
-// 	return nil
-// }
+	return nil
+}
 
 func (u *groupUsecase) memberExistsInGroup(ctx context.Context, groupID, memberID int32) (bool, error) {
 	members, err := u.store.GetMembersByGroupID(ctx, groupID)
@@ -441,17 +443,14 @@ func (u *groupUsecase) createOrGetTagByName(ctx context.Context, tagName string,
 }
 
 func (u *groupUsecase) PostMockData(ctx context.Context, count int) error {
-	// Retrieve list of groups
 	groups, err := u.store.ListGroups(ctx, groupdb.ListGroupsParams{
 		Limit:  int32(count),
-		Offset: 0, // Assuming you want to start from the first group
+		Offset: 0,
 	})
 
 	if err != nil {
 		return err
 	}
-
-	// Seed random number generator
 
 	for _, group := range groups {
 		for i := 0; i < count; i++ {
@@ -461,8 +460,7 @@ func (u *groupUsecase) PostMockData(ctx context.Context, count int) error {
 				return err
 			}
 
-			// Create reactions (random number)
-			numReactions := rand.Intn(10) // Random number of reactions (0 to 9)
+			numReactions := rand.Intn(10)
 			for j := 0; j < numReactions; j++ {
 				err := u.createReaction(ctx, postID)
 				if err != nil {
@@ -470,8 +468,7 @@ func (u *groupUsecase) PostMockData(ctx context.Context, count int) error {
 				}
 			}
 
-			// Create comments (random number)
-			numComments := rand.Intn(10) // Random number of comments (0 to 9)
+			numComments := rand.Intn(10)
 			for j := 0; j < numComments; j++ {
 				err := u.createComment(ctx, postID)
 				if err != nil {
@@ -485,12 +482,11 @@ func (u *groupUsecase) PostMockData(ctx context.Context, count int) error {
 }
 
 func (u *groupUsecase) createPost(ctx context.Context, groupID int32) (int32, error) {
-	// Create post with random photo URL and description
 	photoURL := sql.NullString{String: "https://example.com/photo.jpg", Valid: true}
 	description := sql.NullString{String: "Lorem ipsum dolor sit amet", Valid: true}
 
 	post, err := u.store.CreatePost(ctx, groupdb.CreatePostParams{
-		MemberID:    1, // Assuming member ID is 1, update accordingly
+		MemberID:    1,
 		GroupID:     groupID,
 		PhotoUrl:    photoURL,
 		Description: description,
@@ -505,7 +501,7 @@ func (u *groupUsecase) createPost(ctx context.Context, groupID int32) (int32, er
 func (u *groupUsecase) createReaction(ctx context.Context, postID int32) error {
 	memberID := rand.Int31n(10) + 1
 	reactions := []string{"like", "love", "haha", "wow", "sad", "angry"}
-	reaction := reactions[rand.Intn(len(reactions))] // Random reaction type
+	reaction := reactions[rand.Intn(len(reactions))]
 
 	_, err := u.store.CreateReaction(ctx, groupdb.CreateReactionParams{
 		PostID:   postID,
@@ -516,7 +512,6 @@ func (u *groupUsecase) createReaction(ctx context.Context, postID int32) error {
 }
 
 func (u *groupUsecase) createComment(ctx context.Context, postID int32) error {
-	// Create comment with random member ID and comment text
 	fake := faker.New()
 	memberID := rand.Int31n(10) + 1
 	comment := fake.Lorem().Sentence(5)

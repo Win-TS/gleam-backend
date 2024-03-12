@@ -2,6 +2,7 @@ package groupHandler
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -41,15 +42,15 @@ type (
 		EditReaction(c echo.Context) error
 		DeleteReaction(c echo.Context) error
 		CreateComment(c echo.Context) error
-		GetCommentsByPostId(c echo.Context) error
+		GetCommentsByPostId(c echo.Context) error	
 		GetCommentCountByPostId(c echo.Context) error
 		EditComment(c echo.Context) error
 		DeleteComment(c echo.Context) error
 		CreateTag(c echo.Context) error
 		GetAvailableTags(c echo.Context) error
 		GetGroupsByTagID(c echo.Context) error
-		// GroupMockData(c echo.Context) error
-		// PostMockData(c echo.Context) error
+		GroupMockData(c echo.Context) error
+		PostMockData(c echo.Context) error
 	}
 
 	groupHttpHandler struct {
@@ -637,43 +638,43 @@ func (h *groupHttpHandler) GetGroupsByTagID(c echo.Context) error {
 	return response.SuccessResponse(c, http.StatusOK, groups)
 }
 
-// func (h *groupHttpHandler) GroupMockData(c echo.Context) error {
-// 	ctx := context.Background()
-// 	wrapper := request.ContextWrapper(c)
+func (h *groupHttpHandler) GroupMockData(c echo.Context) error {
+	ctx := context.Background()
+	wrapper := request.ContextWrapper(c)
 
-// 	req := struct {
-// 		Count int `json:"count"`
-// 	}{}
+	req := struct {
+		Count int `json:"count"`
+	}{}
 
-// 	if err := wrapper.Bind(&req); err != nil {
-// 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
-// 	}
+	if err := wrapper.Bind(&req); err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
 
-// 	err := h.groupUsecase.GroupMockData(ctx, req.Count)
-// 	if err != nil {
-// 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
-// 	}
+	err := h.groupUsecase.GroupMockData(ctx, req.Count)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
 
-// 	return response.SuccessResponse(c, http.StatusOK, fmt.Sprintf("%d group data created", req.Count))
+	return response.SuccessResponse(c, http.StatusOK, fmt.Sprintf("%d group data created", req.Count))
 
-// }
+}
 
-// func (h *groupHttpHandler) PostMockData(c echo.Context) error {
-// 	ctx := context.Background()
-// 	wrapper := request.ContextWrapper(c)
+func (h *groupHttpHandler) PostMockData(c echo.Context) error {
+	ctx := context.Background()
+	wrapper := request.ContextWrapper(c)
 
-// 	req := struct {
-// 		Count int `json:"count"`
-// 	}{}
+	req := struct {
+		Count int `json:"count"`
+	}{}
 
-// 	if err := wrapper.Bind(&req); err != nil {
-// 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
-// 	}
+	if err := wrapper.Bind(&req); err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
 
-// 	err := h.groupUsecase.PostMockData(ctx, req.Count)
-// 	if err != nil {
-// 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
-// 	}
+	err := h.groupUsecase.PostMockData(ctx, req.Count)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
 
-// 	return response.SuccessResponse(c, http.StatusOK, fmt.Sprintf("%d Post data created", req.Count))
-// }
+	return response.SuccessResponse(c, http.StatusOK, fmt.Sprintf("%d Post data created", req.Count))
+}

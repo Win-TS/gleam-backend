@@ -14,7 +14,7 @@ type Friend struct {
 	UserId1   sql.NullInt32  `json:"user_id1"`
 	UserId2   sql.NullInt32  `json:"user_id2"`
 	Status    sql.NullString `json:"status"`
-	CreatedAt sql.NullTime   `json:"created_at"`
+	CreatedAt time.Time      `json:"created_at"`
 }
 
 type User struct {
@@ -30,5 +30,5 @@ type User struct {
 	Birthday       time.Time      `json:"birthday"`
 	Gender         string         `json:"gender"`
 	Photourl       sql.NullString `json:"photourl"`
-	CreatedAt      sql.NullTime   `json:"created_at"`
+	CreatedAt      time.Time      `json:"created_at"`
 }

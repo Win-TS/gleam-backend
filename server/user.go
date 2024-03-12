@@ -40,6 +40,7 @@ func (s *server) userService() {
 	friend.GET("/", httpHandler.FriendInfo)
 	friend.GET("/list", httpHandler.FriendListById)
 	friend.GET("/count", httpHandler.FriendsCount)
+	friend.GET("/requested", httpHandler.FriendsRequestedList)
 	friend.GET("/pending", httpHandler.FriendsPendingList)
 	friend.POST("/add", httpHandler.AddFriend)
 	friend.PATCH("/accept", httpHandler.FriendAccept)

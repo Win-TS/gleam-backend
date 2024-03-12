@@ -27,9 +27,10 @@ type UserUsecaseService interface {
 	EditPhoneNumber(pctx context.Context, args userdb.ChangePhoneNoParams) (userdb.User, error)
 	DeleteUser(pctx context.Context, id int) error
 	FriendInfo(ctx context.Context, args userdb.GetFriendParams) ([]userdb.Friend, error)
-	FriendListById(pctx context.Context, id int) ([]int64, error)
+	FriendListById(pctx context.Context, id int) ([]userdb.ListFriendsByUserIdRow, error)
 	FriendsCount(pctx context.Context, userId1 sql.NullInt32) (int64, error)
-	FriendsPendingList(pctx context.Context, userId2 sql.NullInt32) ([]userdb.Friend, error)
+	FriendsRequestedList(pctx context.Context, userId1 sql.NullInt32) ([]userdb.User, error)
+	FriendsPendingList(pctx context.Context, userId2 sql.NullInt32) ([]userdb.User, error)
 	AddFriend(pctx context.Context, args user.CreateFriendReq) (userdb.Friend, error)
 	FriendAccept(pctx context.Context, args user.EditFriendStatusAcceptedReq) error
 	UserMockData(ctx context.Context, count int16) error
@@ -153,23 +154,12 @@ func (u *userUsecase) FriendInfo(pctx context.Context, args userdb.GetFriendPara
 	return []userdb.Friend{friend}, nil
 }
 
-func (u *userUsecase) FriendListById(pctx context.Context, id int) ([]int64, error) {
-	friends, err := u.store.ListFriendsByUserId(pctx, userdb.ListFriendsByUserIdParams{
-		UserId1: sql.NullInt32{Int32: int32(id), Valid: true},
-		Limit:   10,
-		Offset:  0,
-	})
+func (u *userUsecase) FriendListById(pctx context.Context, id int) ([]userdb.ListFriendsByUserIdRow, error) {
+	friends, err := u.store.ListFriendsByUserId(pctx, utils.ConvertIntToSqlNullInt32(id))
 	if err != nil {
 		return nil, err
 	}
-
-	friendIDs := make([]int64, 0, len(friends))
-	for _, friend := range friends {
-		friendID := friend.(int64)
-		friendIDs = append(friendIDs, friendID)
-	}
-
-	return friendIDs, nil
+	return friends, nil
 }
 
 func (u *userUsecase) FriendsCount(pctx context.Context, userId1 sql.NullInt32) (int64, error) {
@@ -180,7 +170,16 @@ func (u *userUsecase) FriendsCount(pctx context.Context, userId1 sql.NullInt32) 
 	return count, nil
 }
 
-func (u *userUsecase) FriendsPendingList(pctx context.Context, userId2 sql.NullInt32) ([]userdb.Friend, error) {
+func (u *userUsecase) FriendsRequestedList(pctx context.Context, userId1 sql.NullInt32) ([]userdb.User, error) {
+	friends, err := u.store.GetFriendsRequestedList(pctx, userId1)
+	if err != nil {
+		return nil, err
+	}
+
+	return friends, nil
+}
+
+func (u *userUsecase) FriendsPendingList(pctx context.Context, userId2 sql.NullInt32) ([]userdb.User, error) {
 	friends, err := u.store.GetFriendsPendingList(pctx, userId2)
 	if err != nil {
 		return nil, err

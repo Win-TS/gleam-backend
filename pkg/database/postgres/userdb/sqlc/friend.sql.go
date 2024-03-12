@@ -8,6 +8,7 @@ package userdb
 import (
 	"context"
 	"database/sql"
+	"time"
 )
 
 const createFriend = `-- name: CreateFriend :one
@@ -91,30 +92,6 @@ func (q *Queries) GetFriend(ctx context.Context, arg GetFriendParams) (Friend, e
 	return i, err
 }
 
-const getFriendForUpdate = `-- name: GetFriendForUpdate :one
-SELECT id, user_id1, user_id2, status, created_at FROM friends
-WHERE user_id1 = $1 AND user_id2 = $2 LIMIT 1 
-FOR NO KEY UPDATE
-`
-
-type GetFriendForUpdateParams struct {
-	UserId1 sql.NullInt32 `json:"user_id1"`
-	UserId2 sql.NullInt32 `json:"user_id2"`
-}
-
-func (q *Queries) GetFriendForUpdate(ctx context.Context, arg GetFriendForUpdateParams) (Friend, error) {
-	row := q.db.QueryRowContext(ctx, getFriendForUpdate, arg.UserId1, arg.UserId2)
-	var i Friend
-	err := row.Scan(
-		&i.ID,
-		&i.UserId1,
-		&i.UserId2,
-		&i.Status,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
 const getFriendsCountByID = `-- name: GetFriendsCountByID :one
 SELECT COUNT(*) FROM friends
 WHERE (user_id1 = $1 OR user_id2 = $1) AND status = 'Accepted'
@@ -127,29 +104,38 @@ func (q *Queries) GetFriendsCountByID(ctx context.Context, userId1 sql.NullInt32
 	return count, err
 }
 
-const getFriendsListByID = `-- name: GetFriendsListByID :many
-SELECT
-    CASE
-        WHEN user_id1 = $1 THEN user_id2
-        ELSE user_id1
-    END AS friend_id
-FROM friends
-WHERE (user_id1 = $1 OR user_id2 = $1) AND status = 'Accepted'
+const getFriendsPendingList = `-- name: GetFriendsPendingList :many
+SELECT users.id, users.username, users.email, users.firstname, users.lastname, users.phone_no, users.private_account, users.nationality, users.age, users.birthday, users.gender, users.photourl, users.created_at FROM friends JOIN users ON friends.user_id1 = users.id
+WHERE user_id2 = $1 AND status = 'Pending'
 `
 
-func (q *Queries) GetFriendsListByID(ctx context.Context, userId1 sql.NullInt32) ([]interface{}, error) {
-	rows, err := q.db.QueryContext(ctx, getFriendsListByID, userId1)
+func (q *Queries) GetFriendsPendingList(ctx context.Context, userId2 sql.NullInt32) ([]User, error) {
+	rows, err := q.db.QueryContext(ctx, getFriendsPendingList, userId2)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []interface{}{}
+	items := []User{}
 	for rows.Next() {
-		var friend_id interface{}
-		if err := rows.Scan(&friend_id); err != nil {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.Username,
+			&i.Email,
+			&i.Firstname,
+			&i.Lastname,
+			&i.PhoneNo,
+			&i.PrivateAccount,
+			&i.Nationality,
+			&i.Age,
+			&i.Birthday,
+			&i.Gender,
+			&i.Photourl,
+			&i.CreatedAt,
+		); err != nil {
 			return nil, err
 		}
-		items = append(items, friend_id)
+		items = append(items, i)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err
@@ -160,25 +146,33 @@ func (q *Queries) GetFriendsListByID(ctx context.Context, userId1 sql.NullInt32)
 	return items, nil
 }
 
-const getFriendsPendingList = `-- name: GetFriendsPendingList :many
-SELECT id, user_id1, user_id2, status, created_at FROM friends
-WHERE user_id2 = $1 AND status = 'Pending'
+const getFriendsRequestedList = `-- name: GetFriendsRequestedList :many
+SELECT users.id, users.username, users.email, users.firstname, users.lastname, users.phone_no, users.private_account, users.nationality, users.age, users.birthday, users.gender, users.photourl, users.created_at FROM friends JOIN users ON friends.user_id2 = users.id
+WHERE user_id1 = $1 AND status = 'Pending'
 `
 
-func (q *Queries) GetFriendsPendingList(ctx context.Context, userId2 sql.NullInt32) ([]Friend, error) {
-	rows, err := q.db.QueryContext(ctx, getFriendsPendingList, userId2)
+func (q *Queries) GetFriendsRequestedList(ctx context.Context, userId1 sql.NullInt32) ([]User, error) {
+	rows, err := q.db.QueryContext(ctx, getFriendsRequestedList, userId1)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Friend{}
+	items := []User{}
 	for rows.Next() {
-		var i Friend
+		var i User
 		if err := rows.Scan(
 			&i.ID,
-			&i.UserId1,
-			&i.UserId2,
-			&i.Status,
+			&i.Username,
+			&i.Email,
+			&i.Firstname,
+			&i.Lastname,
+			&i.PhoneNo,
+			&i.PrivateAccount,
+			&i.Nationality,
+			&i.Age,
+			&i.Birthday,
+			&i.Gender,
+			&i.Photourl,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -199,34 +193,59 @@ SELECT
     CASE
         WHEN user_id1 = $1 THEN user_id2
         ELSE user_id1
-    END AS friend_id
-FROM friends
+    END AS friend_id,
+    users.id, users.username, users.email, users.firstname, users.lastname, users.phone_no, users.private_account, users.nationality, users.age, users.birthday, users.gender, users.photourl, users.created_at
+FROM friends JOIN users ON friends.user_id2 = users.id
 WHERE (user_id1 = $1 OR user_id2 = $1)
 AND status = 'Accepted'
 ORDER BY friend_id
-LIMIT $2
-OFFSET $3
 `
 
-type ListFriendsByUserIdParams struct {
-	UserId1 sql.NullInt32 `json:"user_id1"`
-	Limit   int32         `json:"limit"`
-	Offset  int32         `json:"offset"`
+type ListFriendsByUserIdRow struct {
+	FriendID       interface{}    `json:"friend_id"`
+	ID             int32          `json:"id"`
+	Username       string         `json:"username"`
+	Email          string         `json:"email"`
+	Firstname      string         `json:"firstname"`
+	Lastname       string         `json:"lastname"`
+	PhoneNo        string         `json:"phone_no"`
+	PrivateAccount bool           `json:"private_account"`
+	Nationality    string         `json:"nationality"`
+	Age            int32          `json:"age"`
+	Birthday       time.Time      `json:"birthday"`
+	Gender         string         `json:"gender"`
+	Photourl       sql.NullString `json:"photourl"`
+	CreatedAt      time.Time      `json:"created_at"`
 }
 
-func (q *Queries) ListFriendsByUserId(ctx context.Context, arg ListFriendsByUserIdParams) ([]interface{}, error) {
-	rows, err := q.db.QueryContext(ctx, listFriendsByUserId, arg.UserId1, arg.Limit, arg.Offset)
+func (q *Queries) ListFriendsByUserId(ctx context.Context, userId1 sql.NullInt32) ([]ListFriendsByUserIdRow, error) {
+	rows, err := q.db.QueryContext(ctx, listFriendsByUserId, userId1)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []interface{}{}
+	items := []ListFriendsByUserIdRow{}
 	for rows.Next() {
-		var friend_id interface{}
-		if err := rows.Scan(&friend_id); err != nil {
+		var i ListFriendsByUserIdRow
+		if err := rows.Scan(
+			&i.FriendID,
+			&i.ID,
+			&i.Username,
+			&i.Email,
+			&i.Firstname,
+			&i.Lastname,
+			&i.PhoneNo,
+			&i.PrivateAccount,
+			&i.Nationality,
+			&i.Age,
+			&i.Birthday,
+			&i.Gender,
+			&i.Photourl,
+			&i.CreatedAt,
+		); err != nil {
 			return nil, err
 		}
-		items = append(items, friend_id)
+		items = append(items, i)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err

@@ -29,6 +29,7 @@ type (
 		FriendInfo(c echo.Context) error
 		FriendListById(c echo.Context) error
 		FriendsCount(c echo.Context) error
+		FriendsRequestedList(c echo.Context) error
 		FriendsPendingList(c echo.Context) error
 		AddFriend(c echo.Context) error
 		FriendAccept(c echo.Context) error
@@ -222,7 +223,7 @@ func (h *userHttpHandler) FriendInfo(c echo.Context) error {
 
 	friends, err := h.userUsecase.FriendInfo(c.Request().Context(), arg)
 	if err != nil {
-		return response.ErrResponse(c, http.StatusInternalServerError, "Failed to fetch friends")
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
 
 	return response.SuccessResponse(c, http.StatusOK, friends)
@@ -230,14 +231,15 @@ func (h *userHttpHandler) FriendInfo(c echo.Context) error {
 
 // List friends by user ID.
 func (h *userHttpHandler) FriendListById(c echo.Context) error {
+	ctx := context.Background()
 	userIDStr := c.QueryParam("user_id")
 	userID, err := strconv.Atoi(userIDStr)
 	if err != nil {
 		return response.ErrResponse(c, http.StatusBadRequest, "Invalid user ID")
 	}
-	friends, err := h.userUsecase.FriendListById(c.Request().Context(), userID)
+	friends, err := h.userUsecase.FriendListById(ctx, userID)
 	if err != nil {
-		return response.ErrResponse(c, http.StatusInternalServerError, "Failed to fetch friends")
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
 
 	return response.SuccessResponse(c, http.StatusOK, friends)
@@ -253,10 +255,26 @@ func (h *userHttpHandler) FriendsCount(c echo.Context) error {
 
 	count, err := h.userUsecase.FriendsCount(c.Request().Context(), sql.NullInt32{Int32: int32(userID), Valid: true})
 	if err != nil {
-		return response.ErrResponse(c, http.StatusInternalServerError, "Failed to get friends count")
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
 
 	return response.SuccessResponse(c, http.StatusOK, count)
+}
+
+// GetFriendsRequestedList returns a list of pending friend requests for a given user ID.
+func (h *userHttpHandler) FriendsRequestedList(c echo.Context) error {
+	ctx := context.Background()
+	userIDStr := c.QueryParam("user_id1")
+	userID, err := strconv.Atoi(userIDStr)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, "Invalid user ID")
+	}
+	requestedFriends, err := h.userUsecase.FriendsRequestedList(ctx, sql.NullInt32{Int32: int32(userID), Valid: true})
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	return response.SuccessResponse(c, http.StatusOK, requestedFriends)
 }
 
 // GetFriendsPendingList returns a list of pending friend requests for a given user ID.
@@ -269,7 +287,7 @@ func (h *userHttpHandler) FriendsPendingList(c echo.Context) error {
 	}
 	pendingFriends, err := h.userUsecase.FriendsPendingList(ctx, sql.NullInt32{Int32: int32(userID), Valid: true})
 	if err != nil {
-		return response.ErrResponse(c, http.StatusInternalServerError, "Failed to fetch pending friend requests")
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
 
 	return response.SuccessResponse(c, http.StatusOK, pendingFriends)
@@ -288,7 +306,7 @@ func (h *userHttpHandler) AddFriend(c echo.Context) error {
 	// Dereference the pointer when passing it to AddFriend
 	createdFriend, err := h.userUsecase.AddFriend(ctx, *args)
 	if err != nil {
-		return response.ErrResponse(c, http.StatusInternalServerError, "Failed to create friendship")
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
 
 	return response.SuccessResponse(c, http.StatusCreated, createdFriend)

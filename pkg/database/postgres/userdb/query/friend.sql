@@ -15,36 +15,25 @@ LIMIT 1;
 SELECT COUNT(*) FROM friends
 WHERE (user_id1 = $1 OR user_id2 = $1) AND status = 'Accepted';
 
--- name: GetFriendsListByID :many
-SELECT
-    CASE
-        WHEN user_id1 = $1 THEN user_id2
-        ELSE user_id1
-    END AS friend_id
-FROM friends
-WHERE (user_id1 = $1 OR user_id2 = $1) AND status = 'Accepted';
+-- name: GetFriendsRequestedList :many
+SELECT users.* FROM friends JOIN users ON friends.user_id2 = users.id
+WHERE user_id1 = $1 AND status = 'Pending';
 
 -- name: GetFriendsPendingList :many
-SELECT * FROM friends
+SELECT users.* FROM friends JOIN users ON friends.user_id1 = users.id
 WHERE user_id2 = $1 AND status = 'Pending';
-
--- name: GetFriendForUpdate :one
-SELECT * FROM friends
-WHERE user_id1 = $1 AND user_id2 = $2 LIMIT 1 
-FOR NO KEY UPDATE;
 
 -- name: ListFriendsByUserId :many
 SELECT 
     CASE
         WHEN user_id1 = $1 THEN user_id2
         ELSE user_id1
-    END AS friend_id
-FROM friends
+    END AS friend_id,
+    users.*
+FROM friends JOIN users ON friends.user_id2 = users.id
 WHERE (user_id1 = $1 OR user_id2 = $1)
 AND status = 'Accepted'
-ORDER BY friend_id
-LIMIT $2
-OFFSET $3;
+ORDER BY friend_id;
 
 -- name: EditFriendStatusAccepted :exec
 UPDATE friends SET status = 'Accepted'

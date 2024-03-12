@@ -18,14 +18,13 @@ type Querier interface {
 	EditFriendStatusAccepted(ctx context.Context, arg EditFriendStatusAcceptedParams) error
 	EditFriendStatusDeclined(ctx context.Context, arg EditFriendStatusDeclinedParams) error
 	GetFriend(ctx context.Context, arg GetFriendParams) (Friend, error)
-	GetFriendForUpdate(ctx context.Context, arg GetFriendForUpdateParams) (Friend, error)
 	GetFriendsCountByID(ctx context.Context, userId1 sql.NullInt32) (int64, error)
-	GetFriendsListByID(ctx context.Context, userId1 sql.NullInt32) ([]interface{}, error)
-	GetFriendsPendingList(ctx context.Context, userId2 sql.NullInt32) ([]Friend, error)
+	GetFriendsPendingList(ctx context.Context, userId2 sql.NullInt32) ([]User, error)
+	GetFriendsRequestedList(ctx context.Context, userId1 sql.NullInt32) ([]User, error)
 	GetLatestId(ctx context.Context) (int32, error)
 	GetUser(ctx context.Context, id int32) (User, error)
 	GetUserForUpdate(ctx context.Context, id int32) (User, error)
-	ListFriendsByUserId(ctx context.Context, arg ListFriendsByUserIdParams) ([]interface{}, error)
+	ListFriendsByUserId(ctx context.Context, userId1 sql.NullInt32) ([]ListFriendsByUserIdRow, error)
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error)
 	UpdateProfile(ctx context.Context, arg UpdateProfileParams) error
 }

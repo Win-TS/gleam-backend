@@ -359,12 +359,15 @@ func (u *groupUsecase) GroupMockData(pctx context.Context, count int) error {
 		tagIDs[i] = tagID
 	}
 
+	randomFrequency := rand.Int31n(10) + 1
+
 	for i := 0; i < count; i++ {
 		groupName := fmt.Sprintf("Group %d", i+1)
 		group, err := u.store.CreateGroup(ctx, groupdb.CreateGroupParams{
 			GroupName:      groupName,
-			GroupCreatorID: 1,
+			GroupCreatorID: int32(rand.Intn(10) + 1),
 			TagID:          tagIDs[tagIndex],
+			Frequency:      sql.NullInt32{Int32: randomFrequency, Valid: true},
 		})
 		if err != nil {
 			return err
@@ -397,15 +400,6 @@ func (u *groupUsecase) GroupMockData(pctx context.Context, count int) error {
 				return err
 			}
 		}
-
-		// tagIndex := rand.Intn(len(tagIDs))
-		// _, err = u.store.AddGroupTag(ctx, groupdb.AddGroupTagParams{
-		// 	GroupID: group.GroupID,
-		// 	TagID:   tagIDs[tagIndex],
-		// })
-		// if err != nil {
-		// 	return err
-		// }
 	}
 
 	return nil
@@ -454,7 +448,6 @@ func (u *groupUsecase) PostMockData(ctx context.Context, count int) error {
 
 	for _, group := range groups {
 		for i := 0; i < count; i++ {
-			// Create post
 			postID, err := u.createPost(ctx, group.GroupID)
 			if err != nil {
 				return err

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"math/rand"
+	"net/http"
 	"time"
 
 	"strconv"
@@ -15,6 +16,7 @@ import (
 	userdb "github.com/Win-TS/gleam-backend.git/pkg/database/postgres/userdb/sqlc"
 	"github.com/Win-TS/gleam-backend.git/pkg/utils"
 	"github.com/jaswdr/faker"
+	"github.com/labstack/echo/v4"
 )
 
 type UserUsecaseService interface {
@@ -191,6 +193,27 @@ func (u *userUsecase) FriendsPendingList(pctx context.Context, userId2 sql.NullI
 func (u *userUsecase) AddFriend(pctx context.Context, args user.CreateFriendReq) (userdb.Friend, error) {
 	userID1 := utils.ConvertIntToSqlNullInt32(args.User_id1)
 	userID2 := utils.ConvertIntToSqlNullInt32(args.User_id2)
+
+	requestedList, err := u.store.GetFriendsRequestedList(pctx, userID1)
+	if err != nil {
+		return userdb.Friend{}, err
+	}
+	for _, friend := range requestedList {
+		if int(friend.ID) == args.User_id2 {
+			return userdb.Friend{}, echo.NewHTTPError(http.StatusConflict, "Duplicate record")
+		}
+	}
+
+	pendingList, err := u.store.GetFriendsPendingList(pctx, userID1)
+	if err != nil {
+		return userdb.Friend{}, err
+	}
+	for _, friend := range pendingList {
+		if int(friend.ID) == args.User_id2 {
+			return userdb.Friend{}, echo.NewHTTPError(http.StatusConflict, "Duplicate record")
+		}
+	}
+
 	arg := userdb.CreateFriendParams{
 		UserId1: userID1,
 		UserId2: userID2,
@@ -278,7 +301,7 @@ func (u *userUsecase) createUser(ctx context.Context, seed int16) (userdb.User, 
 func (u *userUsecase) createFakeFriends(ctx context.Context, userID int32, totalUsers int32) error {
 	existingUserIDs := make([]int32, 0, totalUsers)
 	for i := int32(1); i <= totalUsers; i++ {
-		if i != userID { // Exclude the current user
+		if i != userID {
 			existingUserIDs = append(existingUserIDs, i)
 		}
 	}

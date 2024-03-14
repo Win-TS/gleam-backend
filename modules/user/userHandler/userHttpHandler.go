@@ -303,7 +303,6 @@ func (h *userHttpHandler) AddFriend(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 
-	// Dereference the pointer when passing it to AddFriend
 	createdFriend, err := h.userUsecase.AddFriend(ctx, *args)
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())

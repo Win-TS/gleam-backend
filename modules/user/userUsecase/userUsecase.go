@@ -19,6 +19,8 @@ import (
 
 type UserUsecaseService interface {
 	GetUserProfile(pctx context.Context, id int) (user.UserProfile, error)
+	GetUserProfileByEmail(pctx context.Context, email string) (user.UserProfile, error)
+	GetUserProfileByUsername(pctx context.Context, username string) (user.UserProfile, error)
 	GetLatestId(pctx context.Context) (int, error)
 	RegisterNewUser(pctx context.Context, payload *user.NewUserReq, photoUrl string) (userdb.User, error)
 	SaveToFirebaseStorage(pctx context.Context, bucketName, objectPath, filename string, file io.Reader) (string, error)
@@ -82,6 +84,48 @@ func (u *userUsecase) GetUserProfile(pctx context.Context, id int) (user.UserPro
 
 	userID := sql.NullInt32{Int32: int32(id), Valid: true}
 
+	userFriendCount, err := u.store.GetFriendsCountByID(pctx, userID)
+	if err != nil {
+		return user.UserProfile{}, err
+	}
+
+	return user.UserProfile{
+		Username:     userData.Username,
+		Firstname:    userData.Firstname,
+		Lastname:     userData.Lastname,
+		FriendsCount: int(userFriendCount),
+		PhotoUrl:     userData.Photourl.String,
+	}, nil
+}
+
+func (u *userUsecase) GetUserProfileByEmail(pctx context.Context, email string) (user.UserProfile, error) {
+	userData, err := u.store.GetUserByEmail(pctx, email)
+	if err != nil {
+		return user.UserProfile{}, err
+	}
+
+	userID := sql.NullInt32{Int32: userData.ID, Valid: true}
+	userFriendCount, err := u.store.GetFriendsCountByID(pctx, userID)
+	if err != nil {
+		return user.UserProfile{}, err
+	}
+
+	return user.UserProfile{
+		Username:     userData.Username,
+		Firstname:    userData.Firstname,
+		Lastname:     userData.Lastname,
+		FriendsCount: int(userFriendCount),
+		PhotoUrl:     userData.Photourl.String,
+	}, nil
+}
+
+func (u *userUsecase) GetUserProfileByUsername(pctx context.Context, username string) (user.UserProfile, error) {
+	userData, err := u.store.GetUserByUsername(pctx, username)
+	if err != nil {
+		return user.UserProfile{}, err
+	}
+
+	userID := sql.NullInt32{Int32: userData.ID, Valid: true}
 	userFriendCount, err := u.store.GetFriendsCountByID(pctx, userID)
 	if err != nil {
 		return user.UserProfile{}, err

@@ -20,6 +20,8 @@ import (
 type (
 	UserHttpHandlerService interface {
 		GetUserProfile(c echo.Context) error
+		GetUserProfileByEmail(c echo.Context) error
+		GetUserProfileByUsername(c echo.Context) error
 		RegisterNewUser(c echo.Context) error
 		GetUserInfo(c echo.Context) error
 		GetUserInfoByEmail(c echo.Context) error
@@ -57,6 +59,32 @@ func (h *userHttpHandler) GetUserProfile(c echo.Context) error {
 	}
 
 	res, err := h.userUsecase.GetUserProfile(ctx, userId)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	return response.SuccessResponse(c, http.StatusOK, res)
+}
+
+// GetUserProfileByEmail returns a response payload showing data for user profile, using request parameter "email".
+func (h *userHttpHandler) GetUserProfileByEmail(c echo.Context) error {
+	ctx := context.Background()
+	email := c.QueryParam("email")
+
+	res, err := h.userUsecase.GetUserProfileByEmail(ctx, email)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	return response.SuccessResponse(c, http.StatusOK, res)
+}
+
+// GetUserProfileByUsername returns a response payload showing data for user profile, using request parameter "username".
+func (h *userHttpHandler) GetUserProfileByUsername(c echo.Context) error {
+	ctx := context.Background()
+	username := c.QueryParam("username")
+
+	res, err := h.userUsecase.GetUserProfileByUsername(ctx, username)
 	if err != nil {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}

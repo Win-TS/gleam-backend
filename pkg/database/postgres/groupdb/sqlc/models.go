@@ -16,6 +16,7 @@ type Group struct {
 	PhotoUrl       sql.NullString `json:"photo_url"`
 	TagID          int32          `json:"tag_id"`
 	Frequency      sql.NullInt32  `json:"frequency"`
+	MaxMembers     int32          `json:"max_members"`
 	CreatedAt      time.Time      `json:"created_at"`
 }
 
@@ -65,6 +66,7 @@ type StreakSet struct {
 	UserID      int32         `json:"user_id"`
 	StreakCount sql.NullInt32 `json:"streak_count"`
 	Ended       bool          `json:"ended"`
+	CreatedAt   time.Time     `json:"created_at"`
 }
 
 type Tag struct {

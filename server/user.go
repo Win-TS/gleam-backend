@@ -31,6 +31,8 @@ func (s *server) userService() {
 	user.GET("/userprofile", httpHandler.GetUserProfile)
 	user.POST("/uploaduserphoto", httpHandler.UploadProfilePhoto)
 	user.GET("/userinfo", httpHandler.GetUserInfo)
+	user.GET("/userinfobyemail", httpHandler.GetUserInfoByEmail)
+	user.GET("/userinfobyusername", httpHandler.GetUserInfoByUsername)
 	user.PATCH("/editusername", httpHandler.EditUsername)
 	user.PATCH("/changephoneno", httpHandler.EditPhoneNumber)
 	user.DELETE("/deleteuser", httpHandler.DeleteUser)

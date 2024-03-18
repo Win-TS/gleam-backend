@@ -22,6 +22,8 @@ type (
 		GetUserProfile(c echo.Context) error
 		RegisterNewUser(c echo.Context) error
 		GetUserInfo(c echo.Context) error
+		GetUserInfoByEmail(c echo.Context) error
+		GetUserInfoByUsername(c echo.Context) error
 		UploadProfilePhoto(c echo.Context) error
 		EditUsername(c echo.Context) error
 		EditPhoneNumber(c echo.Context) error
@@ -114,6 +116,30 @@ func (h *userHttpHandler) GetUserInfo(c echo.Context) error {
 	}
 
 	res, err := h.userUsecase.GetUserInfo(ctx, userId)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	return response.SuccessResponse(c, http.StatusOK, res)
+}
+
+func (h *userHttpHandler) GetUserInfoByEmail(c echo.Context) error {
+	ctx := context.Background()
+	email := c.QueryParam("email")
+
+	res, err := h.userUsecase.GetUserInfoByEmail(ctx, email)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	return response.SuccessResponse(c, http.StatusOK, res)
+}
+
+func (h *userHttpHandler) GetUserInfoByUsername(c echo.Context) error {
+	ctx := context.Background()
+	username := c.QueryParam("username")
+
+	res, err := h.userUsecase.GetUserInfoByUsername(ctx, username)
 	if err != nil {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}

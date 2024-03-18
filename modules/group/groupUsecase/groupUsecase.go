@@ -31,7 +31,7 @@ type (
 		GetPostsByGroupAndMemberId(pctx context.Context, args groupdb.GetPostsByGroupAndMemberIDParams) ([]groupdb.Post, error)
 		EditPost(pctx context.Context, args groupdb.EditPostParams) error
 		DeletePost(pctx context.Context, postId int) error
-		GetPostsForFeedByMemberId(pctx context.Context, userId int) ([]groupdb.Post, error)
+		GetPostsForOngoingFeedByMemberId(pctx context.Context, userId int) ([]groupdb.GetPostsForOngoingFeedByMemberIDRow, error)
 		CreateReaction(pctx context.Context, args groupdb.CreateReactionParams) (groupdb.PostReaction, error)
 		GetReactionsByPostId(pctx context.Context, postId int) ([]groupdb.PostReaction, error)
 		GetReactionsCountByPostId(pctx context.Context, postId int) (int, error)
@@ -201,10 +201,10 @@ func (u *groupUsecase) DeletePost(pctx context.Context, postId int) error {
 	return nil
 }
 
-func (u *groupUsecase) GetPostsForFeedByMemberId(pctx context.Context, userId int) ([]groupdb.Post, error) {
-	posts, err := u.store.GetPostsForFeedByMemberID(pctx, int32(userId))
+func (u *groupUsecase) GetPostsForOngoingFeedByMemberId(pctx context.Context, userId int) ([]groupdb.GetPostsForOngoingFeedByMemberIDRow, error) {
+	posts, err := u.store.GetPostsForOngoingFeedByMemberID(pctx, int32(userId))
 	if err != nil {
-		return []groupdb.Post{}, err
+		return []groupdb.GetPostsForOngoingFeedByMemberIDRow{}, err
 	}
 	return posts, nil
 }

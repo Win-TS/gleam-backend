@@ -40,9 +40,9 @@ SELECT * FROM posts
 WHERE group_id = $1 AND member_id = $2
 ORDER BY created_at DESC;
 
--- name: GetPostsForFeedByMemberID :many
-SELECT posts.* FROM posts
-JOIN group_members ON posts.group_id = group_members.group_id
+-- name: GetPostsForOngoingFeedByMemberID :many
+SELECT posts.*, groups.* FROM posts
+JOIN group_members ON posts.group_id = group_members.group_id JOIN groups ON posts.group_id = groups.group_id
 WHERE group_members.member_id = $1
 ORDER BY posts.created_at DESC;
 

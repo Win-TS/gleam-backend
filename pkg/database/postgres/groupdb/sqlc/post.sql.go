@@ -8,6 +8,7 @@ package groupdb
 import (
 	"context"
 	"database/sql"
+	"time"
 )
 
 const createComment = `-- name: CreateComment :one
@@ -370,22 +371,39 @@ func (q *Queries) GetPostsByMemberID(ctx context.Context, memberID int32) ([]Pos
 	return items, nil
 }
 
-const getPostsForFeedByMemberID = `-- name: GetPostsForFeedByMemberID :many
-SELECT posts.post_id, posts.member_id, posts.group_id, posts.photo_url, posts.description, posts.created_at FROM posts
-JOIN group_members ON posts.group_id = group_members.group_id
+const getPostsForOngoingFeedByMemberID = `-- name: GetPostsForOngoingFeedByMemberID :many
+SELECT posts.post_id, posts.member_id, posts.group_id, posts.photo_url, posts.description, posts.created_at, groups.group_id, groups.group_name, groups.group_creator_id, groups.photo_url, groups.tag_id, groups.frequency, groups.max_members, groups.created_at FROM posts
+JOIN group_members ON posts.group_id = group_members.group_id JOIN groups ON posts.group_id = groups.group_id
 WHERE group_members.member_id = $1
 ORDER BY posts.created_at DESC
 `
 
-func (q *Queries) GetPostsForFeedByMemberID(ctx context.Context, memberID int32) ([]Post, error) {
-	rows, err := q.db.QueryContext(ctx, getPostsForFeedByMemberID, memberID)
+type GetPostsForOngoingFeedByMemberIDRow struct {
+	PostID         int32          `json:"post_id"`
+	MemberID       int32          `json:"member_id"`
+	GroupID        int32          `json:"group_id"`
+	PhotoUrl       sql.NullString `json:"photo_url"`
+	Description    sql.NullString `json:"description"`
+	CreatedAt      time.Time      `json:"created_at"`
+	GroupID_2      int32          `json:"group_id_2"`
+	GroupName      string         `json:"group_name"`
+	GroupCreatorID int32          `json:"group_creator_id"`
+	PhotoUrl_2     sql.NullString `json:"photo_url_2"`
+	TagID          int32          `json:"tag_id"`
+	Frequency      sql.NullInt32  `json:"frequency"`
+	MaxMembers     int32          `json:"max_members"`
+	CreatedAt_2    time.Time      `json:"created_at_2"`
+}
+
+func (q *Queries) GetPostsForOngoingFeedByMemberID(ctx context.Context, memberID int32) ([]GetPostsForOngoingFeedByMemberIDRow, error) {
+	rows, err := q.db.QueryContext(ctx, getPostsForOngoingFeedByMemberID, memberID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Post{}
+	items := []GetPostsForOngoingFeedByMemberIDRow{}
 	for rows.Next() {
-		var i Post
+		var i GetPostsForOngoingFeedByMemberIDRow
 		if err := rows.Scan(
 			&i.PostID,
 			&i.MemberID,
@@ -393,6 +411,14 @@ func (q *Queries) GetPostsForFeedByMemberID(ctx context.Context, memberID int32)
 			&i.PhotoUrl,
 			&i.Description,
 			&i.CreatedAt,
+			&i.GroupID_2,
+			&i.GroupName,
+			&i.GroupCreatorID,
+			&i.PhotoUrl_2,
+			&i.TagID,
+			&i.Frequency,
+			&i.MaxMembers,
+			&i.CreatedAt_2,
 		); err != nil {
 			return nil, err
 		}

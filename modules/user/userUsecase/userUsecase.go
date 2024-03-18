@@ -23,6 +23,8 @@ type UserUsecaseService interface {
 	RegisterNewUser(pctx context.Context, payload *user.NewUserReq, photoUrl string) (userdb.User, error)
 	SaveToFirebaseStorage(pctx context.Context, bucketName, objectPath, filename string, file io.Reader) (string, error)
 	GetUserInfo(pctx context.Context, id int) (userdb.User, error)
+	GetUserInfoByEmail(pctx context.Context, email string) (userdb.User, error)
+	GetUserInfoByUsername(pctx context.Context, username string) (userdb.User, error)
 	EditUsername(pctx context.Context, args userdb.ChangeUsernameParams) (user.UserProfile, error)
 	EditPhoneNumber(pctx context.Context, args userdb.ChangePhoneNoParams) (userdb.User, error)
 	DeleteUser(pctx context.Context, id int) error
@@ -51,6 +53,24 @@ func (u *userUsecase) GetUserInfo(pctx context.Context, id int) (userdb.User, er
 		return userdb.User{}, err
 	}
 
+	return userData, nil
+}
+
+func (u *userUsecase) GetUserInfoByEmail(pctx context.Context, email string) (userdb.User, error) {
+	userData, err := u.store.GetUserByEmail(pctx, email)
+	if err != nil {
+		return userdb.User{}, err
+	}
+
+	return userData, nil
+}
+
+func (u *userUsecase) GetUserInfoByUsername(pctx context.Context, username string) (userdb.User, error) {
+	userData, err := u.store.GetUserByUsername(pctx, username)
+	if err != nil {
+		return userdb.User{}, err
+	}
+	
 	return userData, nil
 }
 

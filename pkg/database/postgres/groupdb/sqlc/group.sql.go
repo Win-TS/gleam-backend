@@ -44,7 +44,7 @@ INSERT INTO groups (
         tag_id
     )
 VALUES ($1, $2, $3, $4, $5)
-RETURNING group_id, group_name, group_creator_id, photo_url, tag_id, frequency, created_at
+RETURNING group_id, group_name, group_creator_id, photo_url, tag_id, frequency, max_members, created_at
 `
 
 type CreateGroupParams struct {
@@ -71,6 +71,7 @@ func (q *Queries) CreateGroup(ctx context.Context, arg CreateGroupParams) (Group
 		&i.PhotoUrl,
 		&i.TagID,
 		&i.Frequency,
+		&i.MaxMembers,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -250,7 +251,7 @@ func (q *Queries) GetGroupLatestId(ctx context.Context) (int32, error) {
 }
 
 const getGroupsByTagID = `-- name: GetGroupsByTagID :many
-SELECT group_id, group_name, group_creator_id, photo_url, tag_id, frequency, created_at
+SELECT group_id, group_name, group_creator_id, photo_url, tag_id, frequency, max_members, created_at
 from groups
 WHERE tag_id = $1
 `
@@ -271,6 +272,7 @@ func (q *Queries) GetGroupsByTagID(ctx context.Context, tagID int32) ([]Group, e
 			&i.PhotoUrl,
 			&i.TagID,
 			&i.Frequency,
+			&i.MaxMembers,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -321,7 +323,7 @@ func (q *Queries) GetMembersByGroupID(ctx context.Context, groupID int32) ([]Gro
 }
 
 const listGroups = `-- name: ListGroups :many
-SELECT group_id, group_name, group_creator_id, photo_url, tag_id, frequency, created_at
+SELECT group_id, group_name, group_creator_id, photo_url, tag_id, frequency, max_members, created_at
 FROM groups
 ORDER BY group_id
 LIMIT $1 OFFSET $2
@@ -348,6 +350,7 @@ func (q *Queries) ListGroups(ctx context.Context, arg ListGroupsParams) ([]Group
 			&i.PhotoUrl,
 			&i.TagID,
 			&i.Frequency,
+			&i.MaxMembers,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err

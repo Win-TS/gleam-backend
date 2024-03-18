@@ -149,6 +149,58 @@ func (q *Queries) GetUser(ctx context.Context, id int32) (User, error) {
 	return i, err
 }
 
+const getUserByEmail = `-- name: GetUserByEmail :one
+SELECT id, username, email, firstname, lastname, phone_no, private_account, nationality, age, birthday, gender, photourl, created_at FROM users
+WHERE email = $1 LIMIT 1
+`
+
+func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
+	row := q.db.QueryRowContext(ctx, getUserByEmail, email)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.Email,
+		&i.Firstname,
+		&i.Lastname,
+		&i.PhoneNo,
+		&i.PrivateAccount,
+		&i.Nationality,
+		&i.Age,
+		&i.Birthday,
+		&i.Gender,
+		&i.Photourl,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getUserByUsername = `-- name: GetUserByUsername :one
+SELECT id, username, email, firstname, lastname, phone_no, private_account, nationality, age, birthday, gender, photourl, created_at FROM users
+WHERE username = $1 LIMIT 1
+`
+
+func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User, error) {
+	row := q.db.QueryRowContext(ctx, getUserByUsername, username)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.Email,
+		&i.Firstname,
+		&i.Lastname,
+		&i.PhoneNo,
+		&i.PrivateAccount,
+		&i.Nationality,
+		&i.Age,
+		&i.Birthday,
+		&i.Gender,
+		&i.Photourl,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const getUserForUpdate = `-- name: GetUserForUpdate :one
 SELECT id, username, email, firstname, lastname, phone_no, private_account, nationality, age, birthday, gender, photourl, created_at FROM users
 WHERE id = $1 LIMIT 1 

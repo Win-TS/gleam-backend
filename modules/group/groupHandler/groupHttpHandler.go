@@ -35,7 +35,7 @@ type (
 		GetPostsByGroupAndMemberId(c echo.Context) error
 		EditPost(c echo.Context) error
 		DeletePost(c echo.Context) error
-		GetPostsForFeedByMemberId(c echo.Context) error
+		GetPostsForOngoingFeedByMemberId(c echo.Context) error
 		CreateReaction(c echo.Context) error
 		GetReactionsByPostId(c echo.Context) error
 		GetReactionsCountByPostId(c echo.Context) error
@@ -422,14 +422,14 @@ func (h *groupHttpHandler) DeletePost(c echo.Context) error {
 	return response.SuccessResponse(c, http.StatusOK, "Success: post deleted")
 }
 
-func (h *groupHttpHandler) GetPostsForFeedByMemberId(c echo.Context) error {
+func (h *groupHttpHandler) GetPostsForOngoingFeedByMemberId(c echo.Context) error {
 	ctx := context.Background()
 	userId, err := strconv.Atoi(c.QueryParam("user_id"))
 	if err != nil {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 
-	feedPosts, err := h.groupUsecase.GetPostsForFeedByMemberId(ctx, userId)
+	feedPosts, err := h.groupUsecase.GetPostsForOngoingFeedByMemberId(ctx, userId)
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}

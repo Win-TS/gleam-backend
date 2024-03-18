@@ -1,4 +1,4 @@
---name: CreateStreakSet :one
+-- name: CreateStreakSet :one
 INSERT INTO streak_set (
     group_id,
     user_id,

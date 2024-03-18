@@ -23,6 +23,8 @@ type Querier interface {
 	GetFriendsRequestedList(ctx context.Context, userId1 sql.NullInt32) ([]User, error)
 	GetLatestId(ctx context.Context) (int32, error)
 	GetUser(ctx context.Context, id int32) (User, error)
+	GetUserByEmail(ctx context.Context, email string) (User, error)
+	GetUserByUsername(ctx context.Context, username string) (User, error)
 	GetUserForUpdate(ctx context.Context, id int32) (User, error)
 	ListFriendsByUserId(ctx context.Context, userId1 sql.NullInt32) ([]ListFriendsByUserIdRow, error)
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error)

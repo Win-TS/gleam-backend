@@ -1,10 +1,10 @@
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
-    username VARCHAR NOT NULL,
-    email VARCHAR NOT NULL,
+    username VARCHAR UNIQUE NOT NULL,
+    email VARCHAR UNIQUE NOT NULL,
     firstname VARCHAR NOT NULL,
     lastname VARCHAR NOT NULL,
-    phone_no VARCHAR NOT NULL,
+    phone_no VARCHAR UNIQUE NOT NULL,
     private_account BOOLEAN NOT NULL DEFAULT false,
     nationality VARCHAR NOT NULL,
     age INTEGER NOT NULL,

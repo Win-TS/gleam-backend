@@ -10,7 +10,7 @@ import (
 type (
 	contextWrapperService interface {
 		Bind(data any) error
-		//GetAuthorizationHeader() string
+		GetAuthorizationHeader() string
 	}
 
 	contextWrapper struct {
@@ -38,6 +38,6 @@ func (c *contextWrapper) Bind(data any) error {
 	return nil
 }
 
-// func (c *contextWrapper) GetAuthorizationHeader() string {
-// 	return c.Context.Request().Header.Get(echo.HeaderAuthorization)
-// }
+func (c *contextWrapper) GetAuthorizationHeader() string {
+	return c.Context.Request().Header.Get(echo.HeaderAuthorization)
+}

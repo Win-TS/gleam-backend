@@ -128,13 +128,6 @@ func (h *groupHttpHandler) NewGroupMember(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 
-	// _, err := h.groupUsecase.SearchUser(ctx, h.cfg.Grpc.UserUrl, &userPb.SearchUserReq{
-	// 	UserId: int32(req.MemberID),
-	// })
-	// if err != nil {
-	// 	return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
-	// }
-
 	newMember, err := h.groupUsecase.NewGroupMember(ctx, *req)
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
@@ -201,32 +194,43 @@ func (h *groupHttpHandler) ListGroups(c echo.Context) error {
 
 func (h *groupHttpHandler) EditGroupName(c echo.Context) error {
 	ctx := context.Background()
+
 	groupId, err := strconv.Atoi(c.QueryParam("group_id"))
 	if err != nil {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 
-	var requestBody map[string]string
+	var requestBody map[string]interface{}
 	if err := c.Bind(&requestBody); err != nil {
 		return response.ErrResponse(c, http.StatusBadRequest, "Invalid request body")
 	}
-	newGroupName, ok := requestBody["group_name"]
+
+	newGroupName, ok := requestBody["group_name"].(string)
 	if !ok {
-		return response.ErrResponse(c, http.StatusBadRequest, "New group name is missing in request body")
+		return response.ErrResponse(c, http.StatusBadRequest, "New group name is missing or invalid in request body")
 	}
+
+	memberID, ok := requestBody["member_id"].(float64)
+	if !ok {
+		return response.ErrResponse(c, http.StatusBadRequest, "member_id is missing or invalid in request body")
+	}
+
+	memberIdInt := int(memberID)
 
 	args := &groupdb.EditGroupNameParams{
 		GroupID:   int32(groupId),
 		GroupName: newGroupName,
 	}
 
-	updatedGroup, err := h.groupUsecase.EditGroupName(ctx, *args)
+	updatedGroup, err := h.groupUsecase.EditGroupName(ctx, *args, int32(memberIdInt))
+
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
+
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"success": true,
-		"message": "Success: group photo edited",
+		"message": "Success: group name edited",
 		"data":    updatedGroup,
 	})
 }
@@ -237,10 +241,16 @@ func (h *groupHttpHandler) EditGroupPhoto(c echo.Context) error {
 	if err != nil {
 		return response.ErrResponse(c, http.StatusBadRequest, "Invalid group ID")
 	}
-	// Retrieve uploaded file
+
 	file, err := c.FormFile("photo")
 	if err != nil && err != http.ErrMissingFile {
 		return response.ErrResponse(c, http.StatusBadRequest, "Invalid file")
+	}
+
+	editorIdStr := c.FormValue("editor_id")
+	editorId, err := strconv.Atoi(editorIdStr)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, "Invalid editor ID")
 	}
 
 	var url string
@@ -263,7 +273,7 @@ func (h *groupHttpHandler) EditGroupPhoto(c echo.Context) error {
 		PhotoUrl: utils.ConvertStringToSqlNullString(url),
 	}
 
-	updatedGroup, err := h.groupUsecase.EditGroupPhoto(ctx, *req)
+	updatedGroup, err := h.groupUsecase.EditGroupPhoto(ctx, *req, int32(editorId))
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, "Failed to update group photo")
 	}
@@ -277,35 +287,47 @@ func (h *groupHttpHandler) EditGroupPhoto(c echo.Context) error {
 
 func (h *groupHttpHandler) EditMemberRole(c echo.Context) error {
 	ctx := context.Background()
+
 	groupId, err := strconv.Atoi(c.QueryParam("group_id"))
 	if err != nil {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
+
 	memberId, err := strconv.Atoi(c.QueryParam("member_id"))
 	if err != nil {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
-	var requestBody map[string]string
+
+	var requestBody map[string]interface{}
 	if err := c.Bind(&requestBody); err != nil {
 		return response.ErrResponse(c, http.StatusBadRequest, "Invalid request body")
 	}
-	newGroupRole, ok := requestBody["role"]
+
+	editorId, ok := requestBody["editor_id"].(float64)
 	if !ok {
-		return response.ErrResponse(c, http.StatusBadRequest, "New group role is missing in request body")
+		return response.ErrResponse(c, http.StatusBadRequest, "EditorId is missing")
 	}
+	newGroupRole, ok := requestBody["role"].(string)
+	if !ok {
+		return response.ErrResponse(c, http.StatusBadRequest, "New group role is missing or invalid in request body")
+	}
+
+	targetId := int32(memberId)
+
 	args := &groupdb.EditMemberRoleParams{
 		GroupID:  int32(groupId),
-		MemberID: int32(memberId),
+		MemberID: targetId,
 		Role:     newGroupRole,
 	}
-	updatedMember, err := h.groupUsecase.EditMemberRole(ctx, *args)
+
+	updatedMember, err := h.groupUsecase.EditMemberRole(ctx, *args, int32(editorId))
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"success": true,
-		"message": "Success: group photo edited",
+		"message": "Success: group role edited",
 		"data":    updatedMember,
 	})
 }
@@ -316,8 +338,12 @@ func (h *groupHttpHandler) DeleteGroup(c echo.Context) error {
 	if err != nil {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
+	editorId, err := strconv.Atoi(c.QueryParam("editor_id"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
 
-	if err := h.groupUsecase.DeleteGroup(ctx, groupId); err != nil {
+	if err := h.groupUsecase.DeleteGroup(ctx, groupId, int32(editorId)); err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
 
@@ -326,14 +352,28 @@ func (h *groupHttpHandler) DeleteGroup(c echo.Context) error {
 
 func (h *groupHttpHandler) DeleteGroupMember(c echo.Context) error {
 	ctx := context.Background()
-	wrapper := request.ContextWrapper(c)
 
-	req := new(groupdb.DeleteMemberParams)
-	if err := wrapper.Bind(req); err != nil {
+	editorId, err := strconv.Atoi(c.QueryParam("editor_id"))
+	if err != nil {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 
-	if err := h.groupUsecase.DeleteGroupMember(ctx, *req); err != nil {
+	groupId, err := strconv.Atoi(c.QueryParam("group_id"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	memberId, err := strconv.Atoi(c.QueryParam("member_id"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	req := &groupdb.DeleteMemberParams{
+		MemberID: int32(memberId),
+		GroupID:  int32(groupId),
+	}
+
+	if err := h.groupUsecase.DeleteGroupMember(ctx, *req, int32(editorId)); err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
 

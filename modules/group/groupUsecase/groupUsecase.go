@@ -12,6 +12,7 @@ import (
 
 	"firebase.google.com/go/storage"
 	//groupPb "github.com/Win-TS/gleam-backend.git/modules/group/groupPb"
+	"github.com/Win-TS/gleam-backend.git/modules/group"
 	userPb "github.com/Win-TS/gleam-backend.git/modules/user/userPb"
 	groupdb "github.com/Win-TS/gleam-backend.git/pkg/database/postgres/groupdb/sqlc"
 	"github.com/Win-TS/gleam-backend.git/pkg/grpcconn"
@@ -22,16 +23,17 @@ import (
 type (
 	GroupUsecaseService interface {
 		SearchUser(pctx context.Context, grpcUrl string, req *userPb.SearchUserReq) (*userPb.SearchUserRes, error)
+		GetRole(pctx context.Context, userID int32, groupID int32) (group.Role, error)
 		CreateNewGroup(pctx context.Context, args groupdb.CreateGroupParams) (groupdb.Group, error)
 		NewGroupMember(pctx context.Context, args groupdb.AddGroupMemberParams) (groupdb.GroupMember, error)
 		GetGroupById(pctx context.Context, groupId int) (groupdb.GetGroupByIDRow, error)
 		GetGroupMembersByGroupId(pctx context.Context, groupId int) ([]groupdb.GroupMember, error)
 		ListGroups(pctx context.Context, args groupdb.ListGroupsParams) ([]groupdb.Group, error)
-		EditGroupName(pctx context.Context, args groupdb.EditGroupNameParams) (groupdb.GetGroupByIDRow, error)
-		EditGroupPhoto(pctx context.Context, args groupdb.EditGroupPhotoParams) (groupdb.GetGroupByIDRow, error)
-		EditMemberRole(pctx context.Context, args groupdb.EditMemberRoleParams) (groupdb.GetMemberInfoRow, error)
-		DeleteGroup(pctx context.Context, groupId int) error
-		DeleteGroupMember(pctx context.Context, args groupdb.DeleteMemberParams) error
+		EditGroupName(pctx context.Context, args groupdb.EditGroupNameParams, memberId int32) (groupdb.GetGroupByIDRow, error)
+		EditGroupPhoto(pctx context.Context, args groupdb.EditGroupPhotoParams, editorId int32) (groupdb.GetGroupByIDRow, error)
+		EditMemberRole(pctx context.Context, args groupdb.EditMemberRoleParams, editorId int32) (groupdb.GetMemberInfoRow, error)
+		DeleteGroup(pctx context.Context, groupId int, editorId int32) error
+		DeleteGroupMember(pctx context.Context, args groupdb.DeleteMemberParams, editorId int32) error
 		CreatePost(pctx context.Context, args groupdb.CreatePostParams) (groupdb.Post, error)
 		GetPostByPostId(pctx context.Context, postId int) (groupdb.Post, error)
 		GetPostsByGroupId(pctx context.Context, groupId int) ([]groupdb.Post, error)
@@ -89,6 +91,18 @@ func (u *groupUsecase) SearchUser(pctx context.Context, grpcUrl string, req *use
 	return result, nil
 }
 
+func (u *groupUsecase) GetRole(pctx context.Context, userID int32, groupID int32) (group.Role, error) {
+	arg := groupdb.GetMemberInfoParams{
+		MemberID: userID,
+		GroupID:  groupID,
+	}
+	memberInfo, err := u.store.GetMemberInfo(pctx, arg)
+	if err != nil {
+		return group.Role(""), err
+	}
+	return group.Role(memberInfo.Role), nil
+}
+
 func (u *groupUsecase) CreateNewGroup(pctx context.Context, args groupdb.CreateGroupParams) (groupdb.Group, error) {
 	newGroup, err := u.store.CreateGroup(pctx, args)
 	if err != nil {
@@ -98,7 +112,7 @@ func (u *groupUsecase) CreateNewGroup(pctx context.Context, args groupdb.CreateG
 	arg := groupdb.AddGroupMemberParams{
 		GroupID:  newGroup.GroupID,
 		MemberID: newGroup.GroupCreatorID,
-		Role:     "creator",
+		Role:     "admin",
 	}
 	_, err = u.store.AddGroupMember(pctx, arg)
 	if err != nil {
@@ -139,7 +153,16 @@ func (u *groupUsecase) ListGroups(pctx context.Context, args groupdb.ListGroupsP
 	return groups, nil
 }
 
-func (u *groupUsecase) EditGroupName(pctx context.Context, args groupdb.EditGroupNameParams) (groupdb.GetGroupByIDRow, error) {
+func (u *groupUsecase) EditGroupName(pctx context.Context, args groupdb.EditGroupNameParams, memberId int32) (groupdb.GetGroupByIDRow, error) {
+	role, err := u.GetRole(pctx, memberId, args.GroupID)
+	if err != nil {
+		return groupdb.GetGroupByIDRow{}, err
+	}
+
+	if role != group.Admin && role != group.Moderator {
+		return groupdb.GetGroupByIDRow{}, errors.New("no permission")
+	}
+
 	if err := u.store.EditGroupName(pctx, args); err != nil {
 		return groupdb.GetGroupByIDRow{}, err
 	}
@@ -152,7 +175,15 @@ func (u *groupUsecase) EditGroupName(pctx context.Context, args groupdb.EditGrou
 	return updatedGroup, nil
 }
 
-func (u *groupUsecase) EditGroupPhoto(pctx context.Context, args groupdb.EditGroupPhotoParams) (groupdb.GetGroupByIDRow, error) {
+func (u *groupUsecase) EditGroupPhoto(pctx context.Context, args groupdb.EditGroupPhotoParams, editorId int32) (groupdb.GetGroupByIDRow, error) {
+	role, err := u.GetRole(pctx, editorId, args.GroupID)
+	if err != nil {
+		return groupdb.GetGroupByIDRow{}, err
+	}
+
+	if role != group.Admin && role != group.Moderator {
+		return groupdb.GetGroupByIDRow{}, errors.New("no permission")
+	}
 	if err := u.store.EditGroupPhoto(pctx, args); err != nil {
 		return groupdb.GetGroupByIDRow{}, err
 	}
@@ -164,7 +195,17 @@ func (u *groupUsecase) EditGroupPhoto(pctx context.Context, args groupdb.EditGro
 	return groupData, nil
 }
 
-func (u *groupUsecase) EditMemberRole(pctx context.Context, args groupdb.EditMemberRoleParams) (groupdb.GetMemberInfoRow, error) {
+func (u *groupUsecase) EditMemberRole(pctx context.Context, args groupdb.EditMemberRoleParams, editorId int32) (groupdb.GetMemberInfoRow, error) {
+
+	role, err := u.GetRole(pctx, editorId, args.GroupID)
+	if err != nil {
+		return groupdb.GetMemberInfoRow{}, err
+	}
+
+	if role != group.Admin && role != group.Moderator || args.Role != string(group.Moderator) {
+		return groupdb.GetMemberInfoRow{}, errors.New("no permission")
+	}
+
 	if err := u.store.EditMemberRole(pctx, args); err != nil {
 		return groupdb.GetMemberInfoRow{}, err
 	}
@@ -182,14 +223,31 @@ func (u *groupUsecase) EditMemberRole(pctx context.Context, args groupdb.EditMem
 	return updatedMember, nil
 }
 
-func (u *groupUsecase) DeleteGroup(pctx context.Context, groupId int) error {
+func (u *groupUsecase) DeleteGroup(pctx context.Context, groupId int, editorId int32) error {
+	role, err := u.GetRole(pctx, editorId, int32(groupId))
+	if err != nil {
+		return err
+	}
+
+	if role != group.Admin {
+		return errors.New("no permission")
+	}
+
 	if err := u.store.DeleteGroup(pctx, int32(groupId)); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (u *groupUsecase) DeleteGroupMember(pctx context.Context, args groupdb.DeleteMemberParams) error {
+func (u *groupUsecase) DeleteGroupMember(pctx context.Context, args groupdb.DeleteMemberParams, editorId int32) error {
+	role, err := u.GetRole(pctx, editorId, args.GroupID)
+	if err != nil {
+		return err
+	}
+
+	if role != group.Admin && role != group.Moderator {
+		return errors.New("no permission")
+	}
 	if err := u.store.DeleteMember(pctx, args); err != nil {
 		return err
 	}
@@ -430,9 +488,10 @@ func (u *groupUsecase) GroupMockData(pctx context.Context, count int) error {
 
 	for i := 0; i < count; i++ {
 		groupName := fmt.Sprintf("Group %d", i+1)
+		creatorID := int32(rand.Intn(10) + 1) 
 		group, err := u.store.CreateGroup(ctx, groupdb.CreateGroupParams{
 			GroupName:      groupName,
-			GroupCreatorID: int32(rand.Intn(10) + 1),
+			GroupCreatorID: creatorID,
 			PhotoUrl:       utils.ConvertStringToSqlNullString("https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/groupphoto%2F1.jpg?alt=media"),
 			TagID:          tagIDs[tagIndex],
 			Frequency:      sql.NullInt32{Int32: randomFrequency, Valid: true},
@@ -441,7 +500,20 @@ func (u *groupUsecase) GroupMockData(pctx context.Context, count int) error {
 			return err
 		}
 
+		_, err = u.store.AddGroupMember(ctx, groupdb.AddGroupMemberParams{
+			GroupID:  group.GroupID,
+			MemberID: creatorID,
+			Role:     "creator",
+		})
+		if err != nil {
+			return err
+		}
+
 		adminIndex := rand.Intn(10)
+		modIndex := rand.Intn(10)
+
+		coLeaderAssigned := false
+		creatorAssigned := false
 
 		for j := 0; j < 10; j++ {
 			memberID := rand.Intn(10) + 1
@@ -455,8 +527,14 @@ func (u *groupUsecase) GroupMockData(pctx context.Context, count int) error {
 				continue
 			}
 
-			if j == adminIndex {
-				role = "admin"
+			if j == adminIndex && !creatorAssigned {
+				role = "creator"
+				creatorAssigned = true
+			} else if j == modIndex {
+				role = "co_leader"
+			} else if !coLeaderAssigned {
+				role = "co_leader"
+				coLeaderAssigned = true
 			}
 
 			_, err = u.store.AddGroupMember(ctx, groupdb.AddGroupMemberParams{

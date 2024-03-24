@@ -47,10 +47,10 @@ migrateuserdowndocker:
 	migrate -path pkg/database/postgres/userdb/migrations -database "postgresql://root:123456@user-db:5432/user_db?sslmode=disable" -verbose down
 
 migrategroupupdocker:
-	migrate -path pkg/database/postgres/groupdb/migrations -database "postgresql://root:123456@group-db:5433/group_db?sslmode=disable" -verbose up
+	migrate -path pkg/database/postgres/groupdb/migrations -database "postgresql://root:123456@group-db:5432/group_db?sslmode=disable" -verbose up
 
 migrategroupdowndocker:
-	migrate -path pkg/database/postgres/groupdb/migrations -database "postgresql://root:123456@group-db:5433/group_db?sslmode=disable" -verbose down
+	migrate -path pkg/database/postgres/groupdb/migrations -database "postgresql://root:123456@group-db:5432/group_db?sslmode=disable" -verbose down
 
 runauth:
 	go run main.go ./env/dev/.env.auth

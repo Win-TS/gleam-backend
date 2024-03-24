@@ -9,6 +9,7 @@ import (
 
 	"firebase.google.com/go/storage"
 	groupdb "github.com/Win-TS/gleam-backend.git/pkg/database/postgres/groupdb/sqlc"
+	"github.com/Win-TS/gleam-backend.git/pkg/utils"
 	"github.com/jaswdr/faker"
 )
 
@@ -19,9 +20,9 @@ type (
 		GetGroupById(pctx context.Context, groupId int) (groupdb.GetGroupByIDRow, error)
 		GetGroupMembersByGroupId(pctx context.Context, groupId int) ([]groupdb.GroupMember, error)
 		ListGroups(pctx context.Context, args groupdb.ListGroupsParams) ([]groupdb.Group, error)
-		EditGroupName(pctx context.Context, args groupdb.EditGroupNameParams) error
-		EditGroupPhoto(pctx context.Context, args groupdb.EditGroupPhotoParams) error
-		EditMemberRole(pctx context.Context, args groupdb.EditMemberRoleParams) error
+		EditGroupName(pctx context.Context, args groupdb.EditGroupNameParams) (groupdb.GetGroupByIDRow, error)
+		EditGroupPhoto(pctx context.Context, args groupdb.EditGroupPhotoParams) (groupdb.GetGroupByIDRow, error)
+		EditMemberRole(pctx context.Context, args groupdb.EditMemberRoleParams) (groupdb.GetMemberInfoRow, error)
 		DeleteGroup(pctx context.Context, groupId int) error
 		DeleteGroupMember(pctx context.Context, args groupdb.DeleteMemberParams) error
 		CreatePost(pctx context.Context, args groupdb.CreatePostParams) (groupdb.Post, error)
@@ -29,18 +30,18 @@ type (
 		GetPostsByGroupId(pctx context.Context, groupId int) ([]groupdb.Post, error)
 		GetPostsByUserId(pctx context.Context, userId int) ([]groupdb.Post, error)
 		GetPostsByGroupAndMemberId(pctx context.Context, args groupdb.GetPostsByGroupAndMemberIDParams) ([]groupdb.Post, error)
-		EditPost(pctx context.Context, args groupdb.EditPostParams) error
+		EditPost(pctx context.Context, args groupdb.EditPostParams) (groupdb.Post, error)
 		DeletePost(pctx context.Context, postId int) error
 		GetPostsForOngoingFeedByMemberId(pctx context.Context, userId int) ([]groupdb.GetPostsForOngoingFeedByMemberIDRow, error)
 		CreateReaction(pctx context.Context, args groupdb.CreateReactionParams) (groupdb.PostReaction, error)
 		GetReactionsByPostId(pctx context.Context, postId int) ([]groupdb.PostReaction, error)
 		GetReactionsCountByPostId(pctx context.Context, postId int) (int, error)
-		EditReaction(pctx context.Context, args groupdb.EditReactionParams) error
+		EditReaction(pctx context.Context, args groupdb.EditReactionParams) (groupdb.PostReaction, error)
 		DeleteReaction(pctx context.Context, reactionId int) error
 		CreateComment(pctx context.Context, args groupdb.CreateCommentParams) (groupdb.PostComment, error)
 		GetCommentsByPostId(pctx context.Context, postId int) ([]groupdb.PostComment, error)
 		GetCommentCountByPostId(pctx context.Context, postId int) (int, error)
-		EditComment(pctx context.Context, args groupdb.EditCommentParams) error
+		EditComment(pctx context.Context, args groupdb.EditCommentParams) (groupdb.PostComment, error)
 		DeleteComment(pctx context.Context, commentId int) error
 		SaveToFirebaseStorage(pctx context.Context, bucketName, objectPath, filename string, file io.Reader) (string, error)
 		GetGroupLatestId(pctx context.Context) (int, error)
@@ -112,25 +113,47 @@ func (u *groupUsecase) ListGroups(pctx context.Context, args groupdb.ListGroupsP
 	return groups, nil
 }
 
-func (u *groupUsecase) EditGroupName(pctx context.Context, args groupdb.EditGroupNameParams) error {
+func (u *groupUsecase) EditGroupName(pctx context.Context, args groupdb.EditGroupNameParams) (groupdb.GetGroupByIDRow, error) {
 	if err := u.store.EditGroupName(pctx, args); err != nil {
-		return err
+		return groupdb.GetGroupByIDRow{}, err
 	}
-	return nil
+
+	updatedGroup, err := u.GetGroupById(pctx, int(args.GroupID))
+	if err != nil {
+		return groupdb.GetGroupByIDRow{}, err
+	}
+
+	return updatedGroup, nil
 }
 
-func (u *groupUsecase) EditGroupPhoto(pctx context.Context, args groupdb.EditGroupPhotoParams) error {
+func (u *groupUsecase) EditGroupPhoto(pctx context.Context, args groupdb.EditGroupPhotoParams) (groupdb.GetGroupByIDRow, error) {
 	if err := u.store.EditGroupPhoto(pctx, args); err != nil {
-		return err
+		return groupdb.GetGroupByIDRow{}, err
 	}
-	return nil
+	groupData, err := u.GetGroupById(pctx, int(args.GroupID))
+	if err != nil {
+		return groupdb.GetGroupByIDRow{}, err
+	}
+
+	return groupData, nil
 }
 
-func (u *groupUsecase) EditMemberRole(pctx context.Context, args groupdb.EditMemberRoleParams) error {
+func (u *groupUsecase) EditMemberRole(pctx context.Context, args groupdb.EditMemberRoleParams) (groupdb.GetMemberInfoRow, error) {
 	if err := u.store.EditMemberRole(pctx, args); err != nil {
-		return err
+		return groupdb.GetMemberInfoRow{}, err
 	}
-	return nil
+
+	memberInfoParams := groupdb.GetMemberInfoParams{
+		MemberID: int32(args.MemberID),
+		GroupID:  int32(args.GroupID),
+	}
+
+	updatedMember, err := u.store.GetMemberInfo(pctx, memberInfoParams)
+	if err != nil {
+		return groupdb.GetMemberInfoRow{}, err
+	}
+
+	return updatedMember, nil
 }
 
 func (u *groupUsecase) DeleteGroup(pctx context.Context, groupId int) error {
@@ -187,11 +210,17 @@ func (u *groupUsecase) GetPostsByGroupAndMemberId(pctx context.Context, args gro
 	return posts, nil
 }
 
-func (u *groupUsecase) EditPost(pctx context.Context, args groupdb.EditPostParams) error {
+func (u *groupUsecase) EditPost(pctx context.Context, args groupdb.EditPostParams) (groupdb.Post, error) {
 	if err := u.store.EditPost(pctx, args); err != nil {
-		return err
+		return groupdb.Post{}, err
 	}
-	return nil
+
+	updatedPost, err := u.store.GetPostByPostID(pctx, int32(args.PostID))
+	if err != nil {
+		return groupdb.Post{}, err
+	}
+
+	return updatedPost, nil
 }
 
 func (u *groupUsecase) DeletePost(pctx context.Context, postId int) error {
@@ -233,11 +262,17 @@ func (u *groupUsecase) GetReactionsCountByPostId(pctx context.Context, postId in
 	return int(reactionCount), nil
 }
 
-func (u *groupUsecase) EditReaction(pctx context.Context, args groupdb.EditReactionParams) error {
+func (u *groupUsecase) EditReaction(pctx context.Context, args groupdb.EditReactionParams) (groupdb.PostReaction, error) {
 	if err := u.store.EditReaction(pctx, args); err != nil {
-		return err
+		return groupdb.PostReaction{}, err
 	}
-	return nil
+
+	updatedReaction, err := u.store.GetReactionById(pctx, args.ReactionID)
+	if err != nil {
+		return groupdb.PostReaction{}, err
+	}
+
+	return updatedReaction, nil
 }
 
 func (u *groupUsecase) DeleteReaction(pctx context.Context, reactionId int) error {
@@ -271,11 +306,17 @@ func (u *groupUsecase) GetCommentCountByPostId(pctx context.Context, postId int)
 	return int(commentCount), nil
 }
 
-func (u *groupUsecase) EditComment(pctx context.Context, args groupdb.EditCommentParams) error {
+func (u *groupUsecase) EditComment(pctx context.Context, args groupdb.EditCommentParams) (groupdb.PostComment, error) {
 	if err := u.store.EditComment(pctx, args); err != nil {
-		return err
+		return groupdb.PostComment{}, err
 	}
-	return nil
+
+	updatedComment, err := u.store.GetCommentByCommentId(pctx, args.CommentID)
+	if err != nil {
+		return groupdb.PostComment{}, err
+	}
+
+	return updatedComment, nil
 }
 
 func (u *groupUsecase) DeleteComment(pctx context.Context, commentId int) error {
@@ -366,6 +407,7 @@ func (u *groupUsecase) GroupMockData(pctx context.Context, count int) error {
 		group, err := u.store.CreateGroup(ctx, groupdb.CreateGroupParams{
 			GroupName:      groupName,
 			GroupCreatorID: int32(rand.Intn(10) + 1),
+			PhotoUrl:       utils.ConvertStringToSqlNullString("https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/groupphoto%2F1.jpg?alt=media"),
 			TagID:          tagIDs[tagIndex],
 			Frequency:      sql.NullInt32{Int32: randomFrequency, Valid: true},
 		})
@@ -475,7 +517,7 @@ func (u *groupUsecase) PostMockData(ctx context.Context, count int) error {
 }
 
 func (u *groupUsecase) createPost(ctx context.Context, groupID int32) (int32, error) {
-	photoURL := sql.NullString{String: "https://example.com/photo.jpg", Valid: true}
+	photoURL := sql.NullString{String: "https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/groupphoto%2F1.webp?alt=media", Valid: true}
 	description := sql.NullString{String: "Lorem ipsum dolor sit amet", Valid: true}
 
 	post, err := u.store.CreatePost(ctx, groupdb.CreatePostParams{

@@ -7,6 +7,12 @@ require firebase.google.com/go v3.13.0+incompatible
 require github.com/jaswdr/faker v1.19.1
 
 require (
+	github.com/golang/mock v1.6.0 // indirect
+	golang.org/x/mod v0.8.0 // indirect
+	golang.org/x/tools v0.6.0 // indirect
+)
+
+require (
 	cloud.google.com/go v0.112.0 // indirect
 	cloud.google.com/go/compute v1.23.3 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect

@@ -1,3 +1,4 @@
+
 package groupHandler
 
 import (
@@ -42,7 +43,7 @@ type (
 		EditReaction(c echo.Context) error
 		DeleteReaction(c echo.Context) error
 		CreateComment(c echo.Context) error
-		GetCommentsByPostId(c echo.Context) error	
+		GetCommentsByPostId(c echo.Context) error
 		GetCommentCountByPostId(c echo.Context) error
 		EditComment(c echo.Context) error
 		DeleteComment(c echo.Context) error
@@ -160,14 +161,23 @@ func (h *groupHttpHandler) GetGroupMembersByGroupId(c echo.Context) error {
 
 func (h *groupHttpHandler) ListGroups(c echo.Context) error {
 	ctx := context.Background()
-	wrapper := request.ContextWrapper(c)
-
-	req := new(groupdb.ListGroupsParams)
-	if err := wrapper.Bind(req); err != nil {
+	limit, err := strconv.Atoi(c.QueryParam("limit"))
+	if err != nil {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 
-	groupList, err := h.groupUsecase.ListGroups(ctx, *req)
+	Offset, err := strconv.Atoi(c.QueryParam("offset"))
+
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	args := &groupdb.ListGroupsParams{
+		Limit:  int32(limit),
+		Offset: int32(Offset),
+	}
+
+	groupList, err := h.groupUsecase.ListGroups(ctx, *args)
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
@@ -177,44 +187,60 @@ func (h *groupHttpHandler) ListGroups(c echo.Context) error {
 
 func (h *groupHttpHandler) EditGroupName(c echo.Context) error {
 	ctx := context.Background()
-	wrapper := request.ContextWrapper(c)
-
-	req := new(groupdb.EditGroupNameParams)
-	if err := wrapper.Bind(req); err != nil {
-		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
-	}
-
-	if err := h.groupUsecase.EditGroupName(ctx, *req); err != nil {
-		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
-	}
-
-	return response.SuccessResponse(c, http.StatusOK, "Success: group name edited")
-}
-
-func (h *groupHttpHandler) EditGroupPhoto(c echo.Context) error {
-	ctx := context.Background()
-	fileidStr := c.FormValue("group_id")
-	groupId, err := strconv.Atoi(fileidStr)
+	groupId, err := strconv.Atoi(c.QueryParam("group_id"))
 	if err != nil {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 
-	file, _ := c.FormFile("photo")
-	var url string
+	var requestBody map[string]string
+	if err := c.Bind(&requestBody); err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, "Invalid request body")
+	}
+	newGroupName, ok := requestBody["group_name"]
+	if !ok {
+		return response.ErrResponse(c, http.StatusBadRequest, "New group name is missing in request body")
+	}
 
+	args := &groupdb.EditGroupNameParams{
+		GroupID:   int32(groupId),
+		GroupName: newGroupName,
+	}
+
+	updatedGroup, err := h.groupUsecase.EditGroupName(ctx, *args)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"success": true,
+		"message": "Success: group photo edited",
+		"data":    updatedGroup,
+	})
+}
+
+func (h *groupHttpHandler) EditGroupPhoto(c echo.Context) error {
+	ctx := c.Request().Context()
+	groupId, err := strconv.Atoi(c.QueryParam("group_id"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, "Invalid group ID")
+	}
+	// Retrieve uploaded file
+	file, err := c.FormFile("photo")
+	if err != nil && err != http.ErrMissingFile {
+		return response.ErrResponse(c, http.StatusBadRequest, "Invalid file")
+	}
+
+	var url string
 	if file != nil {
 		src, err := file.Open()
 		if err != nil {
-			return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+			return response.ErrResponse(c, http.StatusInternalServerError, "Failed to open file")
 		}
 		defer src.Close()
-
 		bucketName := h.cfg.Firebase.StorageBucket
 		objectPath := "groupphoto"
-
-		url, err = h.groupUsecase.SaveToFirebaseStorage(c.Request().Context(), bucketName, objectPath, (fileidStr + utils.GetFileExtension(file.Filename)), src)
+		url, err = h.groupUsecase.SaveToFirebaseStorage(ctx, bucketName, objectPath, strconv.Itoa(groupId)+utils.GetFileExtension(file.Filename), src)
 		if err != nil {
-			return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+			return response.ErrResponse(c, http.StatusInternalServerError, "Failed to upload file to storage")
 		}
 	}
 
@@ -223,27 +249,51 @@ func (h *groupHttpHandler) EditGroupPhoto(c echo.Context) error {
 		PhotoUrl: utils.ConvertStringToSqlNullString(url),
 	}
 
-	if err := h.groupUsecase.EditGroupPhoto(ctx, *req); err != nil {
-		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	updatedGroup, err := h.groupUsecase.EditGroupPhoto(ctx, *req)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, "Failed to update group photo")
 	}
 
-	return response.SuccessResponse(c, http.StatusOK, "Success: group photo edited")
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"success": true,
+		"message": "Success: group photo edited",
+		"data":    updatedGroup,
+	})
 }
 
 func (h *groupHttpHandler) EditMemberRole(c echo.Context) error {
 	ctx := context.Background()
-	wrapper := request.ContextWrapper(c)
-
-	req := new(groupdb.EditMemberRoleParams)
-	if err := wrapper.Bind(req); err != nil {
+	groupId, err := strconv.Atoi(c.QueryParam("group_id"))
+	if err != nil {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
-
-	if err := h.groupUsecase.EditMemberRole(ctx, *req); err != nil {
+	memberId, err := strconv.Atoi(c.QueryParam("member_id"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+	var requestBody map[string]string
+	if err := c.Bind(&requestBody); err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, "Invalid request body")
+	}
+	newGroupRole, ok := requestBody["role"]
+	if !ok {
+		return response.ErrResponse(c, http.StatusBadRequest, "New group role is missing in request body")
+	}
+	args := &groupdb.EditMemberRoleParams{
+		GroupID:  int32(groupId),
+		MemberID: int32(memberId),
+		Role:     newGroupRole,
+	}
+	updatedMember, err := h.groupUsecase.EditMemberRole(ctx, *args)
+	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
 
-	return response.SuccessResponse(c, http.StatusOK, "Success: member role edited")
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"success": true,
+		"message": "Success: group photo edited",
+		"data":    updatedMember,
+	})
 }
 
 func (h *groupHttpHandler) DeleteGroup(c echo.Context) error {
@@ -389,23 +439,42 @@ func (h *groupHttpHandler) GetPostsByGroupAndMemberId(c echo.Context) error {
 
 func (h *groupHttpHandler) EditPost(c echo.Context) error {
 	ctx := context.Background()
-	wrapper := request.ContextWrapper(c)
-
-	req := new(group.EditPostReq)
-	if err := wrapper.Bind(req); err != nil {
+	postIdStr := c.QueryParam("post_id")
+	postId, err := strconv.Atoi(postIdStr)
+	if err != nil {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 
-	args := &groupdb.EditPostParams{
-		PostID:      int32(req.PostID),
-		Description: utils.ConvertStringToSqlNullString(req.Description),
+	requestBody := make(map[string]string)
+
+	if err := c.Bind(&requestBody); err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, "Failed to parse request body")
 	}
 
-	if err := h.groupUsecase.EditPost(ctx, *args); err != nil {
+	if len(requestBody) == 0 {
+		return response.ErrResponse(c, http.StatusBadRequest, "Request body is empty")
+	}
+
+	description, ok := requestBody["description"]
+	if !ok {
+		return response.ErrResponse(c, http.StatusBadRequest, "New description is missing in request body")
+	}
+
+	args := &groupdb.EditPostParams{
+		PostID:      int32(postId),
+		Description: utils.ConvertStringToSqlNullString(description),
+	}
+
+	updatedPost, err := h.groupUsecase.EditPost(ctx, *args)
+	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
 
-	return response.SuccessResponse(c, http.StatusOK, "Success: post edited")
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"success": true,
+		"message": "Success: post edited",
+		"data":    updatedPost,
+	})
 }
 
 func (h *groupHttpHandler) DeletePost(c echo.Context) error {
@@ -486,18 +555,39 @@ func (h *groupHttpHandler) GetReactionsCountByPostId(c echo.Context) error {
 
 func (h *groupHttpHandler) EditReaction(c echo.Context) error {
 	ctx := context.Background()
-	wrapper := request.ContextWrapper(c)
-
-	req := new(groupdb.EditReactionParams)
-	if err := wrapper.Bind(req); err != nil {
+	reactionId, err := strconv.Atoi(c.QueryParam("reaction_id"))
+	if err != nil {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 
-	if err := h.groupUsecase.EditReaction(ctx, *req); err != nil {
-		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	requestBody := make(map[string]string)
+
+	if err := c.Bind(&requestBody); err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, "Failed to parse request body")
 	}
 
-	return response.SuccessResponse(c, http.StatusOK, "Success: reaction edited")
+	if len(requestBody) == 0 {
+		return response.ErrResponse(c, http.StatusBadRequest, "Request body is empty")
+	}
+
+	reaction, ok := requestBody["reaction"]
+	if !ok {
+		return response.ErrResponse(c, http.StatusBadRequest, "New reaction is missing in request body")
+	}
+	args := &groupdb.EditReactionParams{
+		ReactionID: int32(reactionId),
+		Reaction:   reaction,
+	}
+
+	updatedReaction, err := h.groupUsecase.EditReaction(ctx, *args)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"success": true,
+		"message": "Success: group photo edited",
+		"data":    updatedReaction,
+	})
 }
 
 func (h *groupHttpHandler) DeleteReaction(c echo.Context) error {
@@ -563,18 +653,41 @@ func (h *groupHttpHandler) GetCommentCountByPostId(c echo.Context) error {
 
 func (h *groupHttpHandler) EditComment(c echo.Context) error {
 	ctx := context.Background()
-	wrapper := request.ContextWrapper(c)
-
-	req := new(groupdb.EditCommentParams)
-	if err := wrapper.Bind(req); err != nil {
+	comment_id, err := strconv.Atoi(c.QueryParam("comment_id"))
+	if err != nil {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 
-	if err := h.groupUsecase.EditComment(ctx, *req); err != nil {
-		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	requestBody := make(map[string]string)
+
+	if err := c.Bind(&requestBody); err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, "Failed to parse request body")
 	}
 
-	return response.SuccessResponse(c, http.StatusOK, "Success: comment edited")
+	if len(requestBody) == 0 {
+		return response.ErrResponse(c, http.StatusBadRequest, "Request body is empty")
+	}
+
+	comment, ok := requestBody["comment"]
+	if !ok {
+		return response.ErrResponse(c, http.StatusBadRequest, "New comment is missing in request body")
+	}
+
+	args := &groupdb.EditCommentParams{
+		CommentID: int32(comment_id),
+		Comment:   comment,
+	}
+
+	updatedComment, err := h.groupUsecase.EditComment(ctx, *args)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"success": true,
+		"message": "Success: group photo edited",
+		"data":    updatedComment,
+	})
+
 }
 
 func (h *groupHttpHandler) DeleteComment(c echo.Context) error {

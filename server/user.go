@@ -37,6 +37,7 @@ func (s *server) userService() {
 	user.GET("/userinfobyusername", httpHandler.GetUserInfoByUsername)
 	user.PATCH("/editusername", httpHandler.EditUsername)
 	user.PATCH("/changephoneno", httpHandler.EditPhoneNumber)
+	user.PATCH("/editname", httpHandler.EditName)
 	user.DELETE("/deleteuser", httpHandler.DeleteUser)
 
 	friend := s.app.Group("/friend_v1")

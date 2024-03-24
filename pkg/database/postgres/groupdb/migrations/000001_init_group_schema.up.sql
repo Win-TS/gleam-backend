@@ -45,7 +45,8 @@ CREATE TABLE "post_comments" (
 CREATE TABLE "tags" (
   "tag_id" SERIAL PRIMARY KEY,
   "tag_name" varchar UNIQUE NOT NULL,
-  "icon_url" varchar
+  "icon_url" varchar,
+  "category_id" integer
 );
 
 CREATE TABLE "streak_set" (
@@ -66,6 +67,11 @@ CREATE TABLE "streaks" (
   FOREIGN KEY ("post_id") REFERENCES "posts" ("post_id") ON DELETE CASCADE
 );
 
+CREATE TABLE "tag_category" (
+  "category_id" SERIAL PRIMARY KEY,
+  "category_name" VARCHAR UNIQUE NOT NULL
+);
+
 ALTER TABLE "group_members" ADD FOREIGN KEY ("group_id") REFERENCES "groups" ("group_id") ON DELETE CASCADE;
 
 ALTER TABLE "posts" ADD FOREIGN KEY ("group_id") REFERENCES "groups" ("group_id") ON DELETE CASCADE;
@@ -77,3 +83,5 @@ ALTER TABLE "post_comments" ADD FOREIGN KEY ("post_id") REFERENCES "posts" ("pos
 ALTER TABLE "groups" ADD FOREIGN KEY ("tag_id") REFERENCES "tags" ("tag_id");
 
 ALTER TABLE "streaks" ADD FOREIGN KEY ("streak_set_id") REFERENCES "streak_set" ("streak_set_id");
+
+ALTER TABLE "tags" ADD FOREIGN KEY ("category_id") REFERENCES "tag_category" ("category_id");

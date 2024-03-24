@@ -15,8 +15,11 @@ type Querier interface {
 	CreateFriend(ctx context.Context, arg CreateFriendParams) (Friend, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeleteUser(ctx context.Context, id int32) error
+	EditBothNames(ctx context.Context, arg EditBothNamesParams) error
+	EditFirstNameOnly(ctx context.Context, arg EditFirstNameOnlyParams) error
 	EditFriendStatusAccepted(ctx context.Context, arg EditFriendStatusAcceptedParams) error
 	EditFriendStatusDeclined(ctx context.Context, arg EditFriendStatusDeclinedParams) error
+	EditLastNameOnly(ctx context.Context, arg EditLastNameOnlyParams) error
 	GetFriend(ctx context.Context, arg GetFriendParams) (Friend, error)
 	GetFriendsCountByID(ctx context.Context, userId1 sql.NullInt32) (int64, error)
 	GetFriendsPendingList(ctx context.Context, userId2 sql.NullInt32) ([]User, error)

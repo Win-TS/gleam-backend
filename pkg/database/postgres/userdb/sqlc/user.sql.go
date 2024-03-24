@@ -112,6 +112,62 @@ func (q *Queries) DeleteUser(ctx context.Context, id int32) error {
 	return err
 }
 
+const editBothNames = `-- name: EditBothNames :exec
+UPDATE users
+SET
+    firstname = $2,
+    lastname = $3
+WHERE
+    id = $1
+`
+
+type EditBothNamesParams struct {
+	ID        int32  `json:"id"`
+	Firstname string `json:"firstname"`
+	Lastname  string `json:"lastname"`
+}
+
+func (q *Queries) EditBothNames(ctx context.Context, arg EditBothNamesParams) error {
+	_, err := q.db.ExecContext(ctx, editBothNames, arg.ID, arg.Firstname, arg.Lastname)
+	return err
+}
+
+const editFirstNameOnly = `-- name: EditFirstNameOnly :exec
+UPDATE users
+SET
+    firstname = $2
+WHERE
+    id = $1
+`
+
+type EditFirstNameOnlyParams struct {
+	ID        int32  `json:"id"`
+	Firstname string `json:"firstname"`
+}
+
+func (q *Queries) EditFirstNameOnly(ctx context.Context, arg EditFirstNameOnlyParams) error {
+	_, err := q.db.ExecContext(ctx, editFirstNameOnly, arg.ID, arg.Firstname)
+	return err
+}
+
+const editLastNameOnly = `-- name: EditLastNameOnly :exec
+UPDATE users
+SET
+    lastname = $2
+WHERE
+    id = $1
+`
+
+type EditLastNameOnlyParams struct {
+	ID       int32  `json:"id"`
+	Lastname string `json:"lastname"`
+}
+
+func (q *Queries) EditLastNameOnly(ctx context.Context, arg EditLastNameOnlyParams) error {
+	_, err := q.db.ExecContext(ctx, editLastNameOnly, arg.ID, arg.Lastname)
+	return err
+}
+
 const getLatestId = `-- name: GetLatestId :one
 SELECT COALESCE(MAX(id), 0)::integer FROM users
 `

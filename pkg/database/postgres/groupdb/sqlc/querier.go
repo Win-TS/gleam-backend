@@ -30,12 +30,14 @@ type Querier interface {
 	EditReaction(ctx context.Context, arg EditReactionParams) error
 	EndStreakSet(ctx context.Context, streakSetID int32) error
 	GetAvailableTags(ctx context.Context) ([]Tag, error)
+	GetCommentByCommentId(ctx context.Context, commentID int32) (PostComment, error)
 	GetCommentsByPostID(ctx context.Context, postID int32) ([]PostComment, error)
 	GetCommentsCountByPostID(ctx context.Context, postID int32) (int64, error)
 	GetGroupByID(ctx context.Context, groupID int32) (GetGroupByIDRow, error)
 	GetGroupLatestId(ctx context.Context) (int32, error)
 	GetGroupsByTagID(ctx context.Context, tagID int32) ([]Group, error)
 	GetLatestStreakSetByGroupIDAndUserID(ctx context.Context, arg GetLatestStreakSetByGroupIDAndUserIDParams) (StreakSet, error)
+	GetMemberInfo(ctx context.Context, arg GetMemberInfoParams) (GetMemberInfoRow, error)
 	GetMembersByGroupID(ctx context.Context, groupID int32) ([]GroupMember, error)
 	GetPostByPostID(ctx context.Context, postID int32) (Post, error)
 	GetPostLatestId(ctx context.Context) (int32, error)
@@ -43,6 +45,7 @@ type Querier interface {
 	GetPostsByGroupID(ctx context.Context, groupID int32) ([]Post, error)
 	GetPostsByMemberID(ctx context.Context, memberID int32) ([]Post, error)
 	GetPostsForOngoingFeedByMemberID(ctx context.Context, memberID int32) ([]GetPostsForOngoingFeedByMemberIDRow, error)
+	GetReactionById(ctx context.Context, reactionID int32) (PostReaction, error)
 	GetReactionsByPostID(ctx context.Context, postID int32) ([]PostReaction, error)
 	GetReactionsCountByPostID(ctx context.Context, postID int32) (int64, error)
 	GetStreakByPostID(ctx context.Context, postID int32) (Streak, error)

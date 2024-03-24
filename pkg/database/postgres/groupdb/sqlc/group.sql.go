@@ -288,6 +288,40 @@ func (q *Queries) GetGroupsByTagID(ctx context.Context, tagID int32) ([]Group, e
 	return items, nil
 }
 
+const getMemberInfo = `-- name: GetMemberInfo :one
+SELECT gm.group_id, gm.member_id, gm.role, gm.created_at, g.group_name
+FROM group_members gm
+JOIN groups g ON gm.group_id = g.group_id
+WHERE gm.member_id = $1
+AND gm.group_id = $2
+`
+
+type GetMemberInfoParams struct {
+	MemberID int32 `json:"member_id"`
+	GroupID  int32 `json:"group_id"`
+}
+
+type GetMemberInfoRow struct {
+	GroupID   int32     `json:"group_id"`
+	MemberID  int32     `json:"member_id"`
+	Role      string    `json:"role"`
+	CreatedAt time.Time `json:"created_at"`
+	GroupName string    `json:"group_name"`
+}
+
+func (q *Queries) GetMemberInfo(ctx context.Context, arg GetMemberInfoParams) (GetMemberInfoRow, error) {
+	row := q.db.QueryRowContext(ctx, getMemberInfo, arg.MemberID, arg.GroupID)
+	var i GetMemberInfoRow
+	err := row.Scan(
+		&i.GroupID,
+		&i.MemberID,
+		&i.Role,
+		&i.CreatedAt,
+		&i.GroupName,
+	)
+	return i, err
+}
+
 const getMembersByGroupID = `-- name: GetMembersByGroupID :many
 SELECT group_id, member_id, role, created_at
 FROM group_members
@@ -320,6 +354,25 @@ func (q *Queries) GetMembersByGroupID(ctx context.Context, groupID int32) ([]Gro
 		return nil, err
 	}
 	return items, nil
+}
+
+const getReactionById = `-- name: GetReactionById :one
+SELECT reaction_id, post_id, member_id, reaction, created_at
+FROM post_reactions
+WHERE reaction_id = $1
+`
+
+func (q *Queries) GetReactionById(ctx context.Context, reactionID int32) (PostReaction, error) {
+	row := q.db.QueryRowContext(ctx, getReactionById, reactionID)
+	var i PostReaction
+	err := row.Scan(
+		&i.ReactionID,
+		&i.PostID,
+		&i.MemberID,
+		&i.Reaction,
+		&i.CreatedAt,
+	)
+	return i, err
 }
 
 const listGroups = `-- name: ListGroups :many

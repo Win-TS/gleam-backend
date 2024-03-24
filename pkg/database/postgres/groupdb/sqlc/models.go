@@ -69,6 +69,13 @@ type StreakSet struct {
 	CreatedAt   time.Time     `json:"created_at"`
 }
 
+type Subtag struct {
+	SubtagID   int32     `json:"subtag_id"`
+	TagID      int32     `json:"tag_id"`
+	SubtagName string    `json:"subtag_name"`
+	CreatedAt  time.Time `json:"created_at"`
+}
+
 type Tag struct {
 	TagID   int32          `json:"tag_id"`
 	TagName string         `json:"tag_name"`

@@ -54,3 +54,25 @@ WHERE id = $1;
 
 -- name: DeleteUser :exec
 DELETE FROM users WHERE id = $1;
+
+-- name: EditFirstNameOnly :exec
+UPDATE users
+SET
+    firstname = $2
+WHERE
+    id = $1;
+
+-- name: EditLastNameOnly :exec
+UPDATE users
+SET
+    lastname = $2
+WHERE
+    id = $1;
+
+-- name: EditBothNames :exec
+UPDATE users
+SET
+    firstname = $2,
+    lastname = $3
+WHERE
+    id = $1;

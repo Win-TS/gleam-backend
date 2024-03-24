@@ -29,6 +29,7 @@ type (
 		UploadProfilePhoto(c echo.Context) error
 		EditUsername(c echo.Context) error
 		EditPhoneNumber(c echo.Context) error
+		EditName(c echo.Context) error
 		DeleteUser(c echo.Context) error
 		FriendInfo(c echo.Context) error
 		FriendListById(c echo.Context) error
@@ -239,6 +240,31 @@ func (h *userHttpHandler) EditPhoneNumber(c echo.Context) error {
 	}
 
 	return response.SuccessResponse(c, http.StatusOK, res)
+}
+
+func (h *userHttpHandler) EditName(c echo.Context) error {
+	ctx := context.Background()
+
+	userID, err := strconv.Atoi(c.QueryParam("user_id"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, "Invalid user ID")
+	}
+
+	var requestBody map[string]string
+	if err := c.Bind(&requestBody); err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, "Invalid request body")
+	}
+
+	updatedUser, err := h.userUsecase.EditName(ctx, int32(userID), requestBody["firstname"], requestBody["lastname"])
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"success": true,
+		"message": "Success: user name edited",
+		"data":    updatedUser,
+	})
 }
 
 // DeleteUser deletes a user from the database by the user_id query parameter.

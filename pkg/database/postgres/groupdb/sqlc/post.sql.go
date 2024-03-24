@@ -181,6 +181,25 @@ func (q *Queries) EditReaction(ctx context.Context, arg EditReactionParams) erro
 	return err
 }
 
+const getCommentByCommentId = `-- name: GetCommentByCommentId :one
+SELECT comment_id, post_id, member_id, comment, created_at
+FROM post_comments
+WHERE comment_id = $1
+`
+
+func (q *Queries) GetCommentByCommentId(ctx context.Context, commentID int32) (PostComment, error) {
+	row := q.db.QueryRowContext(ctx, getCommentByCommentId, commentID)
+	var i PostComment
+	err := row.Scan(
+		&i.CommentID,
+		&i.PostID,
+		&i.MemberID,
+		&i.Comment,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const getCommentsByPostID = `-- name: GetCommentsByPostID :many
 SELECT comment_id, post_id, member_id, comment, created_at FROM post_comments
 WHERE post_id = $1

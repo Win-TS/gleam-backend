@@ -29,6 +29,7 @@ type UserUsecaseService interface {
 	GetUserInfoByUsername(pctx context.Context, username string) (userdb.User, error)
 	EditUsername(pctx context.Context, args userdb.ChangeUsernameParams) (user.UserProfile, error)
 	EditPhoneNumber(pctx context.Context, args userdb.ChangePhoneNoParams) (userdb.User, error)
+	EditName(ctx context.Context, userID int32, firstName, lastName string) (user.UserProfile, error)
 	DeleteUser(pctx context.Context, id int) error
 	FriendInfo(ctx context.Context, args userdb.GetFriendParams) ([]userdb.Friend, error)
 	FriendListById(pctx context.Context, id int) ([]userdb.ListFriendsByUserIdRow, error)
@@ -371,4 +372,58 @@ func (u *userUsecase) createFakeFriends(ctx context.Context, userID int32, total
 	}
 
 	return nil
+}
+
+func (u *userUsecase) EditName(ctx context.Context, userID int32, firstName, lastName string) (user.UserProfile, error) {
+	var updatedProfile user.UserProfile
+
+	if firstName != "" && lastName == "" {
+		err := u.editFirstNameOnly(ctx, userID, firstName)
+		if err != nil {
+			return updatedProfile, err
+		}
+	}
+
+	if firstName == "" && lastName != "" {
+		err := u.editLastNameOnly(ctx, userID, lastName)
+		if err != nil {
+			return updatedProfile, err
+		}
+	}
+
+	if firstName != "" && lastName != "" {
+		err := u.editBothNames(ctx, userID, firstName, lastName)
+		if err != nil {
+			return updatedProfile, err
+		}
+	}
+
+	updatedProfile, err := u.GetUserProfile(ctx, int(userID))
+	if err != nil {
+		return updatedProfile, err
+	}
+
+	return updatedProfile, nil
+}
+
+func (u *userUsecase) editFirstNameOnly(ctx context.Context, userID int32, firstName string) error {
+	return u.store.EditFirstNameOnly(ctx, userdb.EditFirstNameOnlyParams{
+		ID:        userID,
+		Firstname: firstName,
+	})
+}
+
+func (u *userUsecase) editLastNameOnly(ctx context.Context, userID int32, lastName string) error {
+	return u.store.EditLastNameOnly(ctx, userdb.EditLastNameOnlyParams{
+		ID:       userID,
+		Lastname: lastName,
+	})
+}
+
+func (u *userUsecase) editBothNames(ctx context.Context, userID int32, firstName, lastName string) error {
+	return u.store.EditBothNames(ctx, userdb.EditBothNamesParams{
+		ID:        userID,
+		Firstname: firstName,
+		Lastname:  lastName,
+	})
 }

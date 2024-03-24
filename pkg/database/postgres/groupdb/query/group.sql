@@ -80,3 +80,15 @@ ORDER BY tag_id;
 SELECT *
 from groups
 WHERE tag_id = $1;
+
+-- name: GetMemberInfo :one
+SELECT gm.*, g.group_name
+FROM group_members gm
+JOIN groups g ON gm.group_id = g.group_id
+WHERE gm.member_id = $1
+AND gm.group_id = $2;
+
+-- name: GetReactionById :one
+SELECT *
+FROM post_reactions
+WHERE reaction_id = $1;

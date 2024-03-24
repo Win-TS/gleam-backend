@@ -95,3 +95,9 @@ WHERE comment_id = $1;
 
 -- name: GetPostLatestId :one
 SELECT COALESCE(MAX(post_id), 0)::integer FROM posts;
+
+
+-- name: GetCommentByCommentId :one
+SELECT *
+FROM post_comments
+WHERE comment_id = $1;

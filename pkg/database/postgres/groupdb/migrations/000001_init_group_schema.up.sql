@@ -2,17 +2,28 @@ CREATE TABLE "groups" (
   "group_id" SERIAL PRIMARY KEY,
   "group_name" varchar UNIQUE NOT NULL,
   "group_creator_id" integer NOT NULL,
+  "description" varchar,
   "photo_url" varchar,
   "tag_id" integer NOT NULL,
   "frequency" integer,
   "max_members" integer NOT NULL DEFAULT 25,
+  "group_type" varchar NOT NULL DEFAULT 'social',
+  "visibility" boolean NOT NULL DEFAULT true,
   "created_at" timestamp NOT NULL DEFAULT (CURRENT_TIMESTAMP)
 );
 
 CREATE TABLE "group_members" (
-  "group_id" SERIAL NOT NULL,
+  "group_id" integer NOT NULL,
   "member_id" integer NOT NULL,
   "role" varchar NOT NULL,
+  "created_at" timestamp NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+  PRIMARY KEY ("group_id", "member_id")
+);
+
+CREATE TABLE "group_request" (
+  "group_id" integer NOT NULL,
+  "member_id" integer NOT NULL,
+  "description" varchar,
   "created_at" timestamp NOT NULL DEFAULT (CURRENT_TIMESTAMP),
   PRIMARY KEY ("group_id", "member_id")
 );
@@ -73,6 +84,8 @@ CREATE TABLE "tag_category" (
 );
 
 ALTER TABLE "group_members" ADD FOREIGN KEY ("group_id") REFERENCES "groups" ("group_id") ON DELETE CASCADE;
+
+ALTER TABLE "group_request" ADD FOREIGN KEY ("group_id") REFERENCES "groups" ("group_id") ON DELETE CASCADE;
 
 ALTER TABLE "posts" ADD FOREIGN KEY ("group_id") REFERENCES "groups" ("group_id") ON DELETE CASCADE;
 

@@ -6,6 +6,8 @@ import (
 	"github.com/Win-TS/gleam-backend.git/modules/user/userHandler"
 	"github.com/Win-TS/gleam-backend.git/modules/user/userUsecase"
 	userdb "github.com/Win-TS/gleam-backend.git/pkg/database/postgres/userdb/sqlc"
+	userPb "github.com/Win-TS/gleam-backend.git/modules/user/userPb"
+	"github.com/Win-TS/gleam-backend.git/pkg/grpcconn"
 )
 
 func (s *server) userService() {
@@ -17,6 +19,14 @@ func (s *server) userService() {
 	usecase := userUsecase.NewUserUsecase(postgresDB, s.storage)
 	httpHandler := userHandler.NewUserHttpHandler(s.cfg, usecase)
 	grpcHandler := userHandler.NewUserGrpcHandler(usecase)
+
+	// gRPC
+	go func() {
+		grpcServer, lis := grpcconn.NewGrpcServer(s.cfg, s.cfg.Grpc.UserUrl)
+		userPb.RegisterUserGrpcServiceServer(grpcServer, grpcHandler)
+		log.Printf("Player gRPC server listening on %s", s.cfg.Grpc.UserUrl)
+		grpcServer.Serve(lis)
+	}()
 
 	_ = grpcHandler
 

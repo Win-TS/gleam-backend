@@ -3,18 +3,25 @@ package groupUsecase
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"io"
+	"log"
 	"math/rand"
+	"time"
 
 	"firebase.google.com/go/storage"
+	//groupPb "github.com/Win-TS/gleam-backend.git/modules/group/groupPb"
+	userPb "github.com/Win-TS/gleam-backend.git/modules/user/userPb"
 	groupdb "github.com/Win-TS/gleam-backend.git/pkg/database/postgres/groupdb/sqlc"
+	"github.com/Win-TS/gleam-backend.git/pkg/grpcconn"
 	"github.com/Win-TS/gleam-backend.git/pkg/utils"
 	"github.com/jaswdr/faker"
 )
 
 type (
 	GroupUsecaseService interface {
+		SearchUser(pctx context.Context, grpcUrl string, req *userPb.SearchUserReq) (*userPb.SearchUserRes, error)
 		CreateNewGroup(pctx context.Context, args groupdb.CreateGroupParams) (groupdb.Group, error)
 		NewGroupMember(pctx context.Context, args groupdb.AddGroupMemberParams) (groupdb.GroupMember, error)
 		GetGroupById(pctx context.Context, groupId int) (groupdb.GetGroupByIDRow, error)
@@ -61,6 +68,25 @@ type (
 
 func NewGroupUsecase(store groupdb.Store, storageClient *storage.Client) GroupUsecaseService {
 	return &groupUsecase{store, storageClient}
+}
+
+func (u *groupUsecase) SearchUser(pctx context.Context, grpcUrl string, req *userPb.SearchUserReq) (*userPb.SearchUserRes, error) {
+	ctx, cancel := context.WithTimeout(pctx, 30*time.Second)
+	defer cancel()
+
+	conn, err := grpcconn.NewGrpcClient(grpcUrl)
+	if err != nil {
+		log.Printf("error - gRPC connection failed: %s", err.Error())
+		return nil, errors.New("error: gRPC connection failed")
+	}
+
+	result, err := conn.User().SearchUser(ctx, req)
+	if err != nil {
+		log.Printf("error - SearchUser failed: %s", err.Error())
+		return nil, errors.New("error: userId not found")
+	}
+
+	return result, nil
 }
 
 func (u *groupUsecase) CreateNewGroup(pctx context.Context, args groupdb.CreateGroupParams) (groupdb.Group, error) {

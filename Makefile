@@ -66,4 +66,9 @@ genuserproto:
 	    --go-grpc_out=. --go-grpc_opt=paths=source_relative \
 	    ./modules/user/userPb/userPb.proto
 
-.PHONY: composeupdb composedowndb migrateuserdown migrateuserup createuserdb dropuserdb createusermigration runauth runuser composeupdb composedowndb migrateuserupdocker migrateuserdowndocker migrategroupupdocker migrategroupdowndocker genuserproto
+gengroupproto:
+	protoc --go_out=. --go_opt=paths=source_relative \
+	    --go-grpc_out=. --go-grpc_opt=paths=source_relative \
+	    ./modules/group/groupPb/groupPb.proto
+
+.PHONY: composeupdb composedowndb migrateuserdown migrateuserup createuserdb dropuserdb createusermigration runauth runuser composeupdb composedowndb migrateuserupdocker migrateuserdowndocker migrategroupupdocker migrategroupdowndocker genuserproto gengroupproto

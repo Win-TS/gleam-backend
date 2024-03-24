@@ -5,17 +5,15 @@ import (
 	"log"
 	"net"
 
-	// inventoryPb "github.com/Win-TS/go-course-microservice-shop-tutorial/modules/inventory/inventoryPb"
-	// itemPb "github.com/Win-TS/go-course-microservice-shop-tutorial/modules/item/itemPb"
-	// playerPb "github.com/Win-TS/go-course-microservice-shop-tutorial/modules/player/playerPb"
 	"github.com/Win-TS/gleam-backend.git/config"
+	userPb "github.com/Win-TS/gleam-backend.git/modules/user/userPb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
 type (
 	GrpcClientFactoryHandler interface {
-		//User() userPb.UserGrpcServiceClient
+		User() userPb.UserGrpcServiceClient
 	}
 
 	grpcClientFactory struct {
@@ -23,9 +21,9 @@ type (
 	}
 )
 
-// func (g *grpcClientFactory) User() userPb.UserGrpcServiceClient {
-// 	return userPb.NewUserGrpcServiceClient(g.client)
-// }
+func (g *grpcClientFactory) User() userPb.UserGrpcServiceClient {
+	return userPb.NewUserGrpcServiceClient(g.client)
+}
 
 func NewGrpcClient(host string) (GrpcClientFactoryHandler, error) {
 	opts := make([]grpc.DialOption, 0)

@@ -3,8 +3,10 @@ package userUsecase
 import (
 	"context"
 	"database/sql"
+	//"errors"
 	"fmt"
 	"io"
+	//"log"
 	"math/rand"
 	"time"
 
@@ -13,6 +15,8 @@ import (
 	"firebase.google.com/go/storage"
 	"github.com/Win-TS/gleam-backend.git/modules/user"
 	userdb "github.com/Win-TS/gleam-backend.git/pkg/database/postgres/userdb/sqlc"
+	//userPb "github.com/Win-TS/gleam-backend.git/modules/user/userPb"
+	//"github.com/Win-TS/gleam-backend.git/pkg/grpcconn"
 	"github.com/Win-TS/gleam-backend.git/pkg/utils"
 	"github.com/jaswdr/faker"
 )
@@ -73,7 +77,7 @@ func (u *userUsecase) GetUserInfoByUsername(pctx context.Context, username strin
 	if err != nil {
 		return userdb.User{}, err
 	}
-	
+
 	return userData, nil
 }
 

@@ -1,4 +1,3 @@
-
 package groupHandler
 
 import (
@@ -10,6 +9,7 @@ import (
 	"github.com/Win-TS/gleam-backend.git/config"
 	"github.com/Win-TS/gleam-backend.git/modules/group"
 	"github.com/Win-TS/gleam-backend.git/modules/group/groupUsecase"
+	//userPb "github.com/Win-TS/gleam-backend.git/modules/user/userPb"
 	groupdb "github.com/Win-TS/gleam-backend.git/pkg/database/postgres/groupdb/sqlc"
 	"github.com/Win-TS/gleam-backend.git/pkg/request"
 	"github.com/Win-TS/gleam-backend.git/pkg/response"
@@ -73,6 +73,13 @@ func (h *groupHttpHandler) CreateNewGroup(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 
+	// _, err := h.groupUsecase.SearchUser(ctx, h.cfg.Grpc.UserUrl, &userPb.SearchUserReq{
+	// 	UserId: int32(req.GroupCreatorId),
+	// })
+	// if err != nil {
+	// 	return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	// }
+
 	file, _ := c.FormFile("photo")
 	var url string
 
@@ -120,6 +127,13 @@ func (h *groupHttpHandler) NewGroupMember(c echo.Context) error {
 	if err := wrapper.Bind(req); err != nil {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
+
+	// _, err := h.groupUsecase.SearchUser(ctx, h.cfg.Grpc.UserUrl, &userPb.SearchUserReq{
+	// 	UserId: int32(req.MemberID),
+	// })
+	// if err != nil {
+	// 	return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	// }
 
 	newMember, err := h.groupUsecase.NewGroupMember(ctx, *req)
 	if err != nil {

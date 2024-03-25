@@ -20,7 +20,7 @@ CREATE TABLE "group_members" (
   PRIMARY KEY ("group_id", "member_id")
 );
 
-CREATE TABLE "group_request" (
+CREATE TABLE "group_requests" (
   "group_id" integer NOT NULL,
   "member_id" integer NOT NULL,
   "description" varchar,
@@ -85,7 +85,7 @@ CREATE TABLE "tag_category" (
 
 ALTER TABLE "group_members" ADD FOREIGN KEY ("group_id") REFERENCES "groups" ("group_id") ON DELETE CASCADE;
 
-ALTER TABLE "group_request" ADD FOREIGN KEY ("group_id") REFERENCES "groups" ("group_id") ON DELETE CASCADE;
+ALTER TABLE "group_requests" ADD FOREIGN KEY ("group_id") REFERENCES "groups" ("group_id") ON DELETE CASCADE;
 
 ALTER TABLE "posts" ADD FOREIGN KEY ("group_id") REFERENCES "groups" ("group_id") ON DELETE CASCADE;
 

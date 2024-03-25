@@ -4,13 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"time"
 )
 
 // Store provides all functions to execute db queries and transactions
 type Store interface {
 	Querier
-	// CreateGroupWithTags(ctx context.Context, args CreateGroupWithTagsParams) (CreateGroupWithTagsRes, error)
+	CreateNewGroup(ctx context.Context, args CreateGroupParams) (Group, error)
+	AcceptGroupRequest(ctx context.Context, args AcceptGroupRequestParams) (GroupMember, error)
 }
 
 // SQLStore provides all functions to execute SQL queries and transactions
@@ -19,20 +19,10 @@ type SQLStore struct {
 	db *sql.DB
 }
 
-type CreateGroupWithTagsParams struct {
-	GroupName      string `json:"group_name" form:"group_name" validate:"required,max=255"`
-	GroupCreatorId int    `json:"group_creator_id" form:"group_creator_id" validate:"required"`
-	PhotoUrl       string `json:"photo_url" form:"photo_url"`
-	TagIDs         []int  `json:"tag_ids" form:"tag_ids"`
-}
-
-type CreateGroupWithTagsRes struct {
-	GroupID        int       `json:"group_id"`
-	GroupName      string    `json:"group_name"`
-	GroupCreatorId int       `json:"group_creator_id"`
-	PhotoUrl       string    `json:"photo_url"`
-	TagIDs         []int     `json:"tag_ids"`
-	CreatedAt      time.Time `json:"created_at"`
+type AcceptGroupRequestParams struct {
+	GroupID    int `json:"group_id" form:"group_id" validate:"required"`
+	MemberID   int `json:"member_id" form:"member_id" validate:"required"`
+	AcceptorId int `json:"acceptor_id" form:"acceptor_id" validate:"required"`
 }
 
 // Create new Store
@@ -59,50 +49,73 @@ func (store *SQLStore) execTx(ctx context.Context, fn func(*Queries) error) erro
 	return tx.Commit()
 }
 
-// // CreateGroupWithTags creates a new group with tags
-// func (store *SQLStore) CreateGroupWithTags(ctx context.Context, args CreateGroupWithTagsParams) (CreateGroupWithTagsRes, error) {
-// 	var groupInfo Group
+// CreateNewGroup creates a new group with the given name and creator id and add the creator to the group_members table
+func (store *SQLStore) CreateNewGroup(ctx context.Context, args CreateGroupParams) (Group, error) {
+	var newGroup Group
 
-// 	err := store.execTx(ctx, func(q *Queries) error {
-// 		var err error
+	err := store.execTx(ctx, func(q *Queries) error {
+		var err error
 
-// 		groupInfo, err = q.CreateGroup(ctx, CreateGroupParams{
-// 			GroupName:      args.GroupName,
-// 			GroupCreatorID: int32(args.GroupCreatorId),
-// 			PhotoUrl:       utils.ConvertStringToSqlNullString(args.PhotoUrl),
-// 		})
-// 		if err != nil {
-// 			return err
-// 		}
+		newGroup, err = q.CreateGroup(ctx, args)
+		if err != nil {
+			return err
+		}
 
-// 		arg := AddGroupMemberParams{
-// 			GroupID:  int32(groupInfo.GroupID),
-// 			MemberID: int32(groupInfo.GroupCreatorID),
-// 			Role:     "creator",
-// 		}
-// 		_, err = store.AddGroupMember(ctx, arg)
-// 		if err != nil {
-// 			return err
-// 		}
+		arg := AddGroupMemberParams{
+			GroupID:  newGroup.GroupID,
+			MemberID: newGroup.GroupCreatorID,
+			Role:     "creator",
+		}
 
-// 		for _, tagID := range args.TagIDs {
-// 			_, err := q.AddGroupTag(ctx, AddGroupTagParams{
-// 				GroupID: groupInfo.GroupID,
-// 				TagID:   int32(tagID),
-// 			})
-// 			if err != nil {
-// 				return err
-// 			}
-// 		}
-// 		return nil
-// 	})
+		_, err = q.AddGroupMember(ctx, arg)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return Group{}, err
+	}
 
-// 	return CreateGroupWithTagsRes{
-// 		GroupID:        int(groupInfo.GroupID),
-// 		GroupName:      groupInfo.GroupName,
-// 		GroupCreatorId: int(groupInfo.GroupCreatorID),
-// 		PhotoUrl:       groupInfo.PhotoUrl.String,
-// 		TagIDs:         args.TagIDs,
-// 		CreatedAt:      groupInfo.CreatedAt,
-// 	}, err
-// }
+	return newGroup, nil
+}
+
+// AcceptGroupRequest accepts a group request by adding the member to the group and deleting the request
+func (store *SQLStore) AcceptGroupRequest(ctx context.Context, args AcceptGroupRequestParams) (GroupMember, error) {
+	var newMember GroupMember
+
+	err := store.execTx(ctx, func(q *Queries) error {
+		var err error
+
+		groupReq, err := q.GetGroupRequest(ctx, GetGroupRequestParams{
+			GroupID:  int32(args.GroupID),
+			MemberID: int32(args.MemberID),
+		})
+		if err != nil {
+			return err
+		}
+
+		newMember, err = q.AddGroupMember(ctx, AddGroupMemberParams{
+			GroupID:  groupReq.GroupID,
+			MemberID: groupReq.MemberID,
+			Role:     "member",
+		})
+		if err != nil {
+			return err
+		}
+
+		err = q.DeleteRequestToJoinGroup(ctx, DeleteRequestToJoinGroupParams{
+			GroupID:  groupReq.GroupID,
+			MemberID: groupReq.MemberID,
+		})
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return GroupMember{}, err
+	}
+
+	return newMember, nil
+}

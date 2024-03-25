@@ -34,18 +34,25 @@ func (s *server) groupService() {
 
 	// Group Endpoints
 	group.POST("/group", httpHandler.CreateNewGroup)
-	group.POST("/newmember", httpHandler.NewGroupMember)
+	group.POST("/requesttojoin", httpHandler.SendRequestToJoinGroup)
+	group.POST("/acceptrequest", httpHandler.AcceptGroupRequest)
+	group.DELETE("/declinerequest", httpHandler.DeclineGroupRequest)
+	group.GET("/grouprequests", httpHandler.GetGroupJoinRequests)
+	group.GET("/userrequests", httpHandler.GetUserJoinRequests)
 	group.GET("/group", httpHandler.GetGroupById)
 	group.GET("/groupmembers", httpHandler.GetGroupMembersByGroupId)
 	group.GET("/listgroups", httpHandler.ListGroups)
 	group.PATCH("/editgroupname", httpHandler.EditGroupName)
 	group.PATCH("/editgroupphoto", httpHandler.EditGroupPhoto)
 	group.PATCH("/editmemberrole", httpHandler.EditMemberRole)
+	group.PATCH("/editgroupvisibility", httpHandler.EditGroupVisibility)
+	group.PATCH("/editgroupdescription", httpHandler.EditGroupDescription)
 	group.DELETE("/group", httpHandler.DeleteGroup)
 	group.DELETE("/groupmember", httpHandler.DeleteGroupMember)
 
 	// Post Mock data
 	post.POST("/mock", httpHandler.PostMockData)
+
 	// Post Endpoints
 	post.POST("/post", httpHandler.CreatePost)
 	post.GET("/post", httpHandler.GetPostByPostId)

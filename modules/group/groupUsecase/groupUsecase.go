@@ -25,12 +25,18 @@ type (
 		SearchUser(pctx context.Context, grpcUrl string, req *userPb.SearchUserReq) (*userPb.SearchUserRes, error)
 		GetRole(pctx context.Context, userID int32, groupID int32) (group.Role, error)
 		CreateNewGroup(pctx context.Context, args groupdb.CreateGroupParams) (groupdb.Group, error)
-		NewGroupMember(pctx context.Context, args groupdb.AddGroupMemberParams) (groupdb.GroupMember, error)
+		SendRequestToJoinGroup(pctx context.Context, args groupdb.SendRequestToJoinGroupParams) (groupdb.GroupRequest, error)
+		AcceptGroupRequest(pctx context.Context, args groupdb.AcceptGroupRequestParams) (groupdb.GroupMember, error)
+		DeclineGroupRequest(pctx context.Context, args groupdb.DeleteRequestToJoinGroupParams, declinerId int) error
+		GetGroupJoinRequests(pctx context.Context, groupId int) ([]groupdb.GroupRequest, error)
+		GetUserJoinRequests(pctx context.Context, userId int) ([]groupdb.GroupRequest, error)
 		GetGroupById(pctx context.Context, groupId int) (groupdb.GetGroupByIDRow, error)
 		GetGroupMembersByGroupId(pctx context.Context, groupId int) ([]groupdb.GroupMember, error)
 		ListGroups(pctx context.Context, args groupdb.ListGroupsParams) ([]groupdb.Group, error)
-		EditGroupName(pctx context.Context, args groupdb.EditGroupNameParams, memberId int32) (groupdb.GetGroupByIDRow, error)
+		EditGroupName(pctx context.Context, args groupdb.EditGroupNameParams, editorId int32) (groupdb.GetGroupByIDRow, error)
 		EditGroupPhoto(pctx context.Context, args groupdb.EditGroupPhotoParams, editorId int32) (groupdb.GetGroupByIDRow, error)
+		EditGroupVisibility(pctx context.Context, args groupdb.EditGroupVisibilityParams, editorId int32) (groupdb.GetGroupByIDRow, error)
+		EditGroupDescription(pctx context.Context, args groupdb.EditGroupDescriptionParams, editorId int32) (groupdb.GetGroupByIDRow, error)
 		EditMemberRole(pctx context.Context, args groupdb.EditMemberRoleParams, editorId int32) (groupdb.GetMemberInfoRow, error)
 		DeleteGroup(pctx context.Context, groupId int, editorId int32) error
 		DeleteGroupMember(pctx context.Context, args groupdb.DeleteMemberParams, editorId int32) error
@@ -104,29 +110,66 @@ func (u *groupUsecase) GetRole(pctx context.Context, userID int32, groupID int32
 }
 
 func (u *groupUsecase) CreateNewGroup(pctx context.Context, args groupdb.CreateGroupParams) (groupdb.Group, error) {
-	newGroup, err := u.store.CreateGroup(pctx, args)
-	if err != nil {
-		return groupdb.Group{}, err
-	}
-
-	arg := groupdb.AddGroupMemberParams{
-		GroupID:  newGroup.GroupID,
-		MemberID: newGroup.GroupCreatorID,
-		Role:     "admin",
-	}
-	_, err = u.store.AddGroupMember(pctx, arg)
+	newGroup, err := u.store.CreateNewGroup(pctx, args)
 	if err != nil {
 		return groupdb.Group{}, err
 	}
 	return newGroup, nil
 }
 
-func (u *groupUsecase) NewGroupMember(pctx context.Context, args groupdb.AddGroupMemberParams) (groupdb.GroupMember, error) {
-	newMember, err := u.store.AddGroupMember(pctx, args)
+func (u *groupUsecase) SendRequestToJoinGroup(pctx context.Context, args groupdb.SendRequestToJoinGroupParams) (groupdb.GroupRequest, error) {
+	newRequest, err := u.store.SendRequestToJoinGroup(pctx, args)
+	if err != nil {
+		return groupdb.GroupRequest{}, err
+	}
+	return newRequest, nil
+}
+
+func (u *groupUsecase) AcceptGroupRequest(pctx context.Context, args groupdb.AcceptGroupRequestParams) (groupdb.GroupMember, error) {
+	role, err := u.GetRole(pctx, int32(args.AcceptorId), int32(args.GroupID))
+	if err != nil {
+		return groupdb.GroupMember{}, err
+	}
+	if role != group.Admin && role != group.Moderator {
+		return groupdb.GroupMember{}, errors.New("no permission")
+	}
+	
+	newMember, err := u.store.AcceptGroupRequest(pctx, args)
 	if err != nil {
 		return groupdb.GroupMember{}, err
 	}
 	return newMember, nil
+}
+
+func (u *groupUsecase) DeclineGroupRequest(pctx context.Context, args groupdb.DeleteRequestToJoinGroupParams, declinerId int) error {
+	role, err := u.GetRole(pctx, int32(declinerId), int32(args.GroupID))
+	if err != nil {
+		return err
+	}
+	if role != group.Admin && role != group.Moderator {
+		return errors.New("no permission")
+	}
+	
+	if err := u.store.DeleteRequestToJoinGroup(pctx, args); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (u *groupUsecase) GetGroupJoinRequests(pctx context.Context, groupId int) ([]groupdb.GroupRequest, error) {
+	requests, err := u.store.GetGroupRequests(pctx, int32(groupId))
+	if err != nil {
+		return []groupdb.GroupRequest{}, err
+	}
+	return requests, nil
+}
+
+func (u *groupUsecase) GetUserJoinRequests(pctx context.Context, userId int) ([]groupdb.GroupRequest, error) {
+	requests, err := u.store.GetMemberPendingGroupRequests(pctx, int32(userId))
+	if err != nil {
+		return []groupdb.GroupRequest{}, err
+	}
+	return requests, nil
 }
 
 func (u *groupUsecase) GetGroupById(pctx context.Context, groupId int) (groupdb.GetGroupByIDRow, error) {
@@ -153,8 +196,8 @@ func (u *groupUsecase) ListGroups(pctx context.Context, args groupdb.ListGroupsP
 	return groups, nil
 }
 
-func (u *groupUsecase) EditGroupName(pctx context.Context, args groupdb.EditGroupNameParams, memberId int32) (groupdb.GetGroupByIDRow, error) {
-	role, err := u.GetRole(pctx, memberId, args.GroupID)
+func (u *groupUsecase) EditGroupName(pctx context.Context, args groupdb.EditGroupNameParams, editorId int32) (groupdb.GetGroupByIDRow, error) {
+	role, err := u.GetRole(pctx, editorId, args.GroupID)
 	if err != nil {
 		return groupdb.GetGroupByIDRow{}, err
 	}
@@ -193,6 +236,48 @@ func (u *groupUsecase) EditGroupPhoto(pctx context.Context, args groupdb.EditGro
 	}
 
 	return groupData, nil
+}
+
+func (u *groupUsecase) EditGroupVisibility(pctx context.Context, args groupdb.EditGroupVisibilityParams, editorId int32) (groupdb.GetGroupByIDRow, error) {
+	role, err := u.GetRole(pctx, editorId, args.GroupID)
+	if err != nil {
+		return groupdb.GetGroupByIDRow{}, err
+	}
+
+	if role != group.Admin && role != group.Moderator {
+		return groupdb.GetGroupByIDRow{}, errors.New("no permission")
+	}
+	if err := u.store.EditGroupVisibility(pctx, args); err != nil {
+		return groupdb.GetGroupByIDRow{}, err
+	}
+
+	groupData, err := u.GetGroupById(pctx, int(args.GroupID))
+	if err != nil {
+		return groupdb.GetGroupByIDRow{}, err
+	}
+	return groupData, nil
+}
+
+func (u *groupUsecase) EditGroupDescription(pctx context.Context, args groupdb.EditGroupDescriptionParams, editorId int32) (groupdb.GetGroupByIDRow, error) {
+	role, err := u.GetRole(pctx, editorId, args.GroupID)
+	if err != nil {
+		return groupdb.GetGroupByIDRow{}, err
+	}
+
+	if role != group.Admin && role != group.Moderator {
+		return groupdb.GetGroupByIDRow{}, errors.New("no permission")
+	}
+
+	if err := u.store.EditGroupDescription(pctx, args); err != nil {
+		return groupdb.GetGroupByIDRow{}, err
+	}
+
+	updatedGroup, err := u.GetGroupById(pctx, int(args.GroupID))
+	if err != nil {
+		return groupdb.GetGroupByIDRow{}, err
+	}
+
+	return updatedGroup, nil
 }
 
 func (u *groupUsecase) EditMemberRole(pctx context.Context, args groupdb.EditMemberRoleParams, editorId int32) (groupdb.GetMemberInfoRow, error) {

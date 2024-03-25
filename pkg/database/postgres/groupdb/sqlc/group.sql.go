@@ -41,10 +41,14 @@ INSERT INTO groups (
         group_creator_id,
         photo_url,
         frequency,
+        max_members,
+        group_type,
+        description,
+        visibility,
         tag_id
     )
-VALUES ($1, $2, $3, $4, $5)
-RETURNING group_id, group_name, group_creator_id, photo_url, tag_id, frequency, max_members, created_at
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+RETURNING group_id, group_name, group_creator_id, description, photo_url, tag_id, frequency, max_members, group_type, visibility, created_at
 `
 
 type CreateGroupParams struct {
@@ -52,6 +56,10 @@ type CreateGroupParams struct {
 	GroupCreatorID int32          `json:"group_creator_id"`
 	PhotoUrl       sql.NullString `json:"photo_url"`
 	Frequency      sql.NullInt32  `json:"frequency"`
+	MaxMembers     int32          `json:"max_members"`
+	GroupType      string         `json:"group_type"`
+	Description    sql.NullString `json:"description"`
+	Visibility     bool           `json:"visibility"`
 	TagID          int32          `json:"tag_id"`
 }
 
@@ -61,6 +69,10 @@ func (q *Queries) CreateGroup(ctx context.Context, arg CreateGroupParams) (Group
 		arg.GroupCreatorID,
 		arg.PhotoUrl,
 		arg.Frequency,
+		arg.MaxMembers,
+		arg.GroupType,
+		arg.Description,
+		arg.Visibility,
 		arg.TagID,
 	)
 	var i Group
@@ -68,10 +80,13 @@ func (q *Queries) CreateGroup(ctx context.Context, arg CreateGroupParams) (Group
 		&i.GroupID,
 		&i.GroupName,
 		&i.GroupCreatorID,
+		&i.Description,
 		&i.PhotoUrl,
 		&i.TagID,
 		&i.Frequency,
 		&i.MaxMembers,
+		&i.GroupType,
+		&i.Visibility,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -80,7 +95,7 @@ func (q *Queries) CreateGroup(ctx context.Context, arg CreateGroupParams) (Group
 const createNewTag = `-- name: CreateNewTag :one
 INSERT INTO tags (tag_name, icon_url)
 VALUES ($1, $2)
-RETURNING tag_id, tag_name, icon_url
+RETURNING tag_id, tag_name, icon_url, category_id
 `
 
 type CreateNewTagParams struct {
@@ -91,7 +106,12 @@ type CreateNewTagParams struct {
 func (q *Queries) CreateNewTag(ctx context.Context, arg CreateNewTagParams) (Tag, error) {
 	row := q.db.QueryRowContext(ctx, createNewTag, arg.TagName, arg.IconUrl)
 	var i Tag
-	err := row.Scan(&i.TagID, &i.TagName, &i.IconUrl)
+	err := row.Scan(
+		&i.TagID,
+		&i.TagName,
+		&i.IconUrl,
+		&i.CategoryID,
+	)
 	return i, err
 }
 
@@ -118,6 +138,38 @@ type DeleteMemberParams struct {
 
 func (q *Queries) DeleteMember(ctx context.Context, arg DeleteMemberParams) error {
 	_, err := q.db.ExecContext(ctx, deleteMember, arg.MemberID, arg.GroupID)
+	return err
+}
+
+const deleteRequestToJoinGroup = `-- name: DeleteRequestToJoinGroup :exec
+DELETE FROM group_requests
+WHERE group_id = $1
+    AND member_id = $2
+`
+
+type DeleteRequestToJoinGroupParams struct {
+	GroupID  int32 `json:"group_id"`
+	MemberID int32 `json:"member_id"`
+}
+
+func (q *Queries) DeleteRequestToJoinGroup(ctx context.Context, arg DeleteRequestToJoinGroupParams) error {
+	_, err := q.db.ExecContext(ctx, deleteRequestToJoinGroup, arg.GroupID, arg.MemberID)
+	return err
+}
+
+const editGroupDescription = `-- name: EditGroupDescription :exec
+UPDATE groups
+SET description = $2
+WHERE group_id = $1
+`
+
+type EditGroupDescriptionParams struct {
+	GroupID     int32          `json:"group_id"`
+	Description sql.NullString `json:"description"`
+}
+
+func (q *Queries) EditGroupDescription(ctx context.Context, arg EditGroupDescriptionParams) error {
+	_, err := q.db.ExecContext(ctx, editGroupDescription, arg.GroupID, arg.Description)
 	return err
 }
 
@@ -153,6 +205,22 @@ func (q *Queries) EditGroupPhoto(ctx context.Context, arg EditGroupPhotoParams) 
 	return err
 }
 
+const editGroupVisibility = `-- name: EditGroupVisibility :exec
+UPDATE groups
+SET visibility = $2
+WHERE group_id = $1
+`
+
+type EditGroupVisibilityParams struct {
+	GroupID    int32 `json:"group_id"`
+	Visibility bool  `json:"visibility"`
+}
+
+func (q *Queries) EditGroupVisibility(ctx context.Context, arg EditGroupVisibilityParams) error {
+	_, err := q.db.ExecContext(ctx, editGroupVisibility, arg.GroupID, arg.Visibility)
+	return err
+}
+
 const editMemberRole = `-- name: EditMemberRole :exec
 UPDATE group_members
 SET role = $3
@@ -172,7 +240,7 @@ func (q *Queries) EditMemberRole(ctx context.Context, arg EditMemberRoleParams) 
 }
 
 const getAvailableTags = `-- name: GetAvailableTags :many
-SELECT tag_id, tag_name, icon_url
+SELECT tag_id, tag_name, icon_url, category_id
 FROM tags
 ORDER BY tag_id
 `
@@ -186,7 +254,12 @@ func (q *Queries) GetAvailableTags(ctx context.Context) ([]Tag, error) {
 	items := []Tag{}
 	for rows.Next() {
 		var i Tag
-		if err := rows.Scan(&i.TagID, &i.TagName, &i.IconUrl); err != nil {
+		if err := rows.Scan(
+			&i.TagID,
+			&i.TagName,
+			&i.IconUrl,
+			&i.CategoryID,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -206,6 +279,10 @@ SELECT groups.group_id,
     groups.photo_url,
     groups.group_creator_id,
     groups.frequency,
+    groups.max_members,
+    groups.group_type,
+    groups.visibility,
+    groups.description,
     groups.created_at,
     tags.tag_name
 FROM groups
@@ -219,6 +296,10 @@ type GetGroupByIDRow struct {
 	PhotoUrl       sql.NullString `json:"photo_url"`
 	GroupCreatorID int32          `json:"group_creator_id"`
 	Frequency      sql.NullInt32  `json:"frequency"`
+	MaxMembers     int32          `json:"max_members"`
+	GroupType      string         `json:"group_type"`
+	Visibility     bool           `json:"visibility"`
+	Description    sql.NullString `json:"description"`
 	CreatedAt      time.Time      `json:"created_at"`
 	TagName        string         `json:"tag_name"`
 }
@@ -232,6 +313,10 @@ func (q *Queries) GetGroupByID(ctx context.Context, groupID int32) (GetGroupByID
 		&i.PhotoUrl,
 		&i.GroupCreatorID,
 		&i.Frequency,
+		&i.MaxMembers,
+		&i.GroupType,
+		&i.Visibility,
+		&i.Description,
 		&i.CreatedAt,
 		&i.TagName,
 	)
@@ -250,8 +335,64 @@ func (q *Queries) GetGroupLatestId(ctx context.Context) (int32, error) {
 	return column_1, err
 }
 
+const getGroupRequest = `-- name: GetGroupRequest :one
+SELECT group_id, member_id, description, created_at FROM group_requests
+WHERE group_id = $1
+    AND member_id = $2
+`
+
+type GetGroupRequestParams struct {
+	GroupID  int32 `json:"group_id"`
+	MemberID int32 `json:"member_id"`
+}
+
+func (q *Queries) GetGroupRequest(ctx context.Context, arg GetGroupRequestParams) (GroupRequest, error) {
+	row := q.db.QueryRowContext(ctx, getGroupRequest, arg.GroupID, arg.MemberID)
+	var i GroupRequest
+	err := row.Scan(
+		&i.GroupID,
+		&i.MemberID,
+		&i.Description,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getGroupRequests = `-- name: GetGroupRequests :many
+SELECT group_id, member_id, description, created_at FROM group_requests
+WHERE group_id = $1
+`
+
+func (q *Queries) GetGroupRequests(ctx context.Context, groupID int32) ([]GroupRequest, error) {
+	rows, err := q.db.QueryContext(ctx, getGroupRequests, groupID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GroupRequest{}
+	for rows.Next() {
+		var i GroupRequest
+		if err := rows.Scan(
+			&i.GroupID,
+			&i.MemberID,
+			&i.Description,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getGroupsByTagID = `-- name: GetGroupsByTagID :many
-SELECT group_id, group_name, group_creator_id, photo_url, tag_id, frequency, max_members, created_at
+SELECT group_id, group_name, group_creator_id, description, photo_url, tag_id, frequency, max_members, group_type, visibility, created_at
 from groups
 WHERE tag_id = $1
 `
@@ -269,10 +410,13 @@ func (q *Queries) GetGroupsByTagID(ctx context.Context, tagID int32) ([]Group, e
 			&i.GroupID,
 			&i.GroupName,
 			&i.GroupCreatorID,
+			&i.Description,
 			&i.PhotoUrl,
 			&i.TagID,
 			&i.Frequency,
 			&i.MaxMembers,
+			&i.GroupType,
+			&i.Visibility,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -320,6 +464,39 @@ func (q *Queries) GetMemberInfo(ctx context.Context, arg GetMemberInfoParams) (G
 		&i.GroupName,
 	)
 	return i, err
+}
+
+const getMemberPendingGroupRequests = `-- name: GetMemberPendingGroupRequests :many
+SELECT group_id, member_id, description, created_at FROM group_requests
+WHERE member_id = $1
+`
+
+func (q *Queries) GetMemberPendingGroupRequests(ctx context.Context, memberID int32) ([]GroupRequest, error) {
+	rows, err := q.db.QueryContext(ctx, getMemberPendingGroupRequests, memberID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GroupRequest{}
+	for rows.Next() {
+		var i GroupRequest
+		if err := rows.Scan(
+			&i.GroupID,
+			&i.MemberID,
+			&i.Description,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getMembersByGroupID = `-- name: GetMembersByGroupID :many
@@ -376,7 +553,7 @@ func (q *Queries) GetReactionById(ctx context.Context, reactionID int32) (PostRe
 }
 
 const listGroups = `-- name: ListGroups :many
-SELECT group_id, group_name, group_creator_id, photo_url, tag_id, frequency, max_members, created_at
+SELECT group_id, group_name, group_creator_id, description, photo_url, tag_id, frequency, max_members, group_type, visibility, created_at
 FROM groups
 ORDER BY group_id
 LIMIT $1 OFFSET $2
@@ -400,10 +577,13 @@ func (q *Queries) ListGroups(ctx context.Context, arg ListGroupsParams) ([]Group
 			&i.GroupID,
 			&i.GroupName,
 			&i.GroupCreatorID,
+			&i.Description,
 			&i.PhotoUrl,
 			&i.TagID,
 			&i.Frequency,
 			&i.MaxMembers,
+			&i.GroupType,
+			&i.Visibility,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -417,4 +597,28 @@ func (q *Queries) ListGroups(ctx context.Context, arg ListGroupsParams) ([]Group
 		return nil, err
 	}
 	return items, nil
+}
+
+const sendRequestToJoinGroup = `-- name: SendRequestToJoinGroup :one
+INSERT INTO group_requests (group_id, member_id, description)
+VALUES ($1, $2, $3)
+RETURNING group_id, member_id, description, created_at
+`
+
+type SendRequestToJoinGroupParams struct {
+	GroupID     int32          `json:"group_id"`
+	MemberID    int32          `json:"member_id"`
+	Description sql.NullString `json:"description"`
+}
+
+func (q *Queries) SendRequestToJoinGroup(ctx context.Context, arg SendRequestToJoinGroupParams) (GroupRequest, error) {
+	row := q.db.QueryRowContext(ctx, sendRequestToJoinGroup, arg.GroupID, arg.MemberID, arg.Description)
+	var i GroupRequest
+	err := row.Scan(
+		&i.GroupID,
+		&i.MemberID,
+		&i.Description,
+		&i.CreatedAt,
+	)
+	return i, err
 }

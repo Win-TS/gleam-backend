@@ -4,9 +4,13 @@ INSERT INTO groups (
         group_creator_id,
         photo_url,
         frequency,
+        max_members,
+        group_type,
+        description,
+        visibility,
         tag_id
     )
-VALUES ($1, $2, $3, $4, $5)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 RETURNING *;
 
 -- name: AddGroupMember :one
@@ -14,12 +18,39 @@ INSERT INTO group_members (group_id, member_id, role)
 VALUES ($1, $2, $3)
 RETURNING *;
 
+-- name: SendRequestToJoinGroup :one
+INSERT INTO group_requests (group_id, member_id, description)
+VALUES ($1, $2, $3)
+RETURNING *;
+
+-- name: DeleteRequestToJoinGroup :exec
+DELETE FROM group_requests
+WHERE group_id = $1
+    AND member_id = $2;
+
+-- name: GetGroupRequest :one
+SELECT * FROM group_requests
+WHERE group_id = $1
+    AND member_id = $2;
+
+-- name: GetGroupRequests :many
+SELECT * FROM group_requests
+WHERE group_id = $1;
+
+-- name: GetMemberPendingGroupRequests :many
+SELECT * FROM group_requests
+WHERE member_id = $1;
+
 -- name: GetGroupByID :one
 SELECT groups.group_id,
     groups.group_name,
     groups.photo_url,
     groups.group_creator_id,
     groups.frequency,
+    groups.max_members,
+    groups.group_type,
+    groups.visibility,
+    groups.description,
     groups.created_at,
     tags.tag_name
 FROM groups
@@ -45,6 +76,16 @@ WHERE group_id = $1;
 -- name: EditGroupPhoto :exec
 UPDATE groups
 SET photo_url = $2
+WHERE group_id = $1;
+
+-- name: EditGroupVisibility :exec
+UPDATE groups
+SET visibility = $2
+WHERE group_id = $1;
+
+-- name: EditGroupDescription :exec
+UPDATE groups
+SET description = $2
 WHERE group_id = $1;
 
 -- name: EditMemberRole :exec

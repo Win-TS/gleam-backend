@@ -22,9 +22,12 @@ type Querier interface {
 	DeleteMember(ctx context.Context, arg DeleteMemberParams) error
 	DeletePost(ctx context.Context, postID int32) error
 	DeleteReaction(ctx context.Context, reactionID int32) error
+	DeleteRequestToJoinGroup(ctx context.Context, arg DeleteRequestToJoinGroupParams) error
 	EditComment(ctx context.Context, arg EditCommentParams) error
+	EditGroupDescription(ctx context.Context, arg EditGroupDescriptionParams) error
 	EditGroupName(ctx context.Context, arg EditGroupNameParams) error
 	EditGroupPhoto(ctx context.Context, arg EditGroupPhotoParams) error
+	EditGroupVisibility(ctx context.Context, arg EditGroupVisibilityParams) error
 	EditMemberRole(ctx context.Context, arg EditMemberRoleParams) error
 	EditPost(ctx context.Context, arg EditPostParams) error
 	EditReaction(ctx context.Context, arg EditReactionParams) error
@@ -35,9 +38,12 @@ type Querier interface {
 	GetCommentsCountByPostID(ctx context.Context, postID int32) (int64, error)
 	GetGroupByID(ctx context.Context, groupID int32) (GetGroupByIDRow, error)
 	GetGroupLatestId(ctx context.Context) (int32, error)
+	GetGroupRequest(ctx context.Context, arg GetGroupRequestParams) (GroupRequest, error)
+	GetGroupRequests(ctx context.Context, groupID int32) ([]GroupRequest, error)
 	GetGroupsByTagID(ctx context.Context, tagID int32) ([]Group, error)
 	GetLatestStreakSetByGroupIDAndUserID(ctx context.Context, arg GetLatestStreakSetByGroupIDAndUserIDParams) (StreakSet, error)
 	GetMemberInfo(ctx context.Context, arg GetMemberInfoParams) (GetMemberInfoRow, error)
+	GetMemberPendingGroupRequests(ctx context.Context, memberID int32) ([]GroupRequest, error)
 	GetMembersByGroupID(ctx context.Context, groupID int32) ([]GroupMember, error)
 	GetPostByPostID(ctx context.Context, postID int32) (Post, error)
 	GetPostLatestId(ctx context.Context) (int32, error)
@@ -54,6 +60,7 @@ type Querier interface {
 	GetStreaksByStreakSetID(ctx context.Context, streakSetID int32) ([]Streak, error)
 	GetUnendedStreakSetByUserID(ctx context.Context, userID int32) ([]StreakSet, error)
 	ListGroups(ctx context.Context, arg ListGroupsParams) ([]Group, error)
+	SendRequestToJoinGroup(ctx context.Context, arg SendRequestToJoinGroupParams) (GroupRequest, error)
 	UpdateStreakSetCount(ctx context.Context, arg UpdateStreakSetCountParams) error
 }
 

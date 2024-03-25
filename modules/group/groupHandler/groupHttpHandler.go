@@ -9,6 +9,7 @@ import (
 	"github.com/Win-TS/gleam-backend.git/config"
 	"github.com/Win-TS/gleam-backend.git/modules/group"
 	"github.com/Win-TS/gleam-backend.git/modules/group/groupUsecase"
+
 	//userPb "github.com/Win-TS/gleam-backend.git/modules/user/userPb"
 	groupdb "github.com/Win-TS/gleam-backend.git/pkg/database/postgres/groupdb/sqlc"
 	"github.com/Win-TS/gleam-backend.git/pkg/request"
@@ -20,13 +21,19 @@ import (
 type (
 	GroupHttpHandlerService interface {
 		CreateNewGroup(c echo.Context) error
-		NewGroupMember(c echo.Context) error
+		SendRequestToJoinGroup(c echo.Context) error
+		AcceptGroupRequest(c echo.Context) error
+		DeclineGroupRequest(c echo.Context) error
+		GetGroupJoinRequests(c echo.Context) error
+		GetUserJoinRequests(c echo.Context) error
 		GetGroupById(c echo.Context) error
 		GetGroupMembersByGroupId(c echo.Context) error
 		ListGroups(c echo.Context) error
 		EditGroupName(c echo.Context) error
 		EditGroupPhoto(c echo.Context) error
 		EditMemberRole(c echo.Context) error
+		EditGroupVisibility(c echo.Context) error
+		EditGroupDescription(c echo.Context) error
 		DeleteGroup(c echo.Context) error
 		DeleteGroupMember(c echo.Context) error
 		CreatePost(c echo.Context) error
@@ -109,6 +116,12 @@ func (h *groupHttpHandler) CreateNewGroup(c echo.Context) error {
 		GroupName:      req.GroupName,
 		GroupCreatorID: int32(req.GroupCreatorId),
 		PhotoUrl:       utils.ConvertStringToSqlNullString(url),
+		TagID:          int32(req.TagID),
+		Description:    utils.ConvertStringToSqlNullString(req.Description),
+		Frequency:      utils.ConvertIntToSqlNullInt32(req.Frequency),
+		MaxMembers:     int32(req.MaxMembers),
+		GroupType:      req.GroupType,
+		Visibility:     req.Visibility,
 	}
 
 	newGroup, err := h.groupUsecase.CreateNewGroup(ctx, *args)
@@ -119,21 +132,100 @@ func (h *groupHttpHandler) CreateNewGroup(c echo.Context) error {
 	return response.SuccessResponse(c, http.StatusCreated, newGroup)
 }
 
-func (h *groupHttpHandler) NewGroupMember(c echo.Context) error {
+func (h *groupHttpHandler) SendRequestToJoinGroup(c echo.Context) error {
 	ctx := context.Background()
 	wrapper := request.ContextWrapper(c)
 
-	req := new(groupdb.AddGroupMemberParams)
+	req := new(group.RequestToJoinGroupReq)
 	if err := wrapper.Bind(req); err != nil {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 
-	newMember, err := h.groupUsecase.NewGroupMember(ctx, *req)
+	newRequest, err := h.groupUsecase.SendRequestToJoinGroup(ctx, groupdb.SendRequestToJoinGroupParams{
+		GroupID:     int32(req.GroupID),
+		MemberID:    int32(req.MemberID),
+		Description: utils.ConvertStringToSqlNullString(req.Description),
+	})
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	return response.SuccessResponse(c, http.StatusCreated, newRequest)
+}
+
+func (h *groupHttpHandler) AcceptGroupRequest(c echo.Context) error {
+	ctx := context.Background()
+	wrapper := request.ContextWrapper(c)
+
+	req := new(groupdb.AcceptGroupRequestParams)
+	if err := wrapper.Bind(req); err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	newMember, err := h.groupUsecase.AcceptGroupRequest(ctx, *req)
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
 
 	return response.SuccessResponse(c, http.StatusCreated, newMember)
+}
+
+func (h *groupHttpHandler) DeclineGroupRequest(c echo.Context) error {
+	ctx := context.Background()
+
+	groupId, err := strconv.Atoi(c.QueryParam("group_id"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	memberId, err := strconv.Atoi(c.QueryParam("member_id"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	declinerId, err := strconv.Atoi(c.QueryParam("decliner_id"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	if err := h.groupUsecase.DeclineGroupRequest(ctx, groupdb.DeleteRequestToJoinGroupParams{
+		GroupID:  int32(groupId),
+		MemberID: int32(memberId),
+	}, declinerId); err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	return response.SuccessResponse(c, http.StatusOK, "Success: group request declined")
+}
+
+func (h *groupHttpHandler) GetGroupJoinRequests(c echo.Context) error {
+	ctx := context.Background()
+	groupId, err := strconv.Atoi(c.QueryParam("group_id"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	joinRequests, err := h.groupUsecase.GetGroupJoinRequests(ctx, groupId)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	return response.SuccessResponse(c, http.StatusOK, joinRequests)
+}
+
+func (h *groupHttpHandler) GetUserJoinRequests(c echo.Context) error {
+	ctx := context.Background()
+	memberId, err := strconv.Atoi(c.QueryParam("user_id"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	userRequests, err := h.groupUsecase.GetUserJoinRequests(ctx, memberId)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	return response.SuccessResponse(c, http.StatusOK, userRequests)
 }
 
 func (h *groupHttpHandler) GetGroupById(c echo.Context) error {
@@ -281,6 +373,80 @@ func (h *groupHttpHandler) EditGroupPhoto(c echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"success": true,
 		"message": "Success: group photo edited",
+		"data":    updatedGroup,
+	})
+}
+
+func (h *groupHttpHandler) EditGroupVisibility(c echo.Context) error {
+	ctx := context.Background()
+
+	groupId, err := strconv.Atoi(c.QueryParam("group_id"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	visibility_str := c.QueryParam("visibility")
+	visibility := false
+	if visibility_str != "true" && visibility_str != "false" {
+		return response.ErrResponse(c, http.StatusBadRequest, "Invalid visibility value")
+	}
+	if visibility_str == "true" {
+		visibility = true
+	}
+
+	editorId, err := strconv.Atoi(c.QueryParam("editor_id"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	args := &groupdb.EditGroupVisibilityParams{
+		GroupID:    int32(groupId),
+		Visibility: visibility,
+	}
+
+	updatedGroup, err := h.groupUsecase.EditGroupVisibility(ctx, *args, int32(editorId))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"success": true,
+		"message": "Success: group visibility edited",
+		"data":    updatedGroup,
+	})
+}
+
+func (h *groupHttpHandler) EditGroupDescription(c echo.Context) error {
+	ctx := context.Background()
+
+	groupId, err := strconv.Atoi(c.QueryParam("group_id"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	newDescription := c.QueryParam("description")
+	if newDescription == "" {
+		return response.ErrResponse(c, http.StatusBadRequest, "Description is missing")
+	}
+
+	editorId, err := strconv.Atoi(c.QueryParam("editor_id"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	args := &groupdb.EditGroupDescriptionParams{
+		GroupID:     int32(groupId),
+		Description: utils.ConvertStringToSqlNullString(newDescription),
+	}
+
+	updatedGroup, err := h.groupUsecase.EditGroupDescription(ctx, *args, int32(editorId))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"success": true,
+		"message": "Success: group description edited",
 		"data":    updatedGroup,
 	})
 }

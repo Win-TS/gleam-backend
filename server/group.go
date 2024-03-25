@@ -41,6 +41,7 @@ func (s *server) groupService() {
 	group.PATCH("/editgroupname", httpHandler.EditGroupName)
 	group.PATCH("/editgroupphoto", httpHandler.EditGroupPhoto)
 	group.PATCH("/editmemberrole", httpHandler.EditMemberRole)
+	group.PATCH("/editgroupTag", httpHandler.EditGroupTag)
 	group.DELETE("/group", httpHandler.DeleteGroup)
 	group.DELETE("/groupmember", httpHandler.DeleteGroupMember)
 
@@ -74,4 +75,11 @@ func (s *server) groupService() {
 	tag.POST("/tag", httpHandler.CreateTag)
 	tag.GET("/alltags", httpHandler.GetAvailableTags)
 	tag.GET("/groupswithtag", httpHandler.GetGroupsByTagID)
+	tag.GET("/tagbycategory", httpHandler.GetTagByCategory)
+	tag.GET("/tagofgroup", httpHandler.GetTagByGroupId)
+	tag.GET("/groupswithcategory", httpHandler.GetGroupsByCategoryID)
+	tag.PATCH("/edittagname", httpHandler.EditTagName)
+	tag.PATCH("/edittagcategory", httpHandler.EditTagCategory)
+	tag.PATCH("/edittagicon", httpHandler.EditTagIcon)
+	tag.DELETE("/tag", httpHandler.DeleteTag)
 }

@@ -391,7 +391,7 @@ func (q *Queries) GetPostsByMemberID(ctx context.Context, memberID int32) ([]Pos
 }
 
 const getPostsForOngoingFeedByMemberID = `-- name: GetPostsForOngoingFeedByMemberID :many
-SELECT posts.post_id, posts.member_id, posts.group_id, posts.photo_url, posts.description, posts.created_at, groups.group_id, groups.group_name, groups.group_creator_id, groups.photo_url, groups.tag_id, groups.frequency, groups.max_members, groups.created_at FROM posts
+SELECT posts.post_id, posts.member_id, posts.group_id, posts.photo_url, posts.description, posts.created_at, groups.group_id, groups.group_name, groups.group_creator_id, groups.description, groups.photo_url, groups.tag_id, groups.frequency, groups.max_members, groups.group_type, groups.visibility, groups.created_at FROM posts
 JOIN group_members ON posts.group_id = group_members.group_id JOIN groups ON posts.group_id = groups.group_id
 WHERE group_members.member_id = $1
 ORDER BY posts.created_at DESC
@@ -407,10 +407,13 @@ type GetPostsForOngoingFeedByMemberIDRow struct {
 	GroupID_2      int32          `json:"group_id_2"`
 	GroupName      string         `json:"group_name"`
 	GroupCreatorID int32          `json:"group_creator_id"`
+	Description_2  sql.NullString `json:"description_2"`
 	PhotoUrl_2     sql.NullString `json:"photo_url_2"`
 	TagID          int32          `json:"tag_id"`
 	Frequency      sql.NullInt32  `json:"frequency"`
 	MaxMembers     int32          `json:"max_members"`
+	GroupType      string         `json:"group_type"`
+	Visibility     bool           `json:"visibility"`
 	CreatedAt_2    time.Time      `json:"created_at_2"`
 }
 
@@ -433,10 +436,13 @@ func (q *Queries) GetPostsForOngoingFeedByMemberID(ctx context.Context, memberID
 			&i.GroupID_2,
 			&i.GroupName,
 			&i.GroupCreatorID,
+			&i.Description_2,
 			&i.PhotoUrl_2,
 			&i.TagID,
 			&i.Frequency,
 			&i.MaxMembers,
+			&i.GroupType,
+			&i.Visibility,
 			&i.CreatedAt_2,
 		); err != nil {
 			return nil, err

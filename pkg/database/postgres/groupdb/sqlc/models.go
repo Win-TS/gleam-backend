@@ -13,10 +13,13 @@ type Group struct {
 	GroupID        int32          `json:"group_id"`
 	GroupName      string         `json:"group_name"`
 	GroupCreatorID int32          `json:"group_creator_id"`
+	Description    sql.NullString `json:"description"`
 	PhotoUrl       sql.NullString `json:"photo_url"`
 	TagID          int32          `json:"tag_id"`
 	Frequency      sql.NullInt32  `json:"frequency"`
 	MaxMembers     int32          `json:"max_members"`
+	GroupType      string         `json:"group_type"`
+	Visibility     bool           `json:"visibility"`
 	CreatedAt      time.Time      `json:"created_at"`
 }
 
@@ -25,6 +28,13 @@ type GroupMember struct {
 	MemberID  int32     `json:"member_id"`
 	Role      string    `json:"role"`
 	CreatedAt time.Time `json:"created_at"`
+}
+
+type GroupRequest struct {
+	GroupID     int32          `json:"group_id"`
+	MemberID    int32          `json:"member_id"`
+	Description sql.NullString `json:"description"`
+	CreatedAt   time.Time      `json:"created_at"`
 }
 
 type Post struct {
@@ -69,15 +79,14 @@ type StreakSet struct {
 	CreatedAt   time.Time     `json:"created_at"`
 }
 
-type Subtag struct {
-	SubtagID   int32     `json:"subtag_id"`
-	TagID      int32     `json:"tag_id"`
-	SubtagName string    `json:"subtag_name"`
-	CreatedAt  time.Time `json:"created_at"`
+type Tag struct {
+	TagID      int32          `json:"tag_id"`
+	TagName    string         `json:"tag_name"`
+	IconUrl    sql.NullString `json:"icon_url"`
+	CategoryID sql.NullInt32  `json:"category_id"`
 }
 
-type Tag struct {
-	TagID   int32          `json:"tag_id"`
-	TagName string         `json:"tag_name"`
-	IconUrl sql.NullString `json:"icon_url"`
+type TagCategory struct {
+	CategoryID   int32  `json:"category_id"`
+	CategoryName string `json:"category_name"`
 }

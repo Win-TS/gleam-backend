@@ -9,6 +9,7 @@ import (
 	"github.com/Win-TS/gleam-backend.git/config"
 	"github.com/Win-TS/gleam-backend.git/modules/group"
 	"github.com/Win-TS/gleam-backend.git/modules/group/groupUsecase"
+
 	//userPb "github.com/Win-TS/gleam-backend.git/modules/user/userPb"
 	groupdb "github.com/Win-TS/gleam-backend.git/pkg/database/postgres/groupdb/sqlc"
 	"github.com/Win-TS/gleam-backend.git/pkg/request"
@@ -52,6 +53,14 @@ type (
 		GetGroupsByTagID(c echo.Context) error
 		GroupMockData(c echo.Context) error
 		PostMockData(c echo.Context) error
+		GetTagByCategory(c echo.Context) error
+		GetTagByGroupId(c echo.Context) error
+		GetGroupsByCategoryID(c echo.Context) error
+		EditTagName(c echo.Context) error
+		EditTagCategory(c echo.Context) error
+		EditTagIcon(c echo.Context) error
+		DeleteTag(c echo.Context) error
+		EditGroupTag(c echo.Context) error
 	}
 
 	groupHttpHandler struct {
@@ -768,8 +777,9 @@ func (h *groupHttpHandler) CreateTag(c echo.Context) error {
 	}
 
 	newTag, err := h.groupUsecase.CreateNewTag(ctx, groupdb.CreateNewTagParams{
-		TagName: req.TagName,
-		IconUrl: utils.ConvertStringToSqlNullString(req.IconUrl),
+		TagName:    req.TagName,
+		IconUrl:    utils.ConvertStringToSqlNullString(req.IconUrl),
+		CategoryID: utils.ConvertIntToSqlNullInt32(req.CategoryId),
 	})
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
@@ -844,4 +854,207 @@ func (h *groupHttpHandler) PostMockData(c echo.Context) error {
 	}
 
 	return response.SuccessResponse(c, http.StatusOK, fmt.Sprintf("%d Post data created", req.Count))
+}
+
+func (h *groupHttpHandler) GetTagByCategory(c echo.Context) error {
+	ctx := context.Background()
+	categoryId, err := strconv.Atoi(c.QueryParam("category_id"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	tag, err := h.groupUsecase.GetTagByCategory(ctx, int32(categoryId))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	return response.SuccessResponse(c, http.StatusOK, tag)
+}
+
+func (h *groupHttpHandler) GetTagByGroupId(c echo.Context) error {
+	ctx := context.Background()
+	groupId, err := strconv.Atoi(c.QueryParam("group_id"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	tag, err := h.groupUsecase.GetTagByGroupId(ctx, int32(groupId))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	return response.SuccessResponse(c, http.StatusOK, tag)
+}
+
+func (h *groupHttpHandler) GetGroupsByCategoryID(c echo.Context) error {
+	ctx := context.Background()
+	categoryID, err := strconv.Atoi(c.QueryParam("category_id"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	reactions, err := h.groupUsecase.GetGroupsByCategoryID(ctx, int32(categoryID))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	return response.SuccessResponse(c, http.StatusOK, reactions)
+}
+
+func (h *groupHttpHandler) EditTagName(c echo.Context) error {
+	ctx := context.Background()
+
+	tagId, err := strconv.Atoi(c.QueryParam("tag_id"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	var requestBody map[string]interface{}
+	if err := c.Bind(&requestBody); err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, "Invalid request body")
+	}
+
+	newTagName, ok := requestBody["tag_name"].(string)
+	if !ok {
+		return response.ErrResponse(c, http.StatusBadRequest, "New tag name is missing or invalid in request body")
+	}
+
+	args := &groupdb.EditTagNameParams{
+		TagID:   int32(tagId),
+		TagName: newTagName,
+	}
+
+	updatedTag, err := h.groupUsecase.EditTagName(ctx, *args)
+
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"success": true,
+		"message": "Success: tag name edited",
+		"data":    updatedTag,
+	})
+}
+
+func (h *groupHttpHandler) EditTagCategory(c echo.Context) error {
+	ctx := context.Background()
+
+	tagId, err := strconv.Atoi(c.QueryParam("tag_id"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	var requestBody map[string]interface{}
+	if err := c.Bind(&requestBody); err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, "Invalid request body")
+	}
+
+	tagCategoryFloat, ok := requestBody["category_id"].(float64)
+	if !ok {
+		return response.ErrResponse(c, http.StatusBadRequest, "New tag category is missing or invalid in request body")
+	}
+
+	newTagCategory := int(tagCategoryFloat)
+
+	args := &groupdb.EditTagCategoryParams{
+		TagID:      int32(tagId),
+		CategoryID: utils.ConvertIntToSqlNullInt32(newTagCategory),
+	}
+
+	updatedTag, err := h.groupUsecase.EditTagCategory(ctx, *args)
+
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"success": true,
+		"message": "Success: tag category edited",
+		"data":    updatedTag,
+	})
+}
+
+func (h *groupHttpHandler) EditTagIcon(c echo.Context) error {
+	ctx := c.Request().Context()
+	tagId, err := strconv.Atoi(c.QueryParam("tag_id"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, "Invalid tag ID")
+	}
+
+	IconStr := c.FormValue("icon_url")
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, "Invalid icon url")
+	}
+
+	req := &groupdb.EditTagIconParams{
+		TagID:   int32(tagId),
+		IconUrl: utils.ConvertStringToSqlNullString(IconStr),
+	}
+
+	updatedTag, err := h.groupUsecase.EditTagIcon(ctx, *req)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, "Failed to update tag icon")
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"success": true,
+		"message": "Success: tag icon edited",
+		"data":    updatedTag,
+	})
+}
+
+func (h *groupHttpHandler) DeleteTag(c echo.Context) error {
+	ctx := context.Background()
+	tagId, err := strconv.Atoi(c.QueryParam("tag_id"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	if err := h.groupUsecase.DeleteTag(ctx, tagId); err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	return response.SuccessResponse(c, http.StatusOK, "Success: Tag deleted")
+}
+
+func (h *groupHttpHandler) EditGroupTag(c echo.Context) error {
+	ctx := context.Background()
+
+	groupId, err := strconv.Atoi(c.QueryParam("group_id"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	var requestBody map[string]interface{}
+	if err := c.Bind(&requestBody); err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, "Invalid request body")
+	}
+
+	newTag, ok := requestBody["tag_id"].(float64)
+	if !ok {
+		return response.ErrResponse(c, http.StatusBadRequest, "New tag is missing or invalid in request body")
+	}
+
+	editorID, ok := requestBody["editor_id"].(float64)
+	if !ok {
+		return response.ErrResponse(c, http.StatusBadRequest, "member_id is missing or invalid in request body")
+	}
+
+	args := &groupdb.EditGroupTagParams{
+		GroupID: int32(groupId),
+		TagID:   int32(newTag),
+	}
+
+	updatedGroup, err := h.groupUsecase.EditGroupTag(ctx, *args, int32(editorID))
+
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"success": true,
+		"message": "Success: group name edited",
+		"data":    updatedGroup,
+	})
 }

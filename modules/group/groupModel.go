@@ -3,7 +3,6 @@ package group
 import (
 	"database/sql"
 	"time"
-
 	//groupdb "github.com/Win-TS/gleam-backend.git/pkg/database/postgres/groupdb/sqlc"
 )
 
@@ -27,8 +26,9 @@ type (
 	}
 
 	NewTagReq struct {
-		TagName string `json:"tag_name" form:"tag_name" validate:"required,max=255"`
-		IconUrl string `json:"icon_url" form:"icon_url"`
+		TagName    string `json:"tag_name" form:"tag_name" validate:"required,max=255"`
+		IconUrl    string `json:"icon_url" form:"icon_url"`
+		CategoryId int    `json:"category_id" form:"category_id"`
 	}
 
 	GroupWithTagsRes struct {

@@ -49,4 +49,13 @@ type (
 		MemberID    int    `json:"member_id" form:"member_id" validate:"required"`
 		Description string `json:"description" form:"description"`
 	}
+
+	GroupRequestRes struct {
+		GroupID      int32          `json:"group_id"`
+		MemberID     int32          `json:"member_id"`
+		Description  sql.NullString `json:"description"`
+		CreatedAt    time.Time      `json:"created_at"`
+		Username     string         `json:"username"`
+		UserPhotourl string         `json:"user_photourl"`
+	}
 )

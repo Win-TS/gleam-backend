@@ -23,6 +23,7 @@ import (
 
 type UserUsecaseService interface {
 	GetUserProfile(pctx context.Context, id int) (user.UserProfile, error)
+	GetBatchUserProfiles(pctx context.Context, ids []int32) ([]userdb.GetBatchUserProfilesRow, error)
 	GetUserProfileByEmail(pctx context.Context, email string) (user.UserProfile, error)
 	GetUserProfileByUsername(pctx context.Context, username string) (user.UserProfile, error)
 	GetLatestId(pctx context.Context) (int, error)
@@ -101,6 +102,14 @@ func (u *userUsecase) GetUserProfile(pctx context.Context, id int) (user.UserPro
 		FriendsCount: int(userFriendCount),
 		PhotoUrl:     userData.Photourl.String,
 	}, nil
+}
+
+func (u *userUsecase) GetBatchUserProfiles(pctx context.Context, ids []int32) ([]userdb.GetBatchUserProfilesRow, error) {
+	userData, err := u.store.GetBatchUserProfiles(pctx, ids)
+	if err != nil {
+		return []userdb.GetBatchUserProfilesRow{}, err
+	}
+	return userData, nil
 }
 
 func (u *userUsecase) GetUserProfileByEmail(pctx context.Context, email string) (user.UserProfile, error) {

@@ -14,7 +14,38 @@ message SearchUserRes {
     bool valid = 2;
 }
 
+message GetUserProfileReq {
+    int32 userId = 1;
+}
+
+message GetUserProfileRes {
+        int32 userId = 1;
+        string username = 2;
+        string email = 3;
+        string firstname = 4;
+        string lastname = 5;
+        string photourl = 6;
+}
+
+message GetBatchUserProfileReq {
+    repeated int32 userIds = 1;
+}
+
+message GetBatchUserProfileRes {
+    message UserProfile {
+        int32 userId = 1;
+        string username = 2;
+        string email = 3;
+        string firstname = 4;
+        string lastname = 5;
+        string photourl = 6;
+    }
+    repeated UserProfile userProfiles = 1;
+}
+
 // Methods
 service UserGrpcService {
     rpc SearchUser(SearchUserReq) returns (SearchUserRes);
+    rpc GetUserProfile(GetUserProfileReq) returns (GetUserProfileRes);
+    rpc GetBatchUserProfiles(GetBatchUserProfileReq) returns (GetBatchUserProfileRes);
 }

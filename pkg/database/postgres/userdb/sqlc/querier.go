@@ -20,6 +20,7 @@ type Querier interface {
 	EditFriendStatusAccepted(ctx context.Context, arg EditFriendStatusAcceptedParams) error
 	EditFriendStatusDeclined(ctx context.Context, arg EditFriendStatusDeclinedParams) error
 	EditLastNameOnly(ctx context.Context, arg EditLastNameOnlyParams) error
+	GetBatchUserProfiles(ctx context.Context, dollar_1 []int32) ([]GetBatchUserProfilesRow, error)
 	GetFriend(ctx context.Context, arg GetFriendParams) (Friend, error)
 	GetFriendsCountByID(ctx context.Context, userId1 sql.NullInt32) (int64, error)
 	GetFriendsPendingList(ctx context.Context, userId2 sql.NullInt32) ([]User, error)

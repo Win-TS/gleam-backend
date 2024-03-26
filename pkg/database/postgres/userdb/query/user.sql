@@ -76,3 +76,7 @@ SET
     lastname = $3
 WHERE
     id = $1;
+
+-- name: GetBatchUserProfiles :many
+SELECT id, username, email, firstname, lastname, photourl FROM users
+WHERE id = ANY($1::int[]);

@@ -125,6 +125,321 @@ func (x *SearchUserRes) GetValid() bool {
 	return false
 }
 
+type GetUserProfileReq struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	UserId int32 `protobuf:"varint,1,opt,name=userId,proto3" json:"userId,omitempty"`
+}
+
+func (x *GetUserProfileReq) Reset() {
+	*x = GetUserProfileReq{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_modules_user_userPb_userPb_proto_msgTypes[2]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GetUserProfileReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetUserProfileReq) ProtoMessage() {}
+
+func (x *GetUserProfileReq) ProtoReflect() protoreflect.Message {
+	mi := &file_modules_user_userPb_userPb_proto_msgTypes[2]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetUserProfileReq.ProtoReflect.Descriptor instead.
+func (*GetUserProfileReq) Descriptor() ([]byte, []int) {
+	return file_modules_user_userPb_userPb_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *GetUserProfileReq) GetUserId() int32 {
+	if x != nil {
+		return x.UserId
+	}
+	return 0
+}
+
+type GetUserProfileRes struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	UserId    int32  `protobuf:"varint,1,opt,name=userId,proto3" json:"userId,omitempty"`
+	Username  string `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"`
+	Email     string `protobuf:"bytes,3,opt,name=email,proto3" json:"email,omitempty"`
+	Firstname string `protobuf:"bytes,4,opt,name=firstname,proto3" json:"firstname,omitempty"`
+	Lastname  string `protobuf:"bytes,5,opt,name=lastname,proto3" json:"lastname,omitempty"`
+	Photourl  string `protobuf:"bytes,6,opt,name=photourl,proto3" json:"photourl,omitempty"`
+}
+
+func (x *GetUserProfileRes) Reset() {
+	*x = GetUserProfileRes{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_modules_user_userPb_userPb_proto_msgTypes[3]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GetUserProfileRes) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetUserProfileRes) ProtoMessage() {}
+
+func (x *GetUserProfileRes) ProtoReflect() protoreflect.Message {
+	mi := &file_modules_user_userPb_userPb_proto_msgTypes[3]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetUserProfileRes.ProtoReflect.Descriptor instead.
+func (*GetUserProfileRes) Descriptor() ([]byte, []int) {
+	return file_modules_user_userPb_userPb_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *GetUserProfileRes) GetUserId() int32 {
+	if x != nil {
+		return x.UserId
+	}
+	return 0
+}
+
+func (x *GetUserProfileRes) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+func (x *GetUserProfileRes) GetEmail() string {
+	if x != nil {
+		return x.Email
+	}
+	return ""
+}
+
+func (x *GetUserProfileRes) GetFirstname() string {
+	if x != nil {
+		return x.Firstname
+	}
+	return ""
+}
+
+func (x *GetUserProfileRes) GetLastname() string {
+	if x != nil {
+		return x.Lastname
+	}
+	return ""
+}
+
+func (x *GetUserProfileRes) GetPhotourl() string {
+	if x != nil {
+		return x.Photourl
+	}
+	return ""
+}
+
+type GetBatchUserProfileReq struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	UserIds []int32 `protobuf:"varint,1,rep,packed,name=userIds,proto3" json:"userIds,omitempty"`
+}
+
+func (x *GetBatchUserProfileReq) Reset() {
+	*x = GetBatchUserProfileReq{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_modules_user_userPb_userPb_proto_msgTypes[4]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GetBatchUserProfileReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetBatchUserProfileReq) ProtoMessage() {}
+
+func (x *GetBatchUserProfileReq) ProtoReflect() protoreflect.Message {
+	mi := &file_modules_user_userPb_userPb_proto_msgTypes[4]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetBatchUserProfileReq.ProtoReflect.Descriptor instead.
+func (*GetBatchUserProfileReq) Descriptor() ([]byte, []int) {
+	return file_modules_user_userPb_userPb_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *GetBatchUserProfileReq) GetUserIds() []int32 {
+	if x != nil {
+		return x.UserIds
+	}
+	return nil
+}
+
+type GetBatchUserProfileRes struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	UserProfiles []*GetBatchUserProfileRes_UserProfile `protobuf:"bytes,1,rep,name=userProfiles,proto3" json:"userProfiles,omitempty"`
+}
+
+func (x *GetBatchUserProfileRes) Reset() {
+	*x = GetBatchUserProfileRes{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_modules_user_userPb_userPb_proto_msgTypes[5]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GetBatchUserProfileRes) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetBatchUserProfileRes) ProtoMessage() {}
+
+func (x *GetBatchUserProfileRes) ProtoReflect() protoreflect.Message {
+	mi := &file_modules_user_userPb_userPb_proto_msgTypes[5]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetBatchUserProfileRes.ProtoReflect.Descriptor instead.
+func (*GetBatchUserProfileRes) Descriptor() ([]byte, []int) {
+	return file_modules_user_userPb_userPb_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *GetBatchUserProfileRes) GetUserProfiles() []*GetBatchUserProfileRes_UserProfile {
+	if x != nil {
+		return x.UserProfiles
+	}
+	return nil
+}
+
+type GetBatchUserProfileRes_UserProfile struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	UserId    int32  `protobuf:"varint,1,opt,name=userId,proto3" json:"userId,omitempty"`
+	Username  string `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"`
+	Email     string `protobuf:"bytes,3,opt,name=email,proto3" json:"email,omitempty"`
+	Firstname string `protobuf:"bytes,4,opt,name=firstname,proto3" json:"firstname,omitempty"`
+	Lastname  string `protobuf:"bytes,5,opt,name=lastname,proto3" json:"lastname,omitempty"`
+	Photourl  string `protobuf:"bytes,6,opt,name=photourl,proto3" json:"photourl,omitempty"`
+}
+
+func (x *GetBatchUserProfileRes_UserProfile) Reset() {
+	*x = GetBatchUserProfileRes_UserProfile{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_modules_user_userPb_userPb_proto_msgTypes[6]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GetBatchUserProfileRes_UserProfile) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetBatchUserProfileRes_UserProfile) ProtoMessage() {}
+
+func (x *GetBatchUserProfileRes_UserProfile) ProtoReflect() protoreflect.Message {
+	mi := &file_modules_user_userPb_userPb_proto_msgTypes[6]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetBatchUserProfileRes_UserProfile.ProtoReflect.Descriptor instead.
+func (*GetBatchUserProfileRes_UserProfile) Descriptor() ([]byte, []int) {
+	return file_modules_user_userPb_userPb_proto_rawDescGZIP(), []int{5, 0}
+}
+
+func (x *GetBatchUserProfileRes_UserProfile) GetUserId() int32 {
+	if x != nil {
+		return x.UserId
+	}
+	return 0
+}
+
+func (x *GetBatchUserProfileRes_UserProfile) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+func (x *GetBatchUserProfileRes_UserProfile) GetEmail() string {
+	if x != nil {
+		return x.Email
+	}
+	return ""
+}
+
+func (x *GetBatchUserProfileRes_UserProfile) GetFirstname() string {
+	if x != nil {
+		return x.Firstname
+	}
+	return ""
+}
+
+func (x *GetBatchUserProfileRes_UserProfile) GetLastname() string {
+	if x != nil {
+		return x.Lastname
+	}
+	return ""
+}
+
+func (x *GetBatchUserProfileRes_UserProfile) GetPhotourl() string {
+	if x != nil {
+		return x.Photourl
+	}
+	return ""
+}
+
 var File_modules_user_userPb_userPb_proto protoreflect.FileDescriptor
 
 var file_modules_user_userPb_userPb_proto_rawDesc = []byte{
@@ -136,11 +451,54 @@ var file_modules_user_userPb_userPb_proto_rawDesc = []byte{
 	0x65, 0x61, 0x72, 0x63, 0x68, 0x55, 0x73, 0x65, 0x72, 0x52, 0x65, 0x73, 0x12, 0x16, 0x0a, 0x06,
 	0x75, 0x73, 0x65, 0x72, 0x49, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x05, 0x52, 0x06, 0x75, 0x73,
 	0x65, 0x72, 0x49, 0x64, 0x12, 0x14, 0x0a, 0x05, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x18, 0x02, 0x20,
-	0x01, 0x28, 0x08, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x32, 0x3f, 0x0a, 0x0f, 0x55, 0x73,
-	0x65, 0x72, 0x47, 0x72, 0x70, 0x63, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x12, 0x2c, 0x0a,
-	0x0a, 0x53, 0x65, 0x61, 0x72, 0x63, 0x68, 0x55, 0x73, 0x65, 0x72, 0x12, 0x0e, 0x2e, 0x53, 0x65,
-	0x61, 0x72, 0x63, 0x68, 0x55, 0x73, 0x65, 0x72, 0x52, 0x65, 0x71, 0x1a, 0x0e, 0x2e, 0x53, 0x65,
-	0x61, 0x72, 0x63, 0x68, 0x55, 0x73, 0x65, 0x72, 0x52, 0x65, 0x73, 0x42, 0x21, 0x5a, 0x1f, 0x67,
+	0x01, 0x28, 0x08, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x22, 0x2b, 0x0a, 0x11, 0x47, 0x65,
+	0x74, 0x55, 0x73, 0x65, 0x72, 0x50, 0x72, 0x6f, 0x66, 0x69, 0x6c, 0x65, 0x52, 0x65, 0x71, 0x12,
+	0x16, 0x0a, 0x06, 0x75, 0x73, 0x65, 0x72, 0x49, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x05, 0x52,
+	0x06, 0x75, 0x73, 0x65, 0x72, 0x49, 0x64, 0x22, 0xb3, 0x01, 0x0a, 0x11, 0x47, 0x65, 0x74, 0x55,
+	0x73, 0x65, 0x72, 0x50, 0x72, 0x6f, 0x66, 0x69, 0x6c, 0x65, 0x52, 0x65, 0x73, 0x12, 0x16, 0x0a,
+	0x06, 0x75, 0x73, 0x65, 0x72, 0x49, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x05, 0x52, 0x06, 0x75,
+	0x73, 0x65, 0x72, 0x49, 0x64, 0x12, 0x1a, 0x0a, 0x08, 0x75, 0x73, 0x65, 0x72, 0x6e, 0x61, 0x6d,
+	0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x75, 0x73, 0x65, 0x72, 0x6e, 0x61, 0x6d,
+	0x65, 0x12, 0x14, 0x0a, 0x05, 0x65, 0x6d, 0x61, 0x69, 0x6c, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09,
+	0x52, 0x05, 0x65, 0x6d, 0x61, 0x69, 0x6c, 0x12, 0x1c, 0x0a, 0x09, 0x66, 0x69, 0x72, 0x73, 0x74,
+	0x6e, 0x61, 0x6d, 0x65, 0x18, 0x04, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x66, 0x69, 0x72, 0x73,
+	0x74, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x1a, 0x0a, 0x08, 0x6c, 0x61, 0x73, 0x74, 0x6e, 0x61, 0x6d,
+	0x65, 0x18, 0x05, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x6c, 0x61, 0x73, 0x74, 0x6e, 0x61, 0x6d,
+	0x65, 0x12, 0x1a, 0x0a, 0x08, 0x70, 0x68, 0x6f, 0x74, 0x6f, 0x75, 0x72, 0x6c, 0x18, 0x06, 0x20,
+	0x01, 0x28, 0x09, 0x52, 0x08, 0x70, 0x68, 0x6f, 0x74, 0x6f, 0x75, 0x72, 0x6c, 0x22, 0x32, 0x0a,
+	0x16, 0x47, 0x65, 0x74, 0x42, 0x61, 0x74, 0x63, 0x68, 0x55, 0x73, 0x65, 0x72, 0x50, 0x72, 0x6f,
+	0x66, 0x69, 0x6c, 0x65, 0x52, 0x65, 0x71, 0x12, 0x18, 0x0a, 0x07, 0x75, 0x73, 0x65, 0x72, 0x49,
+	0x64, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x05, 0x52, 0x07, 0x75, 0x73, 0x65, 0x72, 0x49, 0x64,
+	0x73, 0x22, 0x91, 0x02, 0x0a, 0x16, 0x47, 0x65, 0x74, 0x42, 0x61, 0x74, 0x63, 0x68, 0x55, 0x73,
+	0x65, 0x72, 0x50, 0x72, 0x6f, 0x66, 0x69, 0x6c, 0x65, 0x52, 0x65, 0x73, 0x12, 0x47, 0x0a, 0x0c,
+	0x75, 0x73, 0x65, 0x72, 0x50, 0x72, 0x6f, 0x66, 0x69, 0x6c, 0x65, 0x73, 0x18, 0x01, 0x20, 0x03,
+	0x28, 0x0b, 0x32, 0x23, 0x2e, 0x47, 0x65, 0x74, 0x42, 0x61, 0x74, 0x63, 0x68, 0x55, 0x73, 0x65,
+	0x72, 0x50, 0x72, 0x6f, 0x66, 0x69, 0x6c, 0x65, 0x52, 0x65, 0x73, 0x2e, 0x55, 0x73, 0x65, 0x72,
+	0x50, 0x72, 0x6f, 0x66, 0x69, 0x6c, 0x65, 0x52, 0x0c, 0x75, 0x73, 0x65, 0x72, 0x50, 0x72, 0x6f,
+	0x66, 0x69, 0x6c, 0x65, 0x73, 0x1a, 0xad, 0x01, 0x0a, 0x0b, 0x55, 0x73, 0x65, 0x72, 0x50, 0x72,
+	0x6f, 0x66, 0x69, 0x6c, 0x65, 0x12, 0x16, 0x0a, 0x06, 0x75, 0x73, 0x65, 0x72, 0x49, 0x64, 0x18,
+	0x01, 0x20, 0x01, 0x28, 0x05, 0x52, 0x06, 0x75, 0x73, 0x65, 0x72, 0x49, 0x64, 0x12, 0x1a, 0x0a,
+	0x08, 0x75, 0x73, 0x65, 0x72, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52,
+	0x08, 0x75, 0x73, 0x65, 0x72, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x14, 0x0a, 0x05, 0x65, 0x6d, 0x61,
+	0x69, 0x6c, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x65, 0x6d, 0x61, 0x69, 0x6c, 0x12,
+	0x1c, 0x0a, 0x09, 0x66, 0x69, 0x72, 0x73, 0x74, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x04, 0x20, 0x01,
+	0x28, 0x09, 0x52, 0x09, 0x66, 0x69, 0x72, 0x73, 0x74, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x1a, 0x0a,
+	0x08, 0x6c, 0x61, 0x73, 0x74, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x05, 0x20, 0x01, 0x28, 0x09, 0x52,
+	0x08, 0x6c, 0x61, 0x73, 0x74, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x1a, 0x0a, 0x08, 0x70, 0x68, 0x6f,
+	0x74, 0x6f, 0x75, 0x72, 0x6c, 0x18, 0x06, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x70, 0x68, 0x6f,
+	0x74, 0x6f, 0x75, 0x72, 0x6c, 0x32, 0xc3, 0x01, 0x0a, 0x0f, 0x55, 0x73, 0x65, 0x72, 0x47, 0x72,
+	0x70, 0x63, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x12, 0x2c, 0x0a, 0x0a, 0x53, 0x65, 0x61,
+	0x72, 0x63, 0x68, 0x55, 0x73, 0x65, 0x72, 0x12, 0x0e, 0x2e, 0x53, 0x65, 0x61, 0x72, 0x63, 0x68,
+	0x55, 0x73, 0x65, 0x72, 0x52, 0x65, 0x71, 0x1a, 0x0e, 0x2e, 0x53, 0x65, 0x61, 0x72, 0x63, 0x68,
+	0x55, 0x73, 0x65, 0x72, 0x52, 0x65, 0x73, 0x12, 0x38, 0x0a, 0x0e, 0x47, 0x65, 0x74, 0x55, 0x73,
+	0x65, 0x72, 0x50, 0x72, 0x6f, 0x66, 0x69, 0x6c, 0x65, 0x12, 0x12, 0x2e, 0x47, 0x65, 0x74, 0x55,
+	0x73, 0x65, 0x72, 0x50, 0x72, 0x6f, 0x66, 0x69, 0x6c, 0x65, 0x52, 0x65, 0x71, 0x1a, 0x12, 0x2e,
+	0x47, 0x65, 0x74, 0x55, 0x73, 0x65, 0x72, 0x50, 0x72, 0x6f, 0x66, 0x69, 0x6c, 0x65, 0x52, 0x65,
+	0x73, 0x12, 0x48, 0x0a, 0x14, 0x47, 0x65, 0x74, 0x42, 0x61, 0x74, 0x63, 0x68, 0x55, 0x73, 0x65,
+	0x72, 0x50, 0x72, 0x6f, 0x66, 0x69, 0x6c, 0x65, 0x73, 0x12, 0x17, 0x2e, 0x47, 0x65, 0x74, 0x42,
+	0x61, 0x74, 0x63, 0x68, 0x55, 0x73, 0x65, 0x72, 0x50, 0x72, 0x6f, 0x66, 0x69, 0x6c, 0x65, 0x52,
+	0x65, 0x71, 0x1a, 0x17, 0x2e, 0x47, 0x65, 0x74, 0x42, 0x61, 0x74, 0x63, 0x68, 0x55, 0x73, 0x65,
+	0x72, 0x50, 0x72, 0x6f, 0x66, 0x69, 0x6c, 0x65, 0x52, 0x65, 0x73, 0x42, 0x21, 0x5a, 0x1f, 0x67,
 	0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x57, 0x69, 0x6e, 0x2d, 0x54, 0x53,
 	0x2f, 0x67, 0x6c, 0x65, 0x61, 0x6d, 0x2d, 0x62, 0x61, 0x63, 0x6b, 0x65, 0x6e, 0x64, 0x62, 0x06,
 	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
@@ -158,19 +516,29 @@ func file_modules_user_userPb_userPb_proto_rawDescGZIP() []byte {
 	return file_modules_user_userPb_userPb_proto_rawDescData
 }
 
-var file_modules_user_userPb_userPb_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_modules_user_userPb_userPb_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_modules_user_userPb_userPb_proto_goTypes = []interface{}{
-	(*SearchUserReq)(nil), // 0: SearchUserReq
-	(*SearchUserRes)(nil), // 1: SearchUserRes
+	(*SearchUserReq)(nil),                      // 0: SearchUserReq
+	(*SearchUserRes)(nil),                      // 1: SearchUserRes
+	(*GetUserProfileReq)(nil),                  // 2: GetUserProfileReq
+	(*GetUserProfileRes)(nil),                  // 3: GetUserProfileRes
+	(*GetBatchUserProfileReq)(nil),             // 4: GetBatchUserProfileReq
+	(*GetBatchUserProfileRes)(nil),             // 5: GetBatchUserProfileRes
+	(*GetBatchUserProfileRes_UserProfile)(nil), // 6: GetBatchUserProfileRes.UserProfile
 }
 var file_modules_user_userPb_userPb_proto_depIdxs = []int32{
-	0, // 0: UserGrpcService.SearchUser:input_type -> SearchUserReq
-	1, // 1: UserGrpcService.SearchUser:output_type -> SearchUserRes
-	1, // [1:2] is the sub-list for method output_type
-	0, // [0:1] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	6, // 0: GetBatchUserProfileRes.userProfiles:type_name -> GetBatchUserProfileRes.UserProfile
+	0, // 1: UserGrpcService.SearchUser:input_type -> SearchUserReq
+	2, // 2: UserGrpcService.GetUserProfile:input_type -> GetUserProfileReq
+	4, // 3: UserGrpcService.GetBatchUserProfiles:input_type -> GetBatchUserProfileReq
+	1, // 4: UserGrpcService.SearchUser:output_type -> SearchUserRes
+	3, // 5: UserGrpcService.GetUserProfile:output_type -> GetUserProfileRes
+	5, // 6: UserGrpcService.GetBatchUserProfiles:output_type -> GetBatchUserProfileRes
+	4, // [4:7] is the sub-list for method output_type
+	1, // [1:4] is the sub-list for method input_type
+	1, // [1:1] is the sub-list for extension type_name
+	1, // [1:1] is the sub-list for extension extendee
+	0, // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_modules_user_userPb_userPb_proto_init() }
@@ -203,6 +571,66 @@ func file_modules_user_userPb_userPb_proto_init() {
 				return nil
 			}
 		}
+		file_modules_user_userPb_userPb_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*GetUserProfileReq); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_modules_user_userPb_userPb_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*GetUserProfileRes); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_modules_user_userPb_userPb_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*GetBatchUserProfileReq); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_modules_user_userPb_userPb_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*GetBatchUserProfileRes); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_modules_user_userPb_userPb_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*GetBatchUserProfileRes_UserProfile); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -210,7 +638,7 @@ func file_modules_user_userPb_userPb_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_modules_user_userPb_userPb_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

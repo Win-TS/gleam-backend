@@ -9,6 +9,8 @@ import (
 	"context"
 	"database/sql"
 	"time"
+
+	"github.com/lib/pq"
 )
 
 const changePhoneNo = `-- name: ChangePhoneNo :exec
@@ -166,6 +168,50 @@ type EditLastNameOnlyParams struct {
 func (q *Queries) EditLastNameOnly(ctx context.Context, arg EditLastNameOnlyParams) error {
 	_, err := q.db.ExecContext(ctx, editLastNameOnly, arg.ID, arg.Lastname)
 	return err
+}
+
+const getBatchUserProfiles = `-- name: GetBatchUserProfiles :many
+SELECT id, username, email, firstname, lastname, photourl FROM users
+WHERE id = ANY($1::int[])
+`
+
+type GetBatchUserProfilesRow struct {
+	ID        int32          `json:"id"`
+	Username  string         `json:"username"`
+	Email     string         `json:"email"`
+	Firstname string         `json:"firstname"`
+	Lastname  string         `json:"lastname"`
+	Photourl  sql.NullString `json:"photourl"`
+}
+
+func (q *Queries) GetBatchUserProfiles(ctx context.Context, dollar_1 []int32) ([]GetBatchUserProfilesRow, error) {
+	rows, err := q.db.QueryContext(ctx, getBatchUserProfiles, pq.Array(dollar_1))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetBatchUserProfilesRow{}
+	for rows.Next() {
+		var i GetBatchUserProfilesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Username,
+			&i.Email,
+			&i.Firstname,
+			&i.Lastname,
+			&i.Photourl,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getLatestId = `-- name: GetLatestId :one

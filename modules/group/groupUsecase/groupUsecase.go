@@ -28,7 +28,7 @@ type (
 		SendRequestToJoinGroup(pctx context.Context, args groupdb.SendRequestToJoinGroupParams) (groupdb.GroupRequest, error)
 		AcceptGroupRequest(pctx context.Context, args groupdb.AcceptGroupRequestParams) (groupdb.GroupMember, error)
 		DeclineGroupRequest(pctx context.Context, args groupdb.DeleteRequestToJoinGroupParams, declinerId int) error
-		GetGroupJoinRequests(pctx context.Context, groupId int) ([]groupdb.GroupRequest, error)
+		GetGroupJoinRequests(pctx context.Context, groupId int, grpcUrl string) ([]group.GroupRequestRes, error)
 		GetUserJoinRequests(pctx context.Context, userId int) ([]groupdb.GroupRequest, error)
 		GetGroupById(pctx context.Context, groupId int) (groupdb.GetGroupByIDRow, error)
 		GetGroupMembersByGroupId(pctx context.Context, groupId int) ([]groupdb.GroupMember, error)
@@ -106,6 +106,44 @@ func (u *groupUsecase) SearchUser(pctx context.Context, grpcUrl string, req *use
 	return result, nil
 }
 
+func (u *groupUsecase) GetUserProfile(pctx context.Context, grpcUrl string, req *userPb.GetUserProfileReq) (*userPb.GetUserProfileRes, error) {
+	ctx, cancel := context.WithTimeout(pctx, 30*time.Second)
+	defer cancel()
+
+	conn, err := grpcconn.NewGrpcClient(grpcUrl)
+	if err != nil {
+		log.Printf("error - gRPC connection failed: %s", err.Error())
+		return nil, errors.New("error: gRPC connection failed")
+	}
+
+	result, err := conn.User().GetUserProfile(ctx, req)
+	if err != nil {
+		log.Printf("error - GetUserProfile failed: %s", err.Error())
+		return nil, errors.New("error: GetUserProfile failed")
+	}
+
+	return result, nil
+}
+
+func (u *groupUsecase) GetBatchUserProfiles(pctx context.Context, grpcUrl string, ids []int32) (*userPb.GetBatchUserProfileRes, error) {
+	ctx, cancel := context.WithTimeout(pctx, 30*time.Second)
+	defer cancel()
+
+	conn, err := grpcconn.NewGrpcClient(grpcUrl)
+	if err != nil {
+		log.Printf("error - gRPC connection failed: %s", err.Error())
+		return nil, errors.New("error: gRPC connection failed")
+	}
+
+	result, err := conn.User().GetBatchUserProfiles(ctx, &userPb.GetBatchUserProfileReq{UserIds: ids})
+	if err != nil {
+		log.Printf("error - GetBatchUserProfiles failed: %s", err.Error())
+		return nil, errors.New("error: Get'BatchUserProfiles failed")
+	}
+
+	return result, nil
+}
+
 func (u *groupUsecase) GetRole(pctx context.Context, userID int32, groupID int32) (group.Role, error) {
 	arg := groupdb.GetMemberInfoParams{
 		MemberID: userID,
@@ -142,7 +180,7 @@ func (u *groupUsecase) AcceptGroupRequest(pctx context.Context, args groupdb.Acc
 	if role != group.Admin && role != group.Moderator {
 		return groupdb.GroupMember{}, errors.New("no permission")
 	}
-	
+
 	newMember, err := u.store.AcceptGroupRequest(pctx, args)
 	if err != nil {
 		return groupdb.GroupMember{}, err
@@ -158,19 +196,43 @@ func (u *groupUsecase) DeclineGroupRequest(pctx context.Context, args groupdb.De
 	if role != group.Admin && role != group.Moderator {
 		return errors.New("no permission")
 	}
-	
+
 	if err := u.store.DeleteRequestToJoinGroup(pctx, args); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (u *groupUsecase) GetGroupJoinRequests(pctx context.Context, groupId int) ([]groupdb.GroupRequest, error) {
+func (u *groupUsecase) GetGroupJoinRequests(pctx context.Context, groupId int, grpcUrl string) ([]group.GroupRequestRes, error) {
 	requests, err := u.store.GetGroupRequests(pctx, int32(groupId))
 	if err != nil {
-		return []groupdb.GroupRequest{}, err
+		return []group.GroupRequestRes{}, err
 	}
-	return requests, nil
+
+	var memberIds []int32
+	for _, request := range requests {
+		memberIds = append(memberIds, request.MemberID)
+	}
+
+	userProfiles, err := u.GetBatchUserProfiles(pctx, grpcUrl, memberIds)
+	if err != nil {
+		return []group.GroupRequestRes{}, err
+	}
+	groupRequestRes := make([]group.GroupRequestRes, 0)
+	if len(userProfiles.UserProfiles) != 0 {
+		for i := range requests {
+			groupRequestRes = append(groupRequestRes, group.GroupRequestRes{
+				GroupID:      requests[i].GroupID,
+				MemberID:     requests[i].MemberID,
+				Description:  requests[i].Description,
+				CreatedAt:    requests[i].CreatedAt,
+				Username:     userProfiles.UserProfiles[i].Username,
+				UserPhotourl: userProfiles.UserProfiles[i].Photourl,
+			})
+		}
+	}
+
+	return groupRequestRes, nil
 }
 
 func (u *groupUsecase) GetUserJoinRequests(pctx context.Context, userId int) ([]groupdb.GroupRequest, error) {

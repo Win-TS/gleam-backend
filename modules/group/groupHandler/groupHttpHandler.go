@@ -213,7 +213,7 @@ func (h *groupHttpHandler) GetGroupJoinRequests(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 
-	joinRequests, err := h.groupUsecase.GetGroupJoinRequests(ctx, groupId)
+	joinRequests, err := h.groupUsecase.GetGroupJoinRequests(ctx, groupId, h.cfg.Grpc.UserUrl)
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}

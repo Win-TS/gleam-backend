@@ -6,6 +6,7 @@ package groupdb
 
 import (
 	"context"
+	"database/sql"
 )
 
 type Querier interface {
@@ -23,15 +24,21 @@ type Querier interface {
 	DeletePost(ctx context.Context, postID int32) error
 	DeleteReaction(ctx context.Context, reactionID int32) error
 	DeleteRequestToJoinGroup(ctx context.Context, arg DeleteRequestToJoinGroupParams) error
+	DeleteTag(ctx context.Context, tagID int32) error
 	EditComment(ctx context.Context, arg EditCommentParams) error
 	EditGroupDescription(ctx context.Context, arg EditGroupDescriptionParams) error
 	EditGroupName(ctx context.Context, arg EditGroupNameParams) error
 	EditGroupPhoto(ctx context.Context, arg EditGroupPhotoParams) error
+	EditGroupTag(ctx context.Context, arg EditGroupTagParams) (Group, error)
 	EditGroupVisibility(ctx context.Context, arg EditGroupVisibilityParams) error
 	EditMemberRole(ctx context.Context, arg EditMemberRoleParams) error
 	EditPost(ctx context.Context, arg EditPostParams) error
 	EditReaction(ctx context.Context, arg EditReactionParams) error
+	EditTagCategory(ctx context.Context, arg EditTagCategoryParams) error
+	EditTagIcon(ctx context.Context, arg EditTagIconParams) error
+	EditTagName(ctx context.Context, arg EditTagNameParams) error
 	EndStreakSet(ctx context.Context, streakSetID int32) error
+	GetAvailableCategory(ctx context.Context) ([]TagCategory, error)
 	GetAvailableTags(ctx context.Context) ([]Tag, error)
 	GetCommentByCommentId(ctx context.Context, commentID int32) (PostComment, error)
 	GetCommentsByPostID(ctx context.Context, postID int32) ([]PostComment, error)
@@ -40,6 +47,7 @@ type Querier interface {
 	GetGroupLatestId(ctx context.Context) (int32, error)
 	GetGroupRequest(ctx context.Context, arg GetGroupRequestParams) (GroupRequest, error)
 	GetGroupRequests(ctx context.Context, groupID int32) ([]GroupRequest, error)
+	GetGroupsByCategoryID(ctx context.Context, categoryID sql.NullInt32) ([]GetGroupsByCategoryIDRow, error)
 	GetGroupsByTagID(ctx context.Context, tagID int32) ([]Group, error)
 	GetLatestStreakSetByGroupIDAndUserID(ctx context.Context, arg GetLatestStreakSetByGroupIDAndUserIDParams) (StreakSet, error)
 	GetMemberInfo(ctx context.Context, arg GetMemberInfoParams) (GetMemberInfoRow, error)
@@ -58,7 +66,11 @@ type Querier interface {
 	GetStreakSetByUserID(ctx context.Context, userID int32) ([]StreakSet, error)
 	GetStreaksByGroupIDAndUserID(ctx context.Context, arg GetStreaksByGroupIDAndUserIDParams) ([]GetStreaksByGroupIDAndUserIDRow, error)
 	GetStreaksByStreakSetID(ctx context.Context, streakSetID int32) ([]Streak, error)
+	GetTagByCategory(ctx context.Context, categoryID sql.NullInt32) ([]Tag, error)
+	GetTagByGroupId(ctx context.Context, groupID int32) (GetTagByGroupIdRow, error)
+	GetTagByTagID(ctx context.Context, tagID int32) (Tag, error)
 	GetUnendedStreakSetByUserID(ctx context.Context, userID int32) ([]StreakSet, error)
+	InitializeCategory(ctx context.Context) error
 	ListGroups(ctx context.Context, arg ListGroupsParams) ([]Group, error)
 	SendRequestToJoinGroup(ctx context.Context, arg SendRequestToJoinGroupParams) (GroupRequest, error)
 	UpdateStreakSetCount(ctx context.Context, arg UpdateStreakSetCountParams) error

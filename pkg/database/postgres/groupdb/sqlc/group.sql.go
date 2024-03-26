@@ -93,18 +93,19 @@ func (q *Queries) CreateGroup(ctx context.Context, arg CreateGroupParams) (Group
 }
 
 const createNewTag = `-- name: CreateNewTag :one
-INSERT INTO tags (tag_name, icon_url)
-VALUES ($1, $2)
+INSERT INTO tags (tag_name, icon_url, category_id)
+VALUES ($1, $2, $3)
 RETURNING tag_id, tag_name, icon_url, category_id
 `
 
 type CreateNewTagParams struct {
-	TagName string         `json:"tag_name"`
-	IconUrl sql.NullString `json:"icon_url"`
+	TagName    string         `json:"tag_name"`
+	IconUrl    sql.NullString `json:"icon_url"`
+	CategoryID sql.NullInt32  `json:"category_id"`
 }
 
 func (q *Queries) CreateNewTag(ctx context.Context, arg CreateNewTagParams) (Tag, error) {
-	row := q.db.QueryRowContext(ctx, createNewTag, arg.TagName, arg.IconUrl)
+	row := q.db.QueryRowContext(ctx, createNewTag, arg.TagName, arg.IconUrl, arg.CategoryID)
 	var i Tag
 	err := row.Scan(
 		&i.TagID,
@@ -157,6 +158,16 @@ func (q *Queries) DeleteRequestToJoinGroup(ctx context.Context, arg DeleteReques
 	return err
 }
 
+const deleteTag = `-- name: DeleteTag :exec
+DELETE FROM tags
+WHERE tag_id = $1
+`
+
+func (q *Queries) DeleteTag(ctx context.Context, tagID int32) error {
+	_, err := q.db.ExecContext(ctx, deleteTag, tagID)
+	return err
+}
+
 const editGroupDescription = `-- name: EditGroupDescription :exec
 UPDATE groups
 SET description = $2
@@ -205,6 +216,37 @@ func (q *Queries) EditGroupPhoto(ctx context.Context, arg EditGroupPhotoParams) 
 	return err
 }
 
+const editGroupTag = `-- name: EditGroupTag :one
+UPDATE groups 
+SET tag_id = $2
+WHERE group_id = $1
+RETURNING group_id, group_name, group_creator_id, description, photo_url, tag_id, frequency, max_members, group_type, visibility, created_at
+`
+
+type EditGroupTagParams struct {
+	GroupID int32 `json:"group_id"`
+	TagID   int32 `json:"tag_id"`
+}
+
+func (q *Queries) EditGroupTag(ctx context.Context, arg EditGroupTagParams) (Group, error) {
+	row := q.db.QueryRowContext(ctx, editGroupTag, arg.GroupID, arg.TagID)
+	var i Group
+	err := row.Scan(
+		&i.GroupID,
+		&i.GroupName,
+		&i.GroupCreatorID,
+		&i.Description,
+		&i.PhotoUrl,
+		&i.TagID,
+		&i.Frequency,
+		&i.MaxMembers,
+		&i.GroupType,
+		&i.Visibility,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const editGroupVisibility = `-- name: EditGroupVisibility :exec
 UPDATE groups
 SET visibility = $2
@@ -237,6 +279,83 @@ type EditMemberRoleParams struct {
 func (q *Queries) EditMemberRole(ctx context.Context, arg EditMemberRoleParams) error {
 	_, err := q.db.ExecContext(ctx, editMemberRole, arg.GroupID, arg.MemberID, arg.Role)
 	return err
+}
+
+const editTagCategory = `-- name: EditTagCategory :exec
+UPDATE tags
+SET category_id = $2
+WHERE tag_id = $1
+`
+
+type EditTagCategoryParams struct {
+	TagID      int32         `json:"tag_id"`
+	CategoryID sql.NullInt32 `json:"category_id"`
+}
+
+func (q *Queries) EditTagCategory(ctx context.Context, arg EditTagCategoryParams) error {
+	_, err := q.db.ExecContext(ctx, editTagCategory, arg.TagID, arg.CategoryID)
+	return err
+}
+
+const editTagIcon = `-- name: EditTagIcon :exec
+UPDATE tags
+SET icon_url = $2
+WHERE tag_id = $1
+`
+
+type EditTagIconParams struct {
+	TagID   int32          `json:"tag_id"`
+	IconUrl sql.NullString `json:"icon_url"`
+}
+
+func (q *Queries) EditTagIcon(ctx context.Context, arg EditTagIconParams) error {
+	_, err := q.db.ExecContext(ctx, editTagIcon, arg.TagID, arg.IconUrl)
+	return err
+}
+
+const editTagName = `-- name: EditTagName :exec
+UPDATE tags
+SET tag_name = $2
+WHERE tag_id = $1
+`
+
+type EditTagNameParams struct {
+	TagID   int32  `json:"tag_id"`
+	TagName string `json:"tag_name"`
+}
+
+func (q *Queries) EditTagName(ctx context.Context, arg EditTagNameParams) error {
+	_, err := q.db.ExecContext(ctx, editTagName, arg.TagID, arg.TagName)
+	return err
+}
+
+const getAvailableCategory = `-- name: GetAvailableCategory :many
+SELECT category_id, category_name
+FROM tag_category
+ORDER BY category_id
+`
+
+func (q *Queries) GetAvailableCategory(ctx context.Context) ([]TagCategory, error) {
+	rows, err := q.db.QueryContext(ctx, getAvailableCategory)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []TagCategory{}
+	for rows.Next() {
+		var i TagCategory
+		if err := rows.Scan(&i.CategoryID, &i.CategoryName); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getAvailableTags = `-- name: GetAvailableTags :many
@@ -377,6 +496,67 @@ func (q *Queries) GetGroupRequests(ctx context.Context, groupID int32) ([]GroupR
 			&i.MemberID,
 			&i.Description,
 			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getGroupsByCategoryID = `-- name: GetGroupsByCategoryID :many
+SELECT groups.group_id, groups.group_name, groups.group_creator_id, groups.description, groups.photo_url, groups.tag_id, groups.frequency, groups.max_members, groups.group_type, groups.visibility, groups.created_at, tags.category_id, tag_category.category_name
+FROM groups
+JOIN tags ON groups.tag_id = tags.tag_id
+JOIN tag_category ON tags.category_id = tag_category.category_id
+WHERE tags.category_id = $1
+`
+
+type GetGroupsByCategoryIDRow struct {
+	GroupID        int32          `json:"group_id"`
+	GroupName      string         `json:"group_name"`
+	GroupCreatorID int32          `json:"group_creator_id"`
+	Description    sql.NullString `json:"description"`
+	PhotoUrl       sql.NullString `json:"photo_url"`
+	TagID          int32          `json:"tag_id"`
+	Frequency      sql.NullInt32  `json:"frequency"`
+	MaxMembers     int32          `json:"max_members"`
+	GroupType      string         `json:"group_type"`
+	Visibility     bool           `json:"visibility"`
+	CreatedAt      time.Time      `json:"created_at"`
+	CategoryID     sql.NullInt32  `json:"category_id"`
+	CategoryName   string         `json:"category_name"`
+}
+
+func (q *Queries) GetGroupsByCategoryID(ctx context.Context, categoryID sql.NullInt32) ([]GetGroupsByCategoryIDRow, error) {
+	rows, err := q.db.QueryContext(ctx, getGroupsByCategoryID, categoryID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetGroupsByCategoryIDRow{}
+	for rows.Next() {
+		var i GetGroupsByCategoryIDRow
+		if err := rows.Scan(
+			&i.GroupID,
+			&i.GroupName,
+			&i.GroupCreatorID,
+			&i.Description,
+			&i.PhotoUrl,
+			&i.TagID,
+			&i.Frequency,
+			&i.MaxMembers,
+			&i.GroupType,
+			&i.Visibility,
+			&i.CreatedAt,
+			&i.CategoryID,
+			&i.CategoryName,
 		); err != nil {
 			return nil, err
 		}
@@ -550,6 +730,106 @@ func (q *Queries) GetReactionById(ctx context.Context, reactionID int32) (PostRe
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const getTagByCategory = `-- name: GetTagByCategory :many
+SELECT tag_id, tag_name, icon_url, category_id
+FROM tags
+WHERE category_id = $1
+`
+
+func (q *Queries) GetTagByCategory(ctx context.Context, categoryID sql.NullInt32) ([]Tag, error) {
+	rows, err := q.db.QueryContext(ctx, getTagByCategory, categoryID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Tag{}
+	for rows.Next() {
+		var i Tag
+		if err := rows.Scan(
+			&i.TagID,
+			&i.TagName,
+			&i.IconUrl,
+			&i.CategoryID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getTagByGroupId = `-- name: GetTagByGroupId :one
+SELECT groups.group_id, groups.group_name, tags.tag_id, tags.tag_name, tags.icon_url, tags.category_id, tag_category.category_name
+FROM groups
+JOIN tags ON groups.tag_id = tags.tag_id
+JOIN tag_category ON tags.category_id = tag_category.category_id
+WHERE groups.group_id = $1
+`
+
+type GetTagByGroupIdRow struct {
+	GroupID      int32          `json:"group_id"`
+	GroupName    string         `json:"group_name"`
+	TagID        int32          `json:"tag_id"`
+	TagName      string         `json:"tag_name"`
+	IconUrl      sql.NullString `json:"icon_url"`
+	CategoryID   sql.NullInt32  `json:"category_id"`
+	CategoryName string         `json:"category_name"`
+}
+
+func (q *Queries) GetTagByGroupId(ctx context.Context, groupID int32) (GetTagByGroupIdRow, error) {
+	row := q.db.QueryRowContext(ctx, getTagByGroupId, groupID)
+	var i GetTagByGroupIdRow
+	err := row.Scan(
+		&i.GroupID,
+		&i.GroupName,
+		&i.TagID,
+		&i.TagName,
+		&i.IconUrl,
+		&i.CategoryID,
+		&i.CategoryName,
+	)
+	return i, err
+}
+
+const getTagByTagID = `-- name: GetTagByTagID :one
+SELECT tag_id, tag_name, icon_url, category_id
+FROM tags
+WHERE tag_id = $1
+`
+
+func (q *Queries) GetTagByTagID(ctx context.Context, tagID int32) (Tag, error) {
+	row := q.db.QueryRowContext(ctx, getTagByTagID, tagID)
+	var i Tag
+	err := row.Scan(
+		&i.TagID,
+		&i.TagName,
+		&i.IconUrl,
+		&i.CategoryID,
+	)
+	return i, err
+}
+
+const initializeCategory = `-- name: InitializeCategory :exec
+INSERT INTO tag_category (category_name)
+VALUES ('Sports and Fitness'), 
+        ('Learning and development'),
+		('Health and Wellness'), 
+        ('Entertainment and Media'), 
+        ('Hobbies and Leisure'),
+        ('Others')
+`
+
+func (q *Queries) InitializeCategory(ctx context.Context) error {
+	_, err := q.db.ExecContext(ctx, initializeCategory)
+	return err
 }
 
 const listGroups = `-- name: ListGroups :many

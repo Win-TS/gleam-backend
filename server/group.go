@@ -81,4 +81,11 @@ func (s *server) groupService() {
 	tag.POST("/tag", httpHandler.CreateTag)
 	tag.GET("/alltags", httpHandler.GetAvailableTags)
 	tag.GET("/groupswithtag", httpHandler.GetGroupsByTagID)
+	tag.GET("/tagbycategory", httpHandler.GetTagByCategory)
+	tag.GET("/tagofgroup", httpHandler.GetTagByGroupId)
+	tag.GET("/groupswithcategory", httpHandler.GetGroupsByCategoryID)
+	tag.PATCH("/edittagname", httpHandler.EditTagName)
+	tag.PATCH("/edittagcategory", httpHandler.EditTagCategory)
+	tag.PATCH("/edittagicon", httpHandler.EditTagIcon)
+	tag.DELETE("/tag", httpHandler.DeleteTag)
 }

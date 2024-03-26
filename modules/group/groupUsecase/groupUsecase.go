@@ -64,6 +64,15 @@ type (
 		CreateNewTag(pctx context.Context, args groupdb.CreateNewTagParams) (groupdb.Tag, error)
 		GetAvailableTags(pctx context.Context) ([]groupdb.Tag, error)
 		GetGroupsByTagID(pctx context.Context, tagId int) ([]groupdb.Group, error)
+		GetTagByCategory(pctx context.Context, categoryID int32) ([]groupdb.Tag, error)
+		GetTagByGroupId(pctx context.Context, groupId int32) (groupdb.GetTagByGroupIdRow, error)
+		GetGroupsByCategoryID(pctx context.Context, categoryId int32) ([]groupdb.GetGroupsByCategoryIDRow, error)
+		GetTagByTagID(pctx context.Context, tagId int32) (groupdb.Tag, error)
+		EditTagName(pctx context.Context, args groupdb.EditTagNameParams) (groupdb.Tag, error)
+		EditTagCategory(pctx context.Context, args groupdb.EditTagCategoryParams) (groupdb.Tag, error)
+		EditTagIcon(pctx context.Context, args groupdb.EditTagIconParams) (groupdb.Tag, error)
+		DeleteTag(pctx context.Context, tagId int) error
+		EditGroupTag(pctx context.Context, args groupdb.EditGroupTagParams, memberId int32) (groupdb.Group, error)
 		GroupMockData(pctx context.Context, count int) error
 		PostMockData(ctx context.Context, count int) error
 	}
@@ -555,31 +564,38 @@ func (u *groupUsecase) GetGroupsByTagID(pctx context.Context, tagId int) ([]grou
 func (u *groupUsecase) GroupMockData(pctx context.Context, count int) error {
 	ctx := context.Background()
 
-	tagNames := []string{"Music", "Workout", "Movie", "Reading", "Sport"}
+	err := u.store.InitializeCategory(ctx)
+	if err != nil {
+		return err
+	}
 
-	tagIDs := make([]int32, len(tagNames))
-	tagIndex := rand.Intn(len(tagIDs))
+	tagCategories := []string{"tag1", "tag2", "tag5", "tag4", "tag6", "tag7"}
+
 	existingTags := make(map[string]int32)
 
-	for i, tagName := range tagNames {
-		tagID, err := u.createOrGetTagByName(ctx, tagName, existingTags)
+	for _, category := range tagCategories {
+		_, err := u.createOrGetTagByCategory(ctx, category, existingTags)
 		if err != nil {
 			return err
 		}
-		tagIDs[i] = tagID
 	}
 
-	randomFrequency := rand.Int31n(10) + 1
+	randomFrequency := func() int32 {
+		frequencies := []int32{1, 2, 3, 4, 5}
+		return frequencies[rand.Intn(len(frequencies))]
+	}
 
 	for i := 0; i < count; i++ {
 		groupName := fmt.Sprintf("Group %d", i+1)
-		creatorID := int32(rand.Intn(10) + 1) 
+		creatorID := int32(rand.Intn(10) + 1)
+		tagID := rand.Intn(len(tagCategories)) + 1
+
 		group, err := u.store.CreateGroup(ctx, groupdb.CreateGroupParams{
 			GroupName:      groupName,
 			GroupCreatorID: creatorID,
 			PhotoUrl:       utils.ConvertStringToSqlNullString("https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/groupphoto%2F1.jpg?alt=media"),
-			TagID:          tagIDs[tagIndex],
-			Frequency:      sql.NullInt32{Int32: randomFrequency, Valid: true},
+			TagID:          int32(tagID),
+			Frequency:      sql.NullInt32{Int32: randomFrequency(), Valid: true},
 		})
 		if err != nil {
 			return err
@@ -594,17 +610,14 @@ func (u *groupUsecase) GroupMockData(pctx context.Context, count int) error {
 			return err
 		}
 
-		adminIndex := rand.Intn(10)
-		modIndex := rand.Intn(10)
-
-		coLeaderAssigned := false
-		creatorAssigned := false
-
-		for j := 0; j < 10; j++ {
-			memberID := rand.Intn(10) + 1
-			role := "member"
-
-			exists, err := u.memberExistsInGroup(ctx, group.GroupID, int32(memberID))
+		coLeaderCount := rand.Intn(4) + 1
+		for j := 0; j < coLeaderCount; j++ {
+			memberID := int32(rand.Intn(10) + 1)
+			role := "co_leader"
+			if memberID == creatorID {
+				continue
+			}
+			exists, err := u.memberExistsInGroup(ctx, group.GroupID, memberID)
 			if err != nil {
 				return err
 			}
@@ -612,19 +625,34 @@ func (u *groupUsecase) GroupMockData(pctx context.Context, count int) error {
 				continue
 			}
 
-			if j == adminIndex && !creatorAssigned {
-				role = "creator"
-				creatorAssigned = true
-			} else if j == modIndex {
-				role = "co_leader"
-			} else if !coLeaderAssigned {
-				role = "co_leader"
-				coLeaderAssigned = true
+			_, err = u.store.AddGroupMember(ctx, groupdb.AddGroupMemberParams{
+				GroupID:  group.GroupID,
+				MemberID: memberID,
+				Role:     role,
+			})
+			if err != nil {
+				return err
+			}
+		}
+
+		for j := 0; j < 8; j++ {
+			memberID := int32(rand.Intn(10) + 1)
+			role := "member"
+			if memberID == creatorID {
+				continue
+			}
+
+			exists, err := u.memberExistsInGroup(ctx, group.GroupID, memberID)
+			if err != nil {
+				return err
+			}
+			if exists {
+				continue
 			}
 
 			_, err = u.store.AddGroupMember(ctx, groupdb.AddGroupMemberParams{
 				GroupID:  group.GroupID,
-				MemberID: int32(memberID),
+				MemberID: memberID,
 				Role:     role,
 			})
 			if err != nil {
@@ -634,6 +662,25 @@ func (u *groupUsecase) GroupMockData(pctx context.Context, count int) error {
 	}
 
 	return nil
+}
+
+func (u *groupUsecase) createOrGetTagByCategory(ctx context.Context, category string, existingTags map[string]int32) (int32, error) {
+	tagID, ok := existingTags[category]
+	if ok {
+		return tagID, nil
+	}
+
+	newTag, err := u.store.CreateNewTag(ctx, groupdb.CreateNewTagParams{
+		TagName:    category,
+		IconUrl:    utils.ConvertStringToSqlNullString("https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/postphoto%2F3.jpeg?alt=media"),
+		CategoryID: utils.ConvertIntToSqlNullInt32(rand.Intn(5) + 1),
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	existingTags[category] = newTag.TagID
+	return newTag.TagID, nil
 }
 
 func (u *groupUsecase) memberExistsInGroup(ctx context.Context, groupID, memberID int32) (bool, error) {
@@ -647,24 +694,6 @@ func (u *groupUsecase) memberExistsInGroup(ctx context.Context, groupID, memberI
 		}
 	}
 	return false, nil
-}
-
-func (u *groupUsecase) createOrGetTagByName(ctx context.Context, tagName string, existingTags map[string]int32) (int32, error) {
-
-	tagID, ok := existingTags[tagName]
-	if ok {
-		return tagID, nil
-	}
-
-	newTag, err := u.store.CreateNewTag(ctx, groupdb.CreateNewTagParams{
-		TagName: tagName,
-	})
-	if err != nil {
-		return 0, err
-	}
-
-	existingTags[tagName] = newTag.TagID
-	return newTag.TagID, nil
 }
 
 func (u *groupUsecase) PostMockData(ctx context.Context, count int) error {
@@ -746,4 +775,112 @@ func (u *groupUsecase) createComment(ctx context.Context, postID int32) error {
 		Comment:  comment,
 	})
 	return err
+}
+
+func (u *groupUsecase) GetTagByCategory(pctx context.Context, categoryID int32) ([]groupdb.Tag, error) {
+	categoryId := utils.ConvertIntToSqlNullInt32(int(categoryID))
+	tags, err := u.store.GetTagByCategory(pctx, categoryId)
+	if err != nil {
+		return nil, err
+	}
+	return tags, nil
+}
+
+func (u *groupUsecase) GetTagByGroupId(pctx context.Context, groupId int32) (groupdb.GetTagByGroupIdRow, error) {
+	tag, err := u.store.GetTagByGroupId(pctx, groupId)
+	if err != nil {
+		return groupdb.GetTagByGroupIdRow{}, err
+	}
+	return tag, nil
+}
+
+func (u *groupUsecase) GetGroupsByCategoryID(pctx context.Context, categoryId int32) ([]groupdb.GetGroupsByCategoryIDRow, error) {
+	categoryIdNullInt := utils.ConvertIntToSqlNullInt32(int(categoryId))
+	groups, err := u.store.GetGroupsByCategoryID(pctx, categoryIdNullInt)
+	if err != nil {
+		return nil, err
+	}
+	return groups, nil
+}
+
+func (u *groupUsecase) GetTagByTagID(pctx context.Context, tagId int32) (groupdb.Tag, error) {
+	tag, err := u.store.GetTagByTagID(pctx, tagId)
+	if err != nil {
+		return groupdb.Tag{}, err
+	}
+	return tag, nil
+}
+
+func (u *groupUsecase) EditTagName(pctx context.Context, args groupdb.EditTagNameParams) (groupdb.Tag, error) {
+	// role, err := u.GetRole(pctx, editorId, args.TagID)
+	// if err != nil {
+	// 	return groupdb.Tag{}, err
+	// }
+
+	// if role != group.Admin && role != group.Moderator {
+	// 	return groupdb.Tag{}, errors.New("no permission")
+	// }
+
+	if err := u.store.EditTagName(pctx, args); err != nil {
+		return groupdb.Tag{}, err
+	}
+
+	updatedTag, err := u.GetTagByTagID(pctx, int32(args.TagID))
+	if err != nil {
+		return groupdb.Tag{}, err
+	}
+
+	return updatedTag, nil
+}
+
+func (u *groupUsecase) EditTagCategory(pctx context.Context, args groupdb.EditTagCategoryParams) (groupdb.Tag, error) {
+
+	if err := u.store.EditTagCategory(pctx, args); err != nil {
+		return groupdb.Tag{}, err
+	}
+
+	updatedTag, err := u.GetTagByTagID(pctx, int32(args.TagID))
+	if err != nil {
+		return groupdb.Tag{}, err
+	}
+
+	return updatedTag, nil
+}
+
+func (u *groupUsecase) EditTagIcon(pctx context.Context, args groupdb.EditTagIconParams) (groupdb.Tag, error) {
+	if err := u.store.EditTagIcon(pctx, args); err != nil {
+		return groupdb.Tag{}, err
+	}
+
+	updatedTag, err := u.GetTagByTagID(pctx, int32(args.TagID))
+	if err != nil {
+		return groupdb.Tag{}, err
+	}
+
+	return updatedTag, nil
+}
+
+func (u *groupUsecase) DeleteTag(pctx context.Context, tagId int) error {
+	if err := u.store.DeleteTag(pctx, int32(tagId)); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (u *groupUsecase) EditGroupTag(pctx context.Context, args groupdb.EditGroupTagParams, editorId int32) (groupdb.Group, error) {
+	role, err := u.GetRole(pctx, editorId, args.GroupID)
+	if err != nil {
+		return groupdb.Group{}, err
+	}
+
+	if role != group.Admin && role != group.Moderator {
+		return groupdb.Group{}, errors.New("no permission")
+	}
+
+	updatedGroup, err := u.store.EditGroupTag(pctx, args)
+	if err != nil {
+		return groupdb.Group{}, err
+	}
+
+	return updatedGroup, nil
 }

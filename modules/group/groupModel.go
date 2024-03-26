@@ -30,8 +30,9 @@ type (
 	}
 
 	NewTagReq struct {
-		TagName string `json:"tag_name" form:"tag_name" validate:"required,max=255"`
-		IconUrl string `json:"icon_url" form:"icon_url"`
+		TagName    string `json:"tag_name" form:"tag_name" validate:"required,max=255"`
+		IconUrl    string `json:"icon_url" form:"icon_url"`
+		CategoryId int    `json:"category_id" form:"category_id" validate:"required"`
 	}
 
 	GroupWithTagsRes struct {

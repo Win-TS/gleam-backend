@@ -3,9 +3,11 @@ package userUsecase
 import (
 	"context"
 	"database/sql"
+
 	//"errors"
 	"fmt"
 	"io"
+
 	//"log"
 	"math/rand"
 	"time"
@@ -15,6 +17,7 @@ import (
 	"firebase.google.com/go/storage"
 	"github.com/Win-TS/gleam-backend.git/modules/user"
 	userdb "github.com/Win-TS/gleam-backend.git/pkg/database/postgres/userdb/sqlc"
+
 	//userPb "github.com/Win-TS/gleam-backend.git/modules/user/userPb"
 	//"github.com/Win-TS/gleam-backend.git/pkg/grpcconn"
 	"github.com/Win-TS/gleam-backend.git/pkg/utils"
@@ -44,6 +47,7 @@ type UserUsecaseService interface {
 	AddFriend(pctx context.Context, args user.CreateFriendReq) (userdb.Friend, error)
 	FriendAccept(pctx context.Context, args user.EditFriendStatusAcceptedReq) error
 	UserMockData(ctx context.Context, count int16) error
+	EditUserPhoto(pctx context.Context, args userdb.EditUserProfilePictureParams) (user.UserProfile, error)
 }
 
 type userUsecase struct {
@@ -184,6 +188,13 @@ func (u *userUsecase) RegisterNewUser(pctx context.Context, payload *user.NewUse
 		Gender:      payload.Gender,
 		Photourl:    sqlPhotoUrl,
 	})
+}
+
+func (u *userUsecase) EditUserPhoto(pctx context.Context, args userdb.EditUserProfilePictureParams) (user.UserProfile, error) {
+	if err := u.store.EditUserProfilePicture(pctx, args); err != nil {
+		return user.UserProfile{}, err
+	}
+	return u.GetUserProfile(pctx, int(args.ID))
 }
 
 func (u *userUsecase) SaveToFirebaseStorage(pctx context.Context, bucketName, objectPath, filename string, file io.Reader) (string, error) {

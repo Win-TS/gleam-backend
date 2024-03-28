@@ -39,6 +39,7 @@ type (
 		AddFriend(c echo.Context) error
 		FriendAccept(c echo.Context) error
 		UserMockData(c echo.Context) error
+		EditUserPhoto(c echo.Context) error
 	}
 
 	userHttpHandler struct {
@@ -149,6 +150,24 @@ func (h *userHttpHandler) GetUserInfo(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 
+	return response.SuccessResponse(c, http.StatusOK, res)
+}
+
+func (h *userHttpHandler) EditUserPhoto(c echo.Context) error {
+	ctx := context.Background()
+	userId, err := strconv.Atoi(c.QueryParam("user_id"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, "Invalid user ID")
+	}
+
+	PhotoStr := c.FormValue("photo_url")
+	res, err := h.userUsecase.EditUserPhoto(ctx, userdb.EditUserProfilePictureParams{
+		ID:       int32(userId),
+		Photourl: utils.ConvertStringToSqlNullString(PhotoStr),
+	})
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
 	return response.SuccessResponse(c, http.StatusOK, res)
 }
 

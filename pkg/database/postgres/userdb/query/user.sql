@@ -80,3 +80,10 @@ WHERE
 -- name: GetBatchUserProfiles :many
 SELECT id, username, email, firstname, lastname, photourl FROM users
 WHERE id = ANY($1::int[]);
+
+-- name: EditUserProfilePicture :exec
+UPDATE users
+SET
+    photourl = $2
+WHERE
+    id = $1;

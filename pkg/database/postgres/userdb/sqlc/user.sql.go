@@ -170,6 +170,24 @@ func (q *Queries) EditLastNameOnly(ctx context.Context, arg EditLastNameOnlyPara
 	return err
 }
 
+const editUserProfilePicture = `-- name: EditUserProfilePicture :exec
+UPDATE users
+SET
+    photourl = $2
+WHERE
+    id = $1
+`
+
+type EditUserProfilePictureParams struct {
+	ID       int32          `json:"id"`
+	Photourl sql.NullString `json:"photourl"`
+}
+
+func (q *Queries) EditUserProfilePicture(ctx context.Context, arg EditUserProfilePictureParams) error {
+	_, err := q.db.ExecContext(ctx, editUserProfilePicture, arg.ID, arg.Photourl)
+	return err
+}
+
 const getBatchUserProfiles = `-- name: GetBatchUserProfiles :many
 SELECT id, username, email, firstname, lastname, photourl FROM users
 WHERE id = ANY($1::int[])

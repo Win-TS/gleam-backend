@@ -4,9 +4,9 @@ import (
 	"log"
 
 	"github.com/Win-TS/gleam-backend.git/modules/user/userHandler"
+	userPb "github.com/Win-TS/gleam-backend.git/modules/user/userPb"
 	"github.com/Win-TS/gleam-backend.git/modules/user/userUsecase"
 	userdb "github.com/Win-TS/gleam-backend.git/pkg/database/postgres/userdb/sqlc"
-	userPb "github.com/Win-TS/gleam-backend.git/modules/user/userPb"
 	"github.com/Win-TS/gleam-backend.git/pkg/grpcconn"
 )
 
@@ -49,6 +49,7 @@ func (s *server) userService() {
 	user.PATCH("/changephoneno", httpHandler.EditPhoneNumber)
 	user.PATCH("/editname", httpHandler.EditName)
 	user.DELETE("/deleteuser", httpHandler.DeleteUser)
+	user.PATCH("/editphoto", httpHandler.EditUserPhoto)
 
 	friend := s.app.Group("/friend_v1")
 

@@ -31,7 +31,7 @@ type (
 		GetGroupJoinRequests(pctx context.Context, groupId int, grpcUrl string) ([]group.GroupRequestRes, error)
 		GetUserJoinRequests(pctx context.Context, userId int) ([]groupdb.GroupRequest, error)
 		GetGroupById(pctx context.Context, groupId int) (groupdb.GetGroupByIDRow, error)
-		GetGroupMembersByGroupId(pctx context.Context, groupId int) ([]groupdb.GroupMember, error)
+		GetGroupMembersByGroupId(pctx context.Context, groupId int, grpcUrl string) ([]group.GroupMemberRes, error)
 		ListGroups(pctx context.Context, args groupdb.ListGroupsParams) ([]groupdb.Group, error)
 		EditGroupName(pctx context.Context, args groupdb.EditGroupNameParams, editorId int32) (groupdb.GetGroupByIDRow, error)
 		EditGroupPhoto(pctx context.Context, args groupdb.EditGroupPhotoParams, editorId int32) (groupdb.GetGroupByIDRow, error)
@@ -41,20 +41,20 @@ type (
 		DeleteGroup(pctx context.Context, groupId int, editorId int32) error
 		DeleteGroupMember(pctx context.Context, args groupdb.DeleteMemberParams, editorId int32) error
 		CreatePost(pctx context.Context, args groupdb.CreatePostParams) (groupdb.Post, error)
-		GetPostByPostId(pctx context.Context, postId int) (groupdb.Post, error)
-		GetPostsByGroupId(pctx context.Context, groupId int) ([]groupdb.Post, error)
+		GetPostByPostId(pctx context.Context, postId int, grpcUrl string) (groupdb.Post, *userPb.GetUserProfileRes, error)
+		GetPostsByGroupId(pctx context.Context, groupId int, grpcUrl string) ([]group.PostByGroupRes, error)
 		GetPostsByUserId(pctx context.Context, userId int) ([]groupdb.Post, error)
 		GetPostsByGroupAndMemberId(pctx context.Context, args groupdb.GetPostsByGroupAndMemberIDParams) ([]groupdb.Post, error)
 		EditPost(pctx context.Context, args groupdb.EditPostParams) (groupdb.Post, error)
 		DeletePost(pctx context.Context, postId int) error
 		GetPostsForOngoingFeedByMemberId(pctx context.Context, userId int) ([]groupdb.GetPostsForOngoingFeedByMemberIDRow, error)
 		CreateReaction(pctx context.Context, args groupdb.CreateReactionParams) (groupdb.PostReaction, error)
-		GetReactionsByPostId(pctx context.Context, postId int) ([]groupdb.PostReaction, error)
+		GetReactionsByPostId(pctx context.Context, postId int, grpcUrl string) ([]group.ReactionPostRes, error)
 		GetReactionsCountByPostId(pctx context.Context, postId int) (int, error)
 		EditReaction(pctx context.Context, args groupdb.EditReactionParams) (groupdb.PostReaction, error)
 		DeleteReaction(pctx context.Context, reactionId int) error
 		CreateComment(pctx context.Context, args groupdb.CreateCommentParams) (groupdb.PostComment, error)
-		GetCommentsByPostId(pctx context.Context, postId int) ([]groupdb.PostComment, error)
+		GetCommentsByPostId(pctx context.Context, postId int, grpcUrl string) ([]group.CommentRes, error)
 		GetCommentCountByPostId(pctx context.Context, postId int) (int, error)
 		EditComment(pctx context.Context, args groupdb.EditCommentParams) (groupdb.PostComment, error)
 		DeleteComment(pctx context.Context, commentId int) error
@@ -75,6 +75,8 @@ type (
 		EditGroupTag(pctx context.Context, args groupdb.EditGroupTagParams, memberId int32) (groupdb.Group, error)
 		GroupMockData(pctx context.Context, count int) error
 		PostMockData(ctx context.Context, count int) error
+		GetBatchUserProfiles(pctx context.Context, grpcUrl string, ids []int32) (*userPb.GetBatchUserProfileRes, error)
+		GetUserProfile(pctx context.Context, grpcUrl string, req *userPb.GetUserProfileReq) (*userPb.GetUserProfileRes, error)
 	}
 
 	groupUsecase struct {
@@ -165,11 +167,21 @@ func (u *groupUsecase) CreateNewGroup(pctx context.Context, args groupdb.CreateG
 }
 
 func (u *groupUsecase) SendRequestToJoinGroup(pctx context.Context, args groupdb.SendRequestToJoinGroupParams) (groupdb.GroupRequest, error) {
-	newRequest, err := u.store.SendRequestToJoinGroup(pctx, args)
+	_, err := u.store.GetMemberInfo(pctx, groupdb.GetMemberInfoParams{
+		MemberID: args.MemberID,
+		GroupID:  args.GroupID,
+	})
 	if err != nil {
+		if err == sql.ErrNoRows {
+			newRequest, err := u.store.SendRequestToJoinGroup(pctx, args)
+			if err != nil {
+				return groupdb.GroupRequest{}, err
+			}
+			return newRequest, nil
+		}
 		return groupdb.GroupRequest{}, err
 	}
-	return newRequest, nil
+	return groupdb.GroupRequest{}, errors.New("member is already in the group")
 }
 
 func (u *groupUsecase) AcceptGroupRequest(pctx context.Context, args groupdb.AcceptGroupRequestParams) (groupdb.GroupMember, error) {
@@ -226,6 +238,7 @@ func (u *groupUsecase) GetGroupJoinRequests(pctx context.Context, groupId int, g
 				MemberID:     requests[i].MemberID,
 				Description:  requests[i].Description,
 				CreatedAt:    requests[i].CreatedAt,
+				UserID:       userProfiles.UserProfiles[i].UserId,
 				Username:     userProfiles.UserProfiles[i].Username,
 				UserPhotourl: userProfiles.UserProfiles[i].Photourl,
 			})
@@ -251,12 +264,38 @@ func (u *groupUsecase) GetGroupById(pctx context.Context, groupId int) (groupdb.
 	return groupData, nil
 }
 
-func (u *groupUsecase) GetGroupMembersByGroupId(pctx context.Context, groupId int) ([]groupdb.GroupMember, error) {
+func (u *groupUsecase) GetGroupMembersByGroupId(pctx context.Context, groupId int, grpcUrl string) ([]group.GroupMemberRes, error) {
 	groupMembers, err := u.store.GetMembersByGroupID(pctx, int32(groupId))
 	if err != nil {
-		return []groupdb.GroupMember{}, err
+		return nil, err
 	}
-	return groupMembers, nil
+
+	var memberIds []int32
+	for _, request := range groupMembers {
+		memberIds = append(memberIds, request.MemberID)
+	}
+
+	userProfiles, err := u.GetBatchUserProfiles(pctx, grpcUrl, memberIds)
+	if err != nil {
+		return nil, err
+	}
+
+	GroupMemberRes := make([]group.GroupMemberRes, 0)
+	for i, member := range groupMembers {
+		if i < len(userProfiles.UserProfiles) {
+			GroupMemberRes = append(GroupMemberRes, group.GroupMemberRes{
+				GroupID:      member.GroupID,
+				MemberID:     member.MemberID,
+				Role:         member.Role,
+				CreatedAt:    member.CreatedAt,
+				UserID:       userProfiles.UserProfiles[i].UserId,
+				Username:     userProfiles.UserProfiles[i].Username,
+				UserPhotourl: userProfiles.UserProfiles[i].Photourl,
+			})
+		}
+	}
+
+	return GroupMemberRes, nil
 }
 
 func (u *groupUsecase) ListGroups(pctx context.Context, args groupdb.ListGroupsParams) ([]groupdb.Group, error) {
@@ -358,7 +397,7 @@ func (u *groupUsecase) EditMemberRole(pctx context.Context, args groupdb.EditMem
 		return groupdb.GetMemberInfoRow{}, err
 	}
 
-	if role != group.Admin && role != group.Moderator || args.Role != string(group.Moderator) {
+	if (role != group.Admin && role != group.Moderator) || (args.Role != string(group.Moderator)) {
 		return groupdb.GetMemberInfoRow{}, errors.New("no permission")
 	}
 
@@ -418,23 +457,60 @@ func (u *groupUsecase) CreatePost(pctx context.Context, args groupdb.CreatePostP
 	return newPost, nil
 }
 
-func (u *groupUsecase) GetPostByPostId(pctx context.Context, postId int) (groupdb.Post, error) {
+func (u *groupUsecase) GetPostByPostId(pctx context.Context, postId int, grpcUrl string) (groupdb.Post, *userPb.GetUserProfileRes, error) {
 	postInfo, err := u.store.GetPostByPostID(pctx, int32(postId))
 	if err != nil {
-		return groupdb.Post{}, err
+		return groupdb.Post{}, nil, err
 	}
-	return postInfo, nil
+	profile, err := u.GetUserProfile(pctx, grpcUrl, &userPb.GetUserProfileReq{
+		UserId: postInfo.MemberID,
+	})
+	if err != nil {
+		return groupdb.Post{}, nil, err
+	}
+
+	return postInfo, profile, nil
 }
 
-func (u *groupUsecase) GetPostsByGroupId(pctx context.Context, groupId int) ([]groupdb.Post, error) {
+func (u *groupUsecase) GetPostsByGroupId(pctx context.Context, groupId int, grpcUrl string) ([]group.PostByGroupRes, error) {
 	posts, err := u.store.GetPostsByGroupID(pctx, int32(groupId))
 	if err != nil {
-		return []groupdb.Post{}, err
+		return nil, err
 	}
-	return posts, nil
+
+	var memberIds []int32
+	for _, post := range posts {
+		memberIds = append(memberIds, post.MemberID)
+	}
+
+	userProfiles, err := u.GetBatchUserProfiles(pctx, grpcUrl, memberIds)
+	if err != nil {
+		return nil, err
+	}
+
+	PostsByGroupRes := make([]group.PostByGroupRes, 0)
+	for i, post := range posts {
+		if i < len(userProfiles.UserProfiles) {
+			PostsByGroupRes = append(PostsByGroupRes, group.PostByGroupRes{
+				PostID:       post.PostID,
+				MemberID:     post.MemberID,
+				GroupID:      post.GroupID,
+				PhotoUrl:     post.PhotoUrl,
+				Description:  post.Description,
+				CreatedAt:    post.CreatedAt,
+				UserID:       userProfiles.UserProfiles[i].UserId,
+				Username:     userProfiles.UserProfiles[i].Username,
+				UserPhotourl: userProfiles.UserProfiles[i].Photourl,
+			})
+		}
+	}
+
+	return PostsByGroupRes, nil
 }
 
+// รอแก้
 func (u *groupUsecase) GetPostsByUserId(pctx context.Context, userId int) ([]groupdb.Post, error) {
+
 	posts, err := u.store.GetPostsByMemberID(pctx, int32(userId))
 	if err != nil {
 		return []groupdb.Post{}, err
@@ -486,12 +562,38 @@ func (u *groupUsecase) CreateReaction(pctx context.Context, args groupdb.CreateR
 	return newReaction, nil
 }
 
-func (u *groupUsecase) GetReactionsByPostId(pctx context.Context, postId int) ([]groupdb.PostReaction, error) {
+func (u *groupUsecase) GetReactionsByPostId(pctx context.Context, postId int, grpcUrl string) ([]group.ReactionPostRes, error) {
 	reactions, err := u.store.GetReactionsByPostID(pctx, int32(postId))
 	if err != nil {
-		return []groupdb.PostReaction{}, err
+		return nil, err
 	}
-	return reactions, nil
+	var memberIds []int32
+	for _, request := range reactions {
+		memberIds = append(memberIds, request.MemberID)
+	}
+
+	userProfiles, err := u.GetBatchUserProfiles(pctx, grpcUrl, memberIds)
+	if err != nil {
+		return nil, err
+	}
+
+	ReactionRes := make([]group.ReactionPostRes, 0)
+	for i, member := range reactions {
+		if i < len(userProfiles.UserProfiles) {
+			ReactionRes = append(ReactionRes, group.ReactionPostRes{
+				ReactionID:   member.ReactionID,
+				MemberID:     member.MemberID,
+				PostID:       member.PostID,
+				CreatedAt:    member.CreatedAt,
+				Reaction:     member.Reaction,
+				UserID:       userProfiles.UserProfiles[i].UserId,
+				Username:     userProfiles.UserProfiles[i].Username,
+				UserPhotourl: userProfiles.UserProfiles[i].Photourl,
+			})
+		}
+	}
+
+	return ReactionRes, nil
 }
 
 func (u *groupUsecase) GetReactionsCountByPostId(pctx context.Context, postId int) (int, error) {
@@ -530,12 +632,38 @@ func (u *groupUsecase) CreateComment(pctx context.Context, args groupdb.CreateCo
 	return newComment, nil
 }
 
-func (u *groupUsecase) GetCommentsByPostId(pctx context.Context, postId int) ([]groupdb.PostComment, error) {
+func (u *groupUsecase) GetCommentsByPostId(pctx context.Context, postId int, grpcUrl string) ([]group.CommentRes, error) {
 	comments, err := u.store.GetCommentsByPostID(pctx, int32(postId))
 	if err != nil {
-		return []groupdb.PostComment{}, err
+		return []group.CommentRes{}, err
 	}
-	return comments, nil
+
+	var memberIds []int32
+	for _, request := range comments {
+		memberIds = append(memberIds, request.MemberID)
+	}
+
+	userProfiles, err := u.GetBatchUserProfiles(pctx, grpcUrl, memberIds)
+	if err != nil {
+		return nil, err
+	}
+
+	CommentRes := make([]group.CommentRes, 0)
+	for i, member := range comments {
+		if i < len(userProfiles.UserProfiles) {
+			CommentRes = append(CommentRes, group.CommentRes{
+				CommentID:    member.CommentID,
+				PostID:       member.PostID,
+				MemberID:     member.MemberID,
+				Comment:      member.Comment,
+				CreatedAt:    member.CreatedAt,
+				UserID:       userProfiles.UserProfiles[i].UserId,
+				Username:     userProfiles.UserProfiles[i].Username,
+				UserPhotourl: userProfiles.UserProfiles[i].Photourl,
+			})
+		}
+	}
+	return CommentRes, nil
 }
 
 func (u *groupUsecase) GetCommentCountByPostId(pctx context.Context, postId int) (int, error) {

@@ -55,7 +55,50 @@ type (
 		MemberID     int32          `json:"member_id"`
 		Description  sql.NullString `json:"description"`
 		CreatedAt    time.Time      `json:"created_at"`
+		UserID       int32          `json:"user_id"`
 		Username     string         `json:"username"`
 		UserPhotourl string         `json:"user_photourl"`
+	}
+
+	GroupMemberRes struct {
+		GroupID      int32     `json:"group_id"`
+		MemberID     int32     `json:"member_id"`
+		Role         string    `json:"role"`
+		CreatedAt    time.Time `json:"created_at"`
+		UserID       int32     `json:"user_id"`
+		Username     string    `json:"username"`
+		UserPhotourl string    `json:"user_photourl"`
+	}
+	PostByGroupRes struct {
+		PostID       int32          `json:"post_id"`
+		MemberID     int32          `json:"member_id"`
+		GroupID      int32          `json:"group_id"`
+		PhotoUrl     sql.NullString `json:"photo_url"`
+		Description  sql.NullString `json:"description"`
+		CreatedAt    time.Time      `json:"created_at"`
+		UserID       int32          `json:"user_id"`
+		Username     string         `json:"username"`
+		UserPhotourl string         `json:"user_photourl"`
+	}
+	ReactionPostRes struct {
+		ReactionID   int32     `json:"reaction_id"`
+		PostID       int32     `json:"post_id"`
+		MemberID     int32     `json:"member_id"`
+		Reaction     string    `json:"reaction"`
+		CreatedAt    time.Time `json:"created_at"`
+		UserID       int32     `json:"user_id"`
+		Username     string    `json:"username"`
+		UserPhotourl string    `json:"user_photourl"`
+	}
+
+	CommentRes struct {
+		CommentID    int32     `json:"comment_id"`
+		PostID       int32     `json:"post_id"`
+		MemberID     int32     `json:"member_id"`
+		Comment      string    `json:"comment"`
+		CreatedAt    time.Time `json:"created_at"`
+		UserID       int32     `json:"user_id"`
+		Username     string    `json:"username"`
+		UserPhotourl string    `json:"user_photourl"`
 	}
 )

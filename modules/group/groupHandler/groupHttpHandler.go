@@ -10,7 +10,7 @@ import (
 	"github.com/Win-TS/gleam-backend.git/modules/group"
 	"github.com/Win-TS/gleam-backend.git/modules/group/groupUsecase"
 
-	//userPb "github.com/Win-TS/gleam-backend.git/modules/user/userPb"
+	userPb "github.com/Win-TS/gleam-backend.git/modules/user/userPb"
 	groupdb "github.com/Win-TS/gleam-backend.git/pkg/database/postgres/groupdb/sqlc"
 	"github.com/Win-TS/gleam-backend.git/pkg/request"
 	"github.com/Win-TS/gleam-backend.git/pkg/response"
@@ -88,12 +88,12 @@ func (h *groupHttpHandler) CreateNewGroup(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 
-	// _, err := h.groupUsecase.SearchUser(ctx, h.cfg.Grpc.UserUrl, &userPb.SearchUserReq{
-	// 	UserId: int32(req.GroupCreatorId),
-	// })
-	// if err != nil {
-	// 	return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
-	// }
+	_, err := h.groupUsecase.SearchUser(ctx, h.cfg.Grpc.UserUrl, &userPb.SearchUserReq{
+		UserId: int32(req.GroupCreatorId),
+	})
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
 
 	file, _ := c.FormFile("photo")
 	var url string
@@ -137,7 +137,19 @@ func (h *groupHttpHandler) CreateNewGroup(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
 
-	return response.SuccessResponse(c, http.StatusCreated, newGroup)
+	user, err := h.groupUsecase.GetUserProfile(ctx, h.cfg.Grpc.UserUrl, &userPb.GetUserProfileReq{
+		UserId: int32(req.GroupCreatorId),
+	})
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	return c.JSON(http.StatusCreated, map[string]interface{}{
+		"success": true,
+		"message": "Success: group created",
+		"data":    newGroup,
+		"creator": user,
+	})
 }
 
 func (h *groupHttpHandler) SendRequestToJoinGroup(c echo.Context) error {
@@ -149,6 +161,13 @@ func (h *groupHttpHandler) SendRequestToJoinGroup(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 
+	_, err := h.groupUsecase.SearchUser(ctx, h.cfg.Grpc.UserUrl, &userPb.SearchUserReq{
+		UserId: int32(req.MemberID),
+	})
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
 	newRequest, err := h.groupUsecase.SendRequestToJoinGroup(ctx, groupdb.SendRequestToJoinGroupParams{
 		GroupID:     int32(req.GroupID),
 		MemberID:    int32(req.MemberID),
@@ -158,7 +177,19 @@ func (h *groupHttpHandler) SendRequestToJoinGroup(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
 
-	return response.SuccessResponse(c, http.StatusCreated, newRequest)
+	user, err := h.groupUsecase.GetUserProfile(ctx, h.cfg.Grpc.UserUrl, &userPb.GetUserProfileReq{
+		UserId: int32(req.MemberID),
+	})
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	return c.JSON(http.StatusCreated, map[string]interface{}{
+		"success":            true,
+		"message":            "Success: send join group request success",
+		"data":               newRequest,
+		"requestUserProfile": user,
+	})
 }
 
 func (h *groupHttpHandler) AcceptGroupRequest(c echo.Context) error {
@@ -170,12 +201,40 @@ func (h *groupHttpHandler) AcceptGroupRequest(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 
+	idToSearch := []int32{int32(req.AcceptorId), int32(req.MemberID)}
+
+	_, err := h.groupUsecase.GetBatchUserProfiles(ctx, h.cfg.Grpc.UserUrl, idToSearch)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
 	newMember, err := h.groupUsecase.AcceptGroupRequest(ctx, *req)
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
 
-	return response.SuccessResponse(c, http.StatusCreated, newMember)
+	// return response.SuccessResponse(c, http.StatusCreated, newMember)
+	user, err := h.groupUsecase.GetUserProfile(ctx, h.cfg.Grpc.UserUrl, &userPb.GetUserProfileReq{
+		UserId: int32(req.MemberID),
+	})
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	acceptor, err := h.groupUsecase.GetUserProfile(ctx, h.cfg.Grpc.UserUrl, &userPb.GetUserProfileReq{
+		UserId: int32(req.AcceptorId),
+	})
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	return c.JSON(http.StatusCreated, map[string]interface{}{
+		"success":  true,
+		"message":  "Success: Accepted join request",
+		"data":     newMember,
+		"member":   user,
+		"acceptor": acceptor,
+	})
 }
 
 func (h *groupHttpHandler) DeclineGroupRequest(c echo.Context) error {
@@ -196,6 +255,13 @@ func (h *groupHttpHandler) DeclineGroupRequest(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 
+	idToSearch := []int32{int32(memberId), int32(declinerId)}
+
+	_, err = h.groupUsecase.GetBatchUserProfiles(ctx, h.cfg.Grpc.UserUrl, idToSearch)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
 	if err := h.groupUsecase.DeclineGroupRequest(ctx, groupdb.DeleteRequestToJoinGroupParams{
 		GroupID:  int32(groupId),
 		MemberID: int32(memberId),
@@ -203,7 +269,28 @@ func (h *groupHttpHandler) DeclineGroupRequest(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
 
-	return response.SuccessResponse(c, http.StatusOK, "Success: group request declined")
+	user, err := h.groupUsecase.GetUserProfile(ctx, h.cfg.Grpc.UserUrl, &userPb.GetUserProfileReq{
+		UserId: int32(memberId),
+	})
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	acceptor, err := h.groupUsecase.GetUserProfile(ctx, h.cfg.Grpc.UserUrl, &userPb.GetUserProfileReq{
+		UserId: int32(declinerId),
+	})
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	// return response.SuccessResponse(c, http.StatusOK, "Success: group request declined")
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"success": true,
+		"message": "Success: Declined group request",
+		// "data":    updatedComment,
+		"member":   user,
+		"decliner": acceptor,
+	})
 }
 
 func (h *groupHttpHandler) GetGroupJoinRequests(c echo.Context) error {
@@ -226,6 +313,13 @@ func (h *groupHttpHandler) GetUserJoinRequests(c echo.Context) error {
 	memberId, err := strconv.Atoi(c.QueryParam("user_id"))
 	if err != nil {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	_, err = h.groupUsecase.SearchUser(ctx, h.cfg.Grpc.UserUrl, &userPb.SearchUserReq{
+		UserId: int32(memberId),
+	})
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
 
 	userRequests, err := h.groupUsecase.GetUserJoinRequests(ctx, memberId)
@@ -258,7 +352,7 @@ func (h *groupHttpHandler) GetGroupMembersByGroupId(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 
-	groupMembers, err := h.groupUsecase.GetGroupMembersByGroupId(ctx, groupId)
+	groupMembers, err := h.groupUsecase.GetGroupMembersByGroupId(ctx, groupId, h.cfg.Grpc.UserUrl)
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
@@ -317,6 +411,13 @@ func (h *groupHttpHandler) EditGroupName(c echo.Context) error {
 
 	memberIdInt := int(memberID)
 
+	_, err = h.groupUsecase.SearchUser(ctx, h.cfg.Grpc.UserUrl, &userPb.SearchUserReq{
+		UserId: int32(memberIdInt),
+	})
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
 	args := &groupdb.EditGroupNameParams{
 		GroupID:   int32(groupId),
 		GroupName: newGroupName,
@@ -328,10 +429,18 @@ func (h *groupHttpHandler) EditGroupName(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
 
+	Editor, err := h.groupUsecase.GetUserProfile(ctx, h.cfg.Grpc.UserUrl, &userPb.GetUserProfileReq{
+		UserId: int32(memberID),
+	})
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"success": true,
 		"message": "Success: group name edited",
 		"data":    updatedGroup,
+		"editor":  Editor,
 	})
 }
 
@@ -351,6 +460,13 @@ func (h *groupHttpHandler) EditGroupPhoto(c echo.Context) error {
 	editorId, err := strconv.Atoi(editorIdStr)
 	if err != nil {
 		return response.ErrResponse(c, http.StatusBadRequest, "Invalid editor ID")
+	}
+
+	_, err = h.groupUsecase.SearchUser(ctx, h.cfg.Grpc.UserUrl, &userPb.SearchUserReq{
+		UserId: int32(editorId),
+	})
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
 
 	var url string
@@ -377,11 +493,18 @@ func (h *groupHttpHandler) EditGroupPhoto(c echo.Context) error {
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, "Failed to update group photo")
 	}
+	Editor, err := h.groupUsecase.GetUserProfile(ctx, h.cfg.Grpc.UserUrl, &userPb.GetUserProfileReq{
+		UserId: int32(editorId),
+	})
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"success": true,
 		"message": "Success: group photo edited",
 		"data":    updatedGroup,
+		"editor":  Editor,
 	})
 }
 
@@ -407,6 +530,13 @@ func (h *groupHttpHandler) EditGroupVisibility(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 
+	_, err = h.groupUsecase.SearchUser(ctx, h.cfg.Grpc.UserUrl, &userPb.SearchUserReq{
+		UserId: int32(editorId),
+	})
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
 	args := &groupdb.EditGroupVisibilityParams{
 		GroupID:    int32(groupId),
 		Visibility: visibility,
@@ -417,10 +547,18 @@ func (h *groupHttpHandler) EditGroupVisibility(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
 
+	Editor, err := h.groupUsecase.GetUserProfile(ctx, h.cfg.Grpc.UserUrl, &userPb.GetUserProfileReq{
+		UserId: int32(editorId),
+	})
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"success": true,
 		"message": "Success: group visibility edited",
 		"data":    updatedGroup,
+		"editor":  Editor,
 	})
 }
 
@@ -442,6 +580,13 @@ func (h *groupHttpHandler) EditGroupDescription(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 
+	_, err = h.groupUsecase.SearchUser(ctx, h.cfg.Grpc.UserUrl, &userPb.SearchUserReq{
+		UserId: int32(editorId),
+	})
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
 	args := &groupdb.EditGroupDescriptionParams{
 		GroupID:     int32(groupId),
 		Description: utils.ConvertStringToSqlNullString(newDescription),
@@ -452,10 +597,18 @@ func (h *groupHttpHandler) EditGroupDescription(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
 
+	Editor, err := h.groupUsecase.GetUserProfile(ctx, h.cfg.Grpc.UserUrl, &userPb.GetUserProfileReq{
+		UserId: int32(editorId),
+	})
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"success": true,
 		"message": "Success: group description edited",
 		"data":    updatedGroup,
+		"editor":  Editor,
 	})
 }
 
@@ -488,6 +641,13 @@ func (h *groupHttpHandler) EditMemberRole(c echo.Context) error {
 
 	targetId := int32(memberId)
 
+	idToSearch := []int32{targetId, int32(editorId)}
+
+	_, err = h.groupUsecase.GetBatchUserProfiles(ctx, h.cfg.Grpc.UserUrl, idToSearch)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
 	args := &groupdb.EditMemberRoleParams{
 		GroupID:  int32(groupId),
 		MemberID: targetId,
@@ -499,10 +659,26 @@ func (h *groupHttpHandler) EditMemberRole(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
 
+	Editor, err := h.groupUsecase.GetUserProfile(ctx, h.cfg.Grpc.UserUrl, &userPb.GetUserProfileReq{
+		UserId: int32(editorId),
+	})
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	Target, err := h.groupUsecase.GetUserProfile(ctx, h.cfg.Grpc.UserUrl, &userPb.GetUserProfileReq{
+		UserId: int32(targetId),
+	})
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"success": true,
 		"message": "Success: group role edited",
 		"data":    updatedMember,
+		"editor":  Editor,
+		"target":  Target,
 	})
 }
 
@@ -517,11 +693,29 @@ func (h *groupHttpHandler) DeleteGroup(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 
+	_, err = h.groupUsecase.SearchUser(ctx, h.cfg.Grpc.UserUrl, &userPb.SearchUserReq{
+		UserId: int32(editorId),
+	})
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
 	if err := h.groupUsecase.DeleteGroup(ctx, groupId, int32(editorId)); err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
 
-	return response.SuccessResponse(c, http.StatusOK, "Success: group deleted")
+	Editor, err := h.groupUsecase.GetUserProfile(ctx, h.cfg.Grpc.UserUrl, &userPb.GetUserProfileReq{
+		UserId: int32(editorId),
+	})
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"success": true,
+		"message": "Success: group deleted",
+		"editor":  Editor,
+	})
 }
 
 func (h *groupHttpHandler) DeleteGroupMember(c echo.Context) error {
@@ -542,6 +736,13 @@ func (h *groupHttpHandler) DeleteGroupMember(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 
+	idToSearch := []int32{int32(memberId), int32(editorId)}
+
+	_, err = h.groupUsecase.GetBatchUserProfiles(ctx, h.cfg.Grpc.UserUrl, idToSearch)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
 	req := &groupdb.DeleteMemberParams{
 		MemberID: int32(memberId),
 		GroupID:  int32(groupId),
@@ -551,7 +752,28 @@ func (h *groupHttpHandler) DeleteGroupMember(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
 
-	return response.SuccessResponse(c, http.StatusOK, "Success: member deleted from group")
+	// return response.SuccessResponse(c, http.StatusOK, "Success: member deleted from group")
+	Editor, err := h.groupUsecase.GetUserProfile(ctx, h.cfg.Grpc.UserUrl, &userPb.GetUserProfileReq{
+		UserId: int32(editorId),
+	})
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	Target, err := h.groupUsecase.GetUserProfile(ctx, h.cfg.Grpc.UserUrl, &userPb.GetUserProfileReq{
+		UserId: int32(memberId),
+	})
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"success": true,
+		"message": "Success: member deleted from group",
+		"group":   groupId,
+		"editor":  Editor,
+		"target":  Target,
+	})
 }
 
 func (h *groupHttpHandler) CreatePost(c echo.Context) error {
@@ -588,6 +810,13 @@ func (h *groupHttpHandler) CreatePost(c echo.Context) error {
 		}
 	}
 
+	_, err = h.groupUsecase.SearchUser(ctx, h.cfg.Grpc.UserUrl, &userPb.SearchUserReq{
+		UserId: int32(req.MemberID),
+	})
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
 	args := &groupdb.CreatePostParams{
 		MemberID:    int32(req.MemberID),
 		GroupID:     int32(req.GroupID),
@@ -600,7 +829,19 @@ func (h *groupHttpHandler) CreatePost(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
 
-	return response.SuccessResponse(c, http.StatusCreated, newPost)
+	// return response.SuccessResponse(c, http.StatusCreated, newPost)
+	Member, err := h.groupUsecase.GetUserProfile(ctx, h.cfg.Grpc.UserUrl, &userPb.GetUserProfileReq{
+		UserId: int32(req.MemberID),
+	})
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"success": true,
+		"message": "Success: group role edited",
+		"data":    newPost,
+		"member":  Member,
+	})
 }
 
 func (h *groupHttpHandler) GetPostByPostId(c echo.Context) error {
@@ -610,12 +851,17 @@ func (h *groupHttpHandler) GetPostByPostId(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 
-	postInfo, err := h.groupUsecase.GetPostByPostId(ctx, postId)
+	postInfo, Member, err := h.groupUsecase.GetPostByPostId(ctx, postId, h.cfg.Grpc.UserUrl)
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
 
-	return response.SuccessResponse(c, http.StatusOK, postInfo)
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"success": true,
+		"message": "Success: get post by id success",
+		"data":    postInfo,
+		"member":  Member,
+	})
 }
 
 func (h *groupHttpHandler) GetPostsByGroupId(c echo.Context) error {
@@ -625,7 +871,7 @@ func (h *groupHttpHandler) GetPostsByGroupId(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 
-	postsInGroup, err := h.groupUsecase.GetPostsByGroupId(ctx, groupId)
+	postsInGroup, err := h.groupUsecase.GetPostsByGroupId(ctx, groupId, h.cfg.Grpc.UserUrl)
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
@@ -640,6 +886,13 @@ func (h *groupHttpHandler) GetPostsByUserId(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 
+	_, err = h.groupUsecase.SearchUser(ctx, h.cfg.Grpc.UserUrl, &userPb.SearchUserReq{
+		UserId: int32(userId),
+	})
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
 	userPosts, err := h.groupUsecase.GetPostsByUserId(ctx, userId)
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
@@ -650,11 +903,24 @@ func (h *groupHttpHandler) GetPostsByUserId(c echo.Context) error {
 
 func (h *groupHttpHandler) GetPostsByGroupAndMemberId(c echo.Context) error {
 	ctx := context.Background()
-	wrapper := request.ContextWrapper(c)
+	memberId, err := strconv.Atoi(c.QueryParam("member_id"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+	groupId, err := strconv.Atoi(c.QueryParam("group_id"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
 
-	req := new(groupdb.GetPostsByGroupAndMemberIDParams)
-	if err := wrapper.Bind(req); err != nil {
-		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	req := &groupdb.GetPostsByGroupAndMemberIDParams{
+		GroupID:  int32(groupId),
+		MemberID: int32(memberId),
+	}
+	_, err = h.groupUsecase.SearchUser(ctx, h.cfg.Grpc.UserUrl, &userPb.SearchUserReq{
+		UserId: int32(memberId),
+	})
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
 
 	posts, err := h.groupUsecase.GetPostsByGroupAndMemberId(ctx, *req)
@@ -712,6 +978,13 @@ func (h *groupHttpHandler) DeletePost(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 
+	_, err = h.groupUsecase.SearchUser(ctx, h.cfg.Grpc.UserUrl, &userPb.SearchUserReq{
+		UserId: int32(postId),
+	})
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
 	if err := h.groupUsecase.DeletePost(ctx, postId); err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
@@ -724,6 +997,13 @@ func (h *groupHttpHandler) GetPostsForOngoingFeedByMemberId(c echo.Context) erro
 	userId, err := strconv.Atoi(c.QueryParam("user_id"))
 	if err != nil {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	_, err = h.groupUsecase.SearchUser(ctx, h.cfg.Grpc.UserUrl, &userPb.SearchUserReq{
+		UserId: int32(userId),
+	})
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
 
 	feedPosts, err := h.groupUsecase.GetPostsForOngoingFeedByMemberId(ctx, userId)
@@ -743,6 +1023,13 @@ func (h *groupHttpHandler) CreateReaction(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 
+	_, err := h.groupUsecase.SearchUser(ctx, h.cfg.Grpc.UserUrl, &userPb.SearchUserReq{
+		UserId: int32(req.MemberID),
+	})
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
 	newReaction, err := h.groupUsecase.CreateReaction(ctx, *req)
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
@@ -758,7 +1045,7 @@ func (h *groupHttpHandler) GetReactionsByPostId(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 
-	reactions, err := h.groupUsecase.GetReactionsByPostId(ctx, postId)
+	reactions, err := h.groupUsecase.GetReactionsByPostId(ctx, postId, h.cfg.Grpc.UserUrl)
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
@@ -813,7 +1100,7 @@ func (h *groupHttpHandler) EditReaction(c echo.Context) error {
 	}
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"success": true,
-		"message": "Success: group photo edited",
+		"message": "Success: reaction edited",
 		"data":    updatedReaction,
 	})
 }
@@ -841,6 +1128,13 @@ func (h *groupHttpHandler) CreateComment(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 
+	_, err := h.groupUsecase.SearchUser(ctx, h.cfg.Grpc.UserUrl, &userPb.SearchUserReq{
+		UserId: int32(req.MemberID),
+	})
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
 	newComment, err := h.groupUsecase.CreateComment(ctx, *req)
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
@@ -849,6 +1143,7 @@ func (h *groupHttpHandler) CreateComment(c echo.Context) error {
 	return response.SuccessResponse(c, http.StatusCreated, newComment)
 }
 
+// bug
 func (h *groupHttpHandler) GetCommentsByPostId(c echo.Context) error {
 	ctx := context.Background()
 	postId, err := strconv.Atoi(c.QueryParam("post_id"))
@@ -856,7 +1151,7 @@ func (h *groupHttpHandler) GetCommentsByPostId(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 
-	comments, err := h.groupUsecase.GetCommentsByPostId(ctx, postId)
+	comments, err := h.groupUsecase.GetCommentsByPostId(ctx, postId, h.cfg.Grpc.UserUrl)
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
@@ -1160,6 +1455,13 @@ func (h *groupHttpHandler) EditGroupTag(c echo.Context) error {
 	editorID, ok := requestBody["editor_id"].(float64)
 	if !ok {
 		return response.ErrResponse(c, http.StatusBadRequest, "member_id is missing or invalid in request body")
+	}
+
+	_, err = h.groupUsecase.SearchUser(ctx, h.cfg.Grpc.UserUrl, &userPb.SearchUserReq{
+		UserId: int32(editorID),
+	})
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
 
 	args := &groupdb.EditGroupTagParams{

@@ -73,6 +73,7 @@ type Querier interface {
 	GetUnendedStreakSetByUserID(ctx context.Context, userID int32) ([]StreakSet, error)
 	InitializeCategory(ctx context.Context) error
 	ListGroups(ctx context.Context, arg ListGroupsParams) ([]Group, error)
+	NumberMemberInGroup(ctx context.Context, groupID int32) (int64, error)
 	SendRequestToJoinGroup(ctx context.Context, arg SendRequestToJoinGroupParams) (GroupRequest, error)
 	UpdateStreakSetCount(ctx context.Context, arg UpdateStreakSetCountParams) error
 }

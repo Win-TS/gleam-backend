@@ -18,6 +18,11 @@ INSERT INTO group_members (group_id, member_id, role)
 VALUES ($1, $2, $3)
 RETURNING *;
 
+-- name: NumberMemberInGroup :one
+SELECT COUNT(*)
+FROM group_members
+WHERE group_id = $1;
+
 -- name: SendRequestToJoinGroup :one
 INSERT INTO group_requests (group_id, member_id, description)
 VALUES ($1, $2, $3)

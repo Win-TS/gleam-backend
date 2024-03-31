@@ -879,6 +879,19 @@ func (q *Queries) ListGroups(ctx context.Context, arg ListGroupsParams) ([]Group
 	return items, nil
 }
 
+const numberMemberInGroup = `-- name: NumberMemberInGroup :one
+SELECT COUNT(*)
+FROM group_members
+WHERE group_id = $1
+`
+
+func (q *Queries) NumberMemberInGroup(ctx context.Context, groupID int32) (int64, error) {
+	row := q.db.QueryRowContext(ctx, numberMemberInGroup, groupID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const sendRequestToJoinGroup = `-- name: SendRequestToJoinGroup :one
 INSERT INTO group_requests (group_id, member_id, description)
 VALUES ($1, $2, $3)

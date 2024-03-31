@@ -1201,5 +1201,17 @@ func (u *groupUsecase) GetPostsForFollowingFeedByMemberId(pctx context.Context, 
 }
 
 func (u *groupUsecase) SearchGroupByGroupName(ctx context.Context, groupname string) ([]groupdb.SearchGroupByGroupNameRow, error) {
-	return u.store.SearchGroupByGroupName(ctx, utils.ConvertStringToSqlNullString(groupname))
+	groups, err := u.store.SearchGroupByGroupName(ctx, utils.ConvertStringToSqlNullString(groupname))
+	if err != nil {
+		return nil, err
+	}
+
+	var visibleGroups []groupdb.SearchGroupByGroupNameRow
+	for _, g := range groups {
+		if g.Visibility {
+			visibleGroups = append(visibleGroups, g)
+		}
+	}
+
+	return visibleGroups, nil
 }

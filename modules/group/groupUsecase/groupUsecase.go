@@ -1208,7 +1208,7 @@ func (u *groupUsecase) SearchGroupByGroupName(ctx context.Context, groupname str
 
 	var visibleGroups []groupdb.SearchGroupByGroupNameRow
 	for _, g := range groups {
-		if g.Visibility {
+		if g.Visibility && g.GroupType == "social hive" {
 			visibleGroups = append(visibleGroups, g)
 		}
 	}

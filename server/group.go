@@ -61,7 +61,8 @@ func (s *server) groupService() {
 	post.GET("/groupuserposts", httpHandler.GetPostsByGroupAndMemberId)
 	post.PATCH("/post", httpHandler.EditPost)
 	post.DELETE("/post", httpHandler.DeletePost)
-	post.GET("/feedposts", httpHandler.GetPostsForOngoingFeedByMemberId)
+	post.GET("/ongoingfeed", httpHandler.GetPostsForOngoingFeedByMemberId)
+	post.GET("/followingfeed", httpHandler.GetPostsForFollowingFeedByMemberId)
 
 	// Reaction Endpoints
 	reaction.POST("/reaction", httpHandler.CreateReaction)

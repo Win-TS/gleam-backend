@@ -15,6 +15,7 @@ type (
 		FindUserByUID(ctx context.Context, uid string) (*auth.UserRecord, error)
 		FindUserByEmail(ctx context.Context, email string) (*auth.UserRecord, error)
 		FindUserByPhoneNo(ctx context.Context, phoneNo string) (*auth.UserRecord, error)
+		DeleteUser(ctx context.Context, uid string) error
 	}
 	authRepository struct{
 		authClient *auth.Client
@@ -79,4 +80,13 @@ func (r *authRepository) FindUserByPhoneNo(ctx context.Context, phoneNo string) 
         return nil, err
     }
     return user, nil
+}
+
+// deleteUser deletes a user from the Firebase Authentication service.
+func (r *authRepository) DeleteUser(ctx context.Context, uid string) error {
+	if err := r.authClient.DeleteUser(ctx, uid); err != nil {
+		log.Fatalf("error deleting user: %v\n", err)
+		return err
+	}
+	return nil
 }

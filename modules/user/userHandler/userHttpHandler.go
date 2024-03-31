@@ -294,7 +294,7 @@ func (h *userHttpHandler) DeleteUser(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 
-	if err := h.userUsecase.DeleteUser(ctx, userId); err != nil {
+	if err := h.userUsecase.DeleteUser(ctx, userId, h.cfg.Grpc.AuthUrl); err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
 

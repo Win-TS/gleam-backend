@@ -47,7 +47,7 @@ type (
 		GetPostsByGroupAndMemberId(pctx context.Context, args groupdb.GetPostsByGroupAndMemberIDParams) ([]groupdb.Post, error)
 		EditPost(pctx context.Context, args groupdb.EditPostParams) (groupdb.Post, error)
 		DeletePost(pctx context.Context, postId int) error
-		GetPostsForOngoingFeedByMemberId(pctx context.Context, userId int) ([]groupdb.GetPostsForOngoingFeedByMemberIDRow, error)
+		GetPostsForOngoingFeedByMemberId(pctx context.Context, userId int, grpcUrl string) ([]group.PostsForFeedRes, error)
 		CreateReaction(pctx context.Context, args groupdb.CreateReactionParams) (groupdb.PostReaction, error)
 		GetReactionsByPostId(pctx context.Context, postId int, grpcUrl string) ([]group.ReactionPostRes, error)
 		GetReactionsCountByPostId(pctx context.Context, postId int) (int, error)
@@ -77,6 +77,7 @@ type (
 		PostMockData(ctx context.Context, count int) error
 		GetBatchUserProfiles(pctx context.Context, grpcUrl string, ids []int32) (*userPb.GetBatchUserProfileRes, error)
 		GetUserProfile(pctx context.Context, grpcUrl string, req *userPb.GetUserProfileReq) (*userPb.GetUserProfileRes, error)
+		GetPostsForFollowingFeedByMemberId(pctx context.Context, userId int32, grpcUrl string) ([]group.PostsForFeedRes, error)
 	}
 
 	groupUsecase struct {
@@ -546,12 +547,46 @@ func (u *groupUsecase) DeletePost(pctx context.Context, postId int) error {
 	return nil
 }
 
-func (u *groupUsecase) GetPostsForOngoingFeedByMemberId(pctx context.Context, userId int) ([]groupdb.GetPostsForOngoingFeedByMemberIDRow, error) {
-	posts, err := u.store.GetPostsForOngoingFeedByMemberID(pctx, int32(userId))
+func (u *groupUsecase) GetPostsForOngoingFeedByMemberId(pctx context.Context, userId int, grpcUrl string) ([]group.PostsForFeedRes, error) {
+    posts, err := u.store.GetPostsForOngoingFeedByMemberID(pctx, int32(userId))
 	if err != nil {
-		return []groupdb.GetPostsForOngoingFeedByMemberIDRow{}, err
+		return []group.PostsForFeedRes{}, err
 	}
-	return posts, nil
+	
+	var memberIds []int32
+	for _, post := range posts {
+		memberIds = append(memberIds, post.MemberID)
+	}
+
+	postProfiles, err := u.GetBatchUserProfiles(pctx, grpcUrl, memberIds)
+	if err != nil {
+		return nil, err
+	}
+
+	profileUsernames := make(map[int32]string)
+	profilePhotoUrls := make(map[int32]string)
+	for _, profile := range postProfiles.UserProfiles {
+		profileUsernames[profile.UserId] = profile.Username
+		profilePhotoUrls[profile.UserId] = profile.Photourl
+	}
+
+    result := make([]group.PostsForFeedRes, len(posts))
+    for i, post := range posts {
+        result[i] = group.PostsForFeedRes{
+            PostID:         post.PostID,
+            MemberID:       post.MemberID,
+            GroupID:        post.GroupID,
+            PhotoUrl:       post.PhotoUrl,
+            Description:    post.Description,
+            CreatedAt:      post.CreatedAt,
+            GroupName:      post.GroupName,
+            GroupPhotoUrl:  post.GroupPhotoUrl,
+            PosterUsername: profileUsernames[post.MemberID],
+            PosterPhotoUrl: profilePhotoUrls[post.MemberID],
+        }
+    }
+
+    return result, nil
 }
 
 func (u *groupUsecase) CreateReaction(pctx context.Context, args groupdb.CreateReactionParams) (groupdb.PostReaction, error) {
@@ -1073,4 +1108,51 @@ func (u *groupUsecase) EditGroupTag(pctx context.Context, args groupdb.EditGroup
 	}
 
 	return updatedGroup, nil
+}
+
+func (u *groupUsecase) GetPostsForFollowingFeedByMemberId(pctx context.Context, userId int32, grpcUrl string) ([]group.PostsForFeedRes, error) {
+    conn, err := grpcconn.NewGrpcClient(grpcUrl)
+    if err != nil {
+        log.Printf("error - gRPC connection failed: %s", err.Error())
+        return nil, errors.New("error: gRPC connection failed")
+    }
+
+    friends, err := conn.User().GetUserFriends(pctx, &userPb.GetUserFriendsReq{UserId: userId})
+    if err != nil {
+        log.Printf("error - gRPC GetUserFriends failed: %s", err.Error())
+        return nil, errors.New("error: gRPC GetUserFriends failed")
+    }
+
+    friendIdArr := make([]int32, len(friends.Friends))
+    friendUsernames := make(map[int32]string)
+    friendPhotoUrls := make(map[int32]string)
+
+    for i, friend := range friends.Friends {
+        friendIdArr[i] = friend.UserId
+        friendUsernames[friend.UserId] = friend.Username
+        friendPhotoUrls[friend.UserId] = friend.Photourl
+    }
+
+    posts, err := u.store.GetPostsForFollowingFeedByMemberId(pctx, friendIdArr)
+    if err != nil {
+        return nil, err
+    }
+
+    result := make([]group.PostsForFeedRes, len(posts))
+    for i, post := range posts {
+        result[i] = group.PostsForFeedRes{
+            PostID:         post.PostID,
+            MemberID:       post.MemberID,
+            GroupID:        post.GroupID,
+            PhotoUrl:       post.PhotoUrl,
+            Description:    post.Description,
+            CreatedAt:      post.CreatedAt,
+            GroupName:      post.GroupName,
+            GroupPhotoUrl:  post.GroupPhotoUrl,
+            PosterUsername: friendUsernames[post.MemberID],
+            PosterPhotoUrl: friendPhotoUrls[post.MemberID],
+        }
+    }
+
+    return result, nil
 }

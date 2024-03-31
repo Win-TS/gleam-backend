@@ -3,8 +3,6 @@ package userUsecase
 import (
 	"context"
 	"database/sql"
-
-	//"errors"
 	"fmt"
 	"io"
 
@@ -16,6 +14,7 @@ import (
 
 	"firebase.google.com/go/storage"
 	"github.com/Win-TS/gleam-backend.git/modules/user"
+	// authPb "github.com/Win-TS/gleam-backend.git/modules/auth/authPb"
 	userdb "github.com/Win-TS/gleam-backend.git/pkg/database/postgres/userdb/sqlc"
 
 	//userPb "github.com/Win-TS/gleam-backend.git/modules/user/userPb"
@@ -38,7 +37,7 @@ type UserUsecaseService interface {
 	EditUsername(pctx context.Context, args userdb.ChangeUsernameParams) (user.UserProfile, error)
 	EditPhoneNumber(pctx context.Context, args userdb.ChangePhoneNoParams) (userdb.User, error)
 	EditName(ctx context.Context, userID int32, firstName, lastName string) (user.UserProfile, error)
-	DeleteUser(pctx context.Context, id int) error
+	DeleteUser(pctx context.Context, id int, grpcUrl string) error
 	FriendInfo(ctx context.Context, args userdb.GetFriendParams) ([]userdb.Friend, error)
 	FriendListById(pctx context.Context, id int) ([]userdb.ListFriendsByUserIdRow, error)
 	FriendsCount(pctx context.Context, userId1 sql.NullInt32) (int64, error)
@@ -228,10 +227,38 @@ func (u *userUsecase) EditPhoneNumber(pctx context.Context, args userdb.ChangePh
 	return u.GetUserInfo(pctx, int(args.ID))
 }
 
-func (u *userUsecase) DeleteUser(pctx context.Context, id int) error {
+func (u *userUsecase) DeleteUser(pctx context.Context, id int, grpcUrl string) error {
 	if err := u.store.DeleteUser(pctx, int32(id)); err != nil {
 		return err
 	}
+
+	// user, err := u.GetUserInfo(pctx, id)
+	// if err != nil {
+	// 	return err
+	// }
+
+	// conn, err := grpcconn.NewGrpcClient(grpcUrl)
+	// if err != nil {
+	// 	log.Printf("error - gRPC connection failed: %s", err.Error())
+	// 	return errors.New("error: gRPC connection failed")
+	// }
+
+	// uidRes, err := conn.Auth().GetUidFromEmail(pctx, &authPb.GetUidFromEmailReq{Email: user.Email})
+	// if err != nil {
+	// 	log.Printf("error - DeleteUser (GetUidFromEmail) failed: %s", err.Error())
+	// 	return errors.New("error: DeleteUser failed")
+	// }
+
+	// result, err := conn.Auth().DeleteUser(pctx, &authPb.DeleteUserReq{Uid: uidRes.Uid})
+	// if err != nil {
+	// 	log.Printf("error - DeleteUser (DeleteUser) failed: %s", err.Error())
+	// 	return errors.New("error: DeleteUser failed")
+	// }
+
+	// if !result.Success {
+	// 	return errors.New("error: DeleteUser failed")
+	// }
+
 	return nil
 }
 

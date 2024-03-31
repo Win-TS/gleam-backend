@@ -14,6 +14,7 @@ type (
 		FindUserByEmail(pctx context.Context, email string) (*auth.UserRecord, error)
 		FindUserByUID(pctx context.Context, uid string) (*auth.UserRecord, error)
 		FindUserByPhoneNo(pctx context.Context, uid string) (*auth.UserRecord, error)
+		DeleteUser(pctx context.Context, uid string) error
 	}
 
 	authUsecase struct{
@@ -43,4 +44,8 @@ func (u *authUsecase) FindUserByUID(pctx context.Context, uid string) (*auth.Use
 
 func (u *authUsecase) FindUserByPhoneNo(pctx context.Context, phoneNo string) (*auth.UserRecord, error) {
 	return u.authRepository.FindUserByPhoneNo(pctx, phoneNo)
+}
+
+func (u *authUsecase) DeleteUser(pctx context.Context, uid string) error {
+	return u.authRepository.DeleteUser(pctx, uid)
 }

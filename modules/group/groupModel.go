@@ -101,4 +101,17 @@ type (
 		Username     string    `json:"username"`
 		UserPhotourl string    `json:"user_photourl"`
 	}
+
+	PostsForFeedRes struct {
+		PostID         int32          `json:"post_id"`
+		MemberID       int32          `json:"member_id"`
+		GroupID        int32          `json:"group_id"`
+		PhotoUrl       sql.NullString `json:"photo_url"`
+		Description    sql.NullString `json:"description"`
+		CreatedAt      time.Time      `json:"created_at"`
+		GroupName      string         `json:"group_name"`
+		GroupPhotoUrl  sql.NullString `json:"group_photo_url"`
+		PosterUsername string         `json:"poster_username"`
+		PosterPhotoUrl string         `json:"poster_photo_url"`
+	}
 )

@@ -6,6 +6,7 @@ import (
 	"net"
 
 	"github.com/Win-TS/gleam-backend.git/config"
+	authPb "github.com/Win-TS/gleam-backend.git/modules/auth/authPb"
 	userPb "github.com/Win-TS/gleam-backend.git/modules/user/userPb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -13,6 +14,7 @@ import (
 
 type (
 	GrpcClientFactoryHandler interface {
+		Auth() authPb.AuthGrpcServiceClient
 		User() userPb.UserGrpcServiceClient
 	}
 
@@ -20,6 +22,10 @@ type (
 		client *grpc.ClientConn
 	}
 )
+
+func (g *grpcClientFactory) Auth() authPb.AuthGrpcServiceClient {
+	return authPb.NewAuthGrpcServiceClient(g.client)
+}
 
 func (g *grpcClientFactory) User() userPb.UserGrpcServiceClient {
 	return userPb.NewUserGrpcServiceClient(g.client)

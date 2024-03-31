@@ -61,6 +61,11 @@ runuser:
 rungroup:
 	go run main.go ./env/dev/.env.group
 
+genauthproto:
+	protoc --go_out=. --go_opt=paths=source_relative \
+	    --go-grpc_out=. --go-grpc_opt=paths=source_relative \
+	    ./modules/auth/authPb/authPb.proto
+
 genuserproto:
 	protoc --go_out=. --go_opt=paths=source_relative \
 	    --go-grpc_out=. --go-grpc_opt=paths=source_relative \

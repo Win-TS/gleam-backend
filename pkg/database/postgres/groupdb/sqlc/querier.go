@@ -58,6 +58,7 @@ type Querier interface {
 	GetPostsByGroupAndMemberID(ctx context.Context, arg GetPostsByGroupAndMemberIDParams) ([]Post, error)
 	GetPostsByGroupID(ctx context.Context, groupID int32) ([]Post, error)
 	GetPostsByMemberID(ctx context.Context, memberID int32) ([]Post, error)
+	GetPostsForFollowingFeedByMemberId(ctx context.Context, dollar_1 []int32) ([]GetPostsForFollowingFeedByMemberIdRow, error)
 	GetPostsForOngoingFeedByMemberID(ctx context.Context, memberID int32) ([]GetPostsForOngoingFeedByMemberIDRow, error)
 	GetReactionById(ctx context.Context, reactionID int32) (PostReaction, error)
 	GetReactionsByPostID(ctx context.Context, postID int32) ([]PostReaction, error)

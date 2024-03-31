@@ -1,0 +1,30 @@
+// Version
+syntax = "proto3";
+
+// Package name
+option go_package = "github.com/Win-TS/gleam-backend";
+
+// Structure
+message DeleteUserReq {
+    string uid = 1;
+}
+
+message DeleteUserRes {
+    string uid = 1;
+    bool success = 2;
+}
+
+message GetUidFromEmailReq {
+    string email = 1;
+}
+
+message GetUidFromEmailRes {
+    string email = 1;
+    string uid = 2;
+}
+
+// Methods
+service AuthGrpcService {
+    rpc DeleteUser(DeleteUserReq) returns (DeleteUserRes);
+    rpc GetUidFromEmail(GetUidFromEmailReq) returns (GetUidFromEmailRes);
+}

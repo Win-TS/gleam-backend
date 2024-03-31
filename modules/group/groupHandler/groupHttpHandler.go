@@ -67,6 +67,7 @@ type (
 		EditGroupTag(c echo.Context) error
 		GroupMockData(c echo.Context) error
 		PostMockData(c echo.Context) error
+		GetPostsForFollowingFeedByMemberId(c echo.Context) error
 	}
 
 	groupHttpHandler struct {
@@ -1006,7 +1007,7 @@ func (h *groupHttpHandler) GetPostsForOngoingFeedByMemberId(c echo.Context) erro
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
 
-	feedPosts, err := h.groupUsecase.GetPostsForOngoingFeedByMemberId(ctx, userId)
+	feedPosts, err := h.groupUsecase.GetPostsForOngoingFeedByMemberId(ctx, userId, h.cfg.Grpc.UserUrl)
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
@@ -1521,4 +1522,19 @@ func (h *groupHttpHandler) PostMockData(c echo.Context) error {
 	}
 
 	return response.SuccessResponse(c, http.StatusOK, fmt.Sprintf("%d Post data created", req.Count))
+}
+
+func (h *groupHttpHandler) GetPostsForFollowingFeedByMemberId(c echo.Context) error {
+	ctx := context.Background()
+	userId, err := strconv.Atoi(c.QueryParam("user_id"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, "Invalid userId")
+	}
+
+	feedPosts, err := h.groupUsecase.GetPostsForFollowingFeedByMemberId(ctx, int32(userId), h.cfg.Grpc.UserUrl)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	return response.SuccessResponse(c, http.StatusOK, feedPosts)
 }

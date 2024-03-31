@@ -43,9 +43,26 @@ message GetBatchUserProfileRes {
     repeated UserProfile userProfiles = 1;
 }
 
+message GetUserFriendsReq {
+    int32 userId = 1;
+}
+
+message GetUserFriendsRes {
+    message Friend {
+        int32 userId = 1;
+        string username = 2;
+        string email = 3;
+        string firstname = 4;
+        string lastname = 5;
+        string photourl = 6;
+    }
+    repeated Friend friends = 1;
+}
+
 // Methods
 service UserGrpcService {
     rpc SearchUser(SearchUserReq) returns (SearchUserRes);
     rpc GetUserProfile(GetUserProfileReq) returns (GetUserProfileRes);
     rpc GetBatchUserProfiles(GetBatchUserProfileReq) returns (GetBatchUserProfileRes);
+    rpc GetUserFriends(GetUserFriendsReq) returns (GetUserFriendsRes);
 }

@@ -820,7 +820,7 @@ func (q *Queries) GetTagByTagID(ctx context.Context, tagID int32) (Tag, error) {
 const initializeCategory = `-- name: InitializeCategory :exec
 INSERT INTO tag_category (category_name)
 VALUES ('Sports and Fitness'), 
-        ('Learning and development'),
+        ('Learning and Development'),
 		('Health and Wellness'), 
         ('Entertainment and Media'), 
         ('Hobbies and Leisure'),

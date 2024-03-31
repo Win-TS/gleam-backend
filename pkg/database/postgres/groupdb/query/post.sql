@@ -41,9 +41,15 @@ WHERE group_id = $1 AND member_id = $2
 ORDER BY created_at DESC;
 
 -- name: GetPostsForOngoingFeedByMemberID :many
-SELECT posts.*, groups.* FROM posts
+SELECT DISTINCT posts.*, groups.group_name, groups.photo_url AS group_photo_url FROM posts
 JOIN group_members ON posts.group_id = group_members.group_id JOIN groups ON posts.group_id = groups.group_id
 WHERE group_members.member_id = $1
+ORDER BY posts.created_at DESC;
+
+-- name: GetPostsForFollowingFeedByMemberId :many
+SELECT posts.*, groups.group_name, groups.photo_url AS group_photo_url FROM posts
+JOIN groups ON posts.group_id = groups.group_id
+WHERE posts.member_id = ANY($1::int[]) AND visibility = true
 ORDER BY posts.created_at DESC;
 
 -- name: GetPostsByMemberID :many

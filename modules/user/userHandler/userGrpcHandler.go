@@ -72,3 +72,26 @@ func (g *userGrpcHandler) GetBatchUserProfiles(ctx context.Context, req *userPb.
 		UserProfiles: userProfileRes,
 	}, nil
 }
+
+func (g *userGrpcHandler) GetUserFriends(ctx context.Context, req *userPb.GetUserFriendsReq) (*userPb.GetUserFriendsRes, error) {
+	friends, err := g.userUsecase.FriendListById(ctx, int(req.UserId))
+	if err != nil {
+		return nil, err
+	}
+
+	var friendsRes []*userPb.GetUserFriendsRes_Friend
+	for _, friend := range friends {
+		friendsRes = append(friendsRes, &userPb.GetUserFriendsRes_Friend{
+			UserId:    int32(friend.ID),
+			Username:  friend.Username,
+			Email:     friend.Email,
+			Firstname: friend.Firstname,
+			Lastname:  friend.Lastname,
+			Photourl:  friend.Photourl.String,
+		})
+	}
+
+	return &userPb.GetUserFriendsRes{
+		Friends: friendsRes,
+	}, nil
+}

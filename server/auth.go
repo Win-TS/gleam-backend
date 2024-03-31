@@ -4,9 +4,11 @@ import (
 	"log"
 
 	firebase "firebase.google.com/go"
+	authPb "github.com/Win-TS/gleam-backend.git/modules/auth/authPb"
 	"github.com/Win-TS/gleam-backend.git/modules/auth/authHandler"
 	"github.com/Win-TS/gleam-backend.git/modules/auth/authRepository"
 	"github.com/Win-TS/gleam-backend.git/modules/auth/authUsecase"
+	"github.com/Win-TS/gleam-backend.git/pkg/grpcconn"
 )
 
 func (s *server) authService() {
@@ -20,13 +22,13 @@ func (s *server) authService() {
 	httpHandler := authHandler.NewAuthHttpHandler(s.cfg, usecase)
 	grpcHandler := authHandler.NewAuthGrpcHandler(usecase)
 
-	// // gRPC
-	// go func() {
-	// 	grpcServer, lis := grpcconn.NewGrpcServer(&s.cfg.Jwt, s.cfg.Grpc.AuthUrl)
-	// 	authPb.RegisterPlayerGrpcServiceServer(grpcServer, grpcHandler)
-	// 	log.Printf("Player gRPC server listening on %s", s.cfg.Grpc.AuthUrl)
-	// 	grpcServer.Serve(lis)
-	// }()
+	// gRPC
+	go func() {
+		grpcServer, lis := grpcconn.NewGrpcServer(s.cfg, s.cfg.Grpc.AuthUrl)
+		authPb.RegisterAuthGrpcServiceServer(grpcServer, grpcHandler)
+		log.Printf("Player gRPC server listening on %s", s.cfg.Grpc.AuthUrl)
+		grpcServer.Serve(lis)
+	}()
 
 	_ = grpcHandler
 

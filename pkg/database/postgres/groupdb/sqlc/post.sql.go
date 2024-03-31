@@ -9,6 +9,8 @@ import (
 	"context"
 	"database/sql"
 	"time"
+
+	"github.com/lib/pq"
 )
 
 const createComment = `-- name: CreateComment :one
@@ -390,31 +392,72 @@ func (q *Queries) GetPostsByMemberID(ctx context.Context, memberID int32) ([]Pos
 	return items, nil
 }
 
+const getPostsForFollowingFeedByMemberId = `-- name: GetPostsForFollowingFeedByMemberId :many
+SELECT posts.post_id, posts.member_id, posts.group_id, posts.photo_url, posts.description, posts.created_at, groups.group_name, groups.photo_url AS group_photo_url FROM posts
+JOIN groups ON posts.group_id = groups.group_id
+WHERE posts.member_id = ANY($1::int[]) AND visibility = true
+ORDER BY posts.created_at DESC
+`
+
+type GetPostsForFollowingFeedByMemberIdRow struct {
+	PostID        int32          `json:"post_id"`
+	MemberID      int32          `json:"member_id"`
+	GroupID       int32          `json:"group_id"`
+	PhotoUrl      sql.NullString `json:"photo_url"`
+	Description   sql.NullString `json:"description"`
+	CreatedAt     time.Time      `json:"created_at"`
+	GroupName     string         `json:"group_name"`
+	GroupPhotoUrl sql.NullString `json:"group_photo_url"`
+}
+
+func (q *Queries) GetPostsForFollowingFeedByMemberId(ctx context.Context, dollar_1 []int32) ([]GetPostsForFollowingFeedByMemberIdRow, error) {
+	rows, err := q.db.QueryContext(ctx, getPostsForFollowingFeedByMemberId, pq.Array(dollar_1))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetPostsForFollowingFeedByMemberIdRow{}
+	for rows.Next() {
+		var i GetPostsForFollowingFeedByMemberIdRow
+		if err := rows.Scan(
+			&i.PostID,
+			&i.MemberID,
+			&i.GroupID,
+			&i.PhotoUrl,
+			&i.Description,
+			&i.CreatedAt,
+			&i.GroupName,
+			&i.GroupPhotoUrl,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getPostsForOngoingFeedByMemberID = `-- name: GetPostsForOngoingFeedByMemberID :many
-SELECT posts.post_id, posts.member_id, posts.group_id, posts.photo_url, posts.description, posts.created_at, groups.group_id, groups.group_name, groups.group_creator_id, groups.description, groups.photo_url, groups.tag_id, groups.frequency, groups.max_members, groups.group_type, groups.visibility, groups.created_at FROM posts
+SELECT DISTINCT posts.post_id, posts.member_id, posts.group_id, posts.photo_url, posts.description, posts.created_at, groups.group_name, groups.photo_url AS group_photo_url FROM posts
 JOIN group_members ON posts.group_id = group_members.group_id JOIN groups ON posts.group_id = groups.group_id
 WHERE group_members.member_id = $1
 ORDER BY posts.created_at DESC
 `
 
 type GetPostsForOngoingFeedByMemberIDRow struct {
-	PostID         int32          `json:"post_id"`
-	MemberID       int32          `json:"member_id"`
-	GroupID        int32          `json:"group_id"`
-	PhotoUrl       sql.NullString `json:"photo_url"`
-	Description    sql.NullString `json:"description"`
-	CreatedAt      time.Time      `json:"created_at"`
-	GroupID_2      int32          `json:"group_id_2"`
-	GroupName      string         `json:"group_name"`
-	GroupCreatorID int32          `json:"group_creator_id"`
-	Description_2  sql.NullString `json:"description_2"`
-	PhotoUrl_2     sql.NullString `json:"photo_url_2"`
-	TagID          int32          `json:"tag_id"`
-	Frequency      sql.NullInt32  `json:"frequency"`
-	MaxMembers     int32          `json:"max_members"`
-	GroupType      string         `json:"group_type"`
-	Visibility     bool           `json:"visibility"`
-	CreatedAt_2    time.Time      `json:"created_at_2"`
+	PostID        int32          `json:"post_id"`
+	MemberID      int32          `json:"member_id"`
+	GroupID       int32          `json:"group_id"`
+	PhotoUrl      sql.NullString `json:"photo_url"`
+	Description   sql.NullString `json:"description"`
+	CreatedAt     time.Time      `json:"created_at"`
+	GroupName     string         `json:"group_name"`
+	GroupPhotoUrl sql.NullString `json:"group_photo_url"`
 }
 
 func (q *Queries) GetPostsForOngoingFeedByMemberID(ctx context.Context, memberID int32) ([]GetPostsForOngoingFeedByMemberIDRow, error) {
@@ -433,17 +476,8 @@ func (q *Queries) GetPostsForOngoingFeedByMemberID(ctx context.Context, memberID
 			&i.PhotoUrl,
 			&i.Description,
 			&i.CreatedAt,
-			&i.GroupID_2,
 			&i.GroupName,
-			&i.GroupCreatorID,
-			&i.Description_2,
-			&i.PhotoUrl_2,
-			&i.TagID,
-			&i.Frequency,
-			&i.MaxMembers,
-			&i.GroupType,
-			&i.Visibility,
-			&i.CreatedAt_2,
+			&i.GroupPhotoUrl,
 		); err != nil {
 			return nil, err
 		}

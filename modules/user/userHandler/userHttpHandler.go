@@ -40,6 +40,7 @@ type (
 		FriendAccept(c echo.Context) error
 		UserMockData(c echo.Context) error
 		EditUserPhoto(c echo.Context) error
+		SearchUsersByUsername(c echo.Context) error
 	}
 
 	userHttpHandler struct {
@@ -446,4 +447,16 @@ func (h *userHttpHandler) UserMockData(c echo.Context) error {
 	}
 
 	return response.SuccessResponse(c, http.StatusOK, fmt.Sprintf("%d users data created", req.Count))
+}
+
+func (h *userHttpHandler) SearchUsersByUsername(c echo.Context) error {
+	ctx := context.Background()
+	username := c.QueryParam("username")
+
+	userInfo, err := h.userUsecase.SearchUsersByUsername(ctx, username)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	return response.SuccessResponse(c, http.StatusOK, userInfo)
 }

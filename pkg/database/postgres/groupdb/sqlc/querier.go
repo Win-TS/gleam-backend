@@ -72,8 +72,9 @@ type Querier interface {
 	GetTagByTagID(ctx context.Context, tagID int32) (Tag, error)
 	GetUnendedStreakSetByUserID(ctx context.Context, userID int32) ([]StreakSet, error)
 	InitializeCategory(ctx context.Context) error
-	ListGroups(ctx context.Context, arg ListGroupsParams) ([]Group, error)
+	ListGroups(ctx context.Context, arg ListGroupsParams) ([]ListGroupsRow, error)
 	NumberMemberInGroup(ctx context.Context, groupID int32) (int64, error)
+	SearchGroupByGroupName(ctx context.Context, dollar_1 sql.NullString) ([]SearchGroupByGroupNameRow, error)
 	SendRequestToJoinGroup(ctx context.Context, arg SendRequestToJoinGroupParams) (GroupRequest, error)
 	UpdateStreakSetCount(ctx context.Context, arg UpdateStreakSetCountParams) error
 }

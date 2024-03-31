@@ -68,6 +68,7 @@ type (
 		GroupMockData(c echo.Context) error
 		PostMockData(c echo.Context) error
 		GetPostsForFollowingFeedByMemberId(c echo.Context) error
+		SearchGroupByGroupName(c echo.Context) error
 	}
 
 	groupHttpHandler struct {
@@ -1537,4 +1538,16 @@ func (h *groupHttpHandler) GetPostsForFollowingFeedByMemberId(c echo.Context) er
 	}
 
 	return response.SuccessResponse(c, http.StatusOK, feedPosts)
+}
+
+func (h *groupHttpHandler) SearchGroupByGroupName(c echo.Context) error {
+	ctx := context.Background()
+	groupname := c.QueryParam("groupname")
+
+	groupInfo, err := h.groupUsecase.SearchGroupByGroupName(ctx, groupname)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	return response.SuccessResponse(c, http.StatusOK, groupInfo)
 }

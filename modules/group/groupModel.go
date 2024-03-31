@@ -114,4 +114,19 @@ type (
 		PosterUsername string         `json:"poster_username"`
 		PosterPhotoUrl string         `json:"poster_photo_url"`
 	}
+
+	GroupInfoWithMemberRes struct {
+		GroupID        int32          `json:"group_id"`
+		GroupName      string         `json:"group_name"`
+		PhotoUrl       sql.NullString `json:"photo_url"`
+		GroupCreatorID int32          `json:"group_creator_id"`
+		Frequency      sql.NullInt32  `json:"frequency"`
+		MaxMembers     int32          `json:"max_members"`
+		GroupType      string         `json:"group_type"`
+		Visibility     bool           `json:"visibility"`
+		Description    sql.NullString `json:"description"`
+		CreatedAt      time.Time      `json:"created_at"`
+		TagName        string         `json:"tag_name"`
+		TotalMember    int32          `json:"total_member"`
+	}
 )

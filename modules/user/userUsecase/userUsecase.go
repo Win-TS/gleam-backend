@@ -14,6 +14,7 @@ import (
 
 	"firebase.google.com/go/storage"
 	"github.com/Win-TS/gleam-backend.git/modules/user"
+
 	// authPb "github.com/Win-TS/gleam-backend.git/modules/auth/authPb"
 	userdb "github.com/Win-TS/gleam-backend.git/pkg/database/postgres/userdb/sqlc"
 
@@ -47,6 +48,7 @@ type UserUsecaseService interface {
 	FriendAccept(pctx context.Context, args user.EditFriendStatusAcceptedReq) error
 	UserMockData(ctx context.Context, count int16) error
 	EditUserPhoto(pctx context.Context, args userdb.EditUserProfilePictureParams) (user.UserProfile, error)
+	SearchUsersByUsername(ctx context.Context, username string) ([]userdb.SearchUsersByUsernameRow, error)
 }
 
 type userUsecase struct {
@@ -477,4 +479,8 @@ func (u *userUsecase) editBothNames(ctx context.Context, userID int32, firstName
 		Firstname: firstName,
 		Lastname:  lastName,
 	})
+}
+
+func (u *userUsecase) SearchUsersByUsername(ctx context.Context, username string) ([]userdb.SearchUsersByUsernameRow, error) {
+	return u.store.SearchUsersByUsername(ctx, utils.ConvertStringToSqlNullString(username))
 }

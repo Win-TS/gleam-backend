@@ -32,7 +32,7 @@ type (
 		GetUserJoinRequests(pctx context.Context, userId int) ([]groupdb.GroupRequest, error)
 		GetGroupById(pctx context.Context, groupId int) (groupdb.GetGroupByIDRow, error)
 		GetGroupMembersByGroupId(pctx context.Context, groupId int, grpcUrl string) ([]group.GroupMemberRes, error)
-		ListGroups(pctx context.Context, args groupdb.ListGroupsParams) ([]groupdb.Group, error)
+		ListGroups(pctx context.Context, args groupdb.ListGroupsParams) ([]groupdb.ListGroupsRow, error)
 		EditGroupName(pctx context.Context, args groupdb.EditGroupNameParams, editorId int32) (groupdb.GetGroupByIDRow, error)
 		EditGroupPhoto(pctx context.Context, args groupdb.EditGroupPhotoParams, editorId int32) (groupdb.GetGroupByIDRow, error)
 		EditGroupVisibility(pctx context.Context, args groupdb.EditGroupVisibilityParams, editorId int32) (groupdb.GetGroupByIDRow, error)
@@ -78,6 +78,7 @@ type (
 		GetBatchUserProfiles(pctx context.Context, grpcUrl string, ids []int32) (*userPb.GetBatchUserProfileRes, error)
 		GetUserProfile(pctx context.Context, grpcUrl string, req *userPb.GetUserProfileReq) (*userPb.GetUserProfileRes, error)
 		GetPostsForFollowingFeedByMemberId(pctx context.Context, userId int32, grpcUrl string) ([]group.PostsForFeedRes, error)
+		SearchGroupByGroupName(ctx context.Context, groupname string) ([]groupdb.SearchGroupByGroupNameRow, error)
 	}
 
 	groupUsecase struct {
@@ -167,6 +168,7 @@ func (u *groupUsecase) CreateNewGroup(pctx context.Context, args groupdb.CreateG
 	return newGroup, nil
 }
 
+// จะดัก member ตรงนี้ด้วยมั้ย
 func (u *groupUsecase) SendRequestToJoinGroup(pctx context.Context, args groupdb.SendRequestToJoinGroupParams) (groupdb.GroupRequest, error) {
 	_, err := u.store.GetMemberInfo(pctx, groupdb.GetMemberInfoParams{
 		MemberID: args.MemberID,
@@ -309,10 +311,10 @@ func (u *groupUsecase) GetGroupMembersByGroupId(pctx context.Context, groupId in
 	return GroupMemberRes, nil
 }
 
-func (u *groupUsecase) ListGroups(pctx context.Context, args groupdb.ListGroupsParams) ([]groupdb.Group, error) {
+func (u *groupUsecase) ListGroups(pctx context.Context, args groupdb.ListGroupsParams) ([]groupdb.ListGroupsRow, error) {
 	groups, err := u.store.ListGroups(pctx, args)
 	if err != nil {
-		return []groupdb.Group{}, err
+		return nil, err
 	}
 	return groups, nil
 }
@@ -804,14 +806,39 @@ func (u *groupUsecase) GroupMockData(pctx context.Context, count int) error {
 		return err
 	}
 
-	tagCategories := []string{"tag1", "tag2", "tag5", "tag4", "tag6", "tag7"}
+	tagCategories := map[string][]string{
+		"Sports and Fitness": {
+			"Football", "Rock Climbing", "Basketball", "Volleyball", "Golf",
+			"Boxing", "Badminton", "Bowling", "Ice skating", "Racquet",
+			"Tennis", "Table tennis", "Snooker", "Pool", "Swimming",
+			"Running", "Yoga and Pilates", "Karate", "Taekwondo", "Hiking",
+			"Cycling", "Hockey", "Figure Skating", "Skiing",
+		},
+		"Learning and Development": {
+			"Online courses", "Exam prep", "Investing", "Programming",
+			"Language", "Public speaking", "SAT", "IELTS", "Midterm exam",
+			"Final exam",
+		},
+		"Health and Wellness": {
+			"Fitness and gym", "Dietary", "Bulking", "Vegan and J", "Meditation",
+		},
+		"Entertainment and Media": {
+			"Movies", "Series", "Music", "Theater", "Podcasts",
+		},
+		"Hobbies and Leisure": {
+			"Cooking", "Baking", "Gardening", "Planting", "Knitting",
+			"Pottery", "Caligraphy", "Travelling", "Board games",
+		},
+	}
 
 	existingTags := make(map[string]int32)
 
-	for _, category := range tagCategories {
-		_, err := u.createOrGetTagByCategory(ctx, category, existingTags)
-		if err != nil {
-			return err
+	for category, tagNames := range tagCategories {
+		for _, tagName := range tagNames {
+			_, err := u.createOrGetTagByCategory(ctx, category, tagName, existingTags)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -825,12 +852,18 @@ func (u *groupUsecase) GroupMockData(pctx context.Context, count int) error {
 		creatorID := int32(rand.Intn(10) + 1)
 		tagID := rand.Intn(len(tagCategories)) + 1
 
+		fake := faker.NewWithSeed(rand.NewSource(time.Now().UnixNano() + int64(i)))
+
 		group, err := u.store.CreateGroup(ctx, groupdb.CreateGroupParams{
 			GroupName:      groupName,
 			GroupCreatorID: creatorID,
-			PhotoUrl:       utils.ConvertStringToSqlNullString("https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/groupphoto%2F1.jpg?alt=media"),
+			PhotoUrl:       utils.ConvertStringToSqlNullString("https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/groupphoto%2F15.webp?alt=media"),
 			TagID:          int32(tagID),
 			Frequency:      sql.NullInt32{Int32: randomFrequency(), Valid: true},
+			MaxMembers:     25,
+			GroupType:      "social",
+			Description:    utils.ConvertStringToSqlNullString(fake.Lorem().Sentence(5)),
+			Visibility:     true,
 		})
 		if err != nil {
 			return err
@@ -899,14 +932,14 @@ func (u *groupUsecase) GroupMockData(pctx context.Context, count int) error {
 	return nil
 }
 
-func (u *groupUsecase) createOrGetTagByCategory(ctx context.Context, category string, existingTags map[string]int32) (int32, error) {
-	tagID, ok := existingTags[category]
+func (u *groupUsecase) createOrGetTagByCategory(ctx context.Context, category, tagName string, existingTags map[string]int32) (int32, error) {
+	tagID, ok := existingTags[tagName]
 	if ok {
 		return tagID, nil
 	}
 
 	newTag, err := u.store.CreateNewTag(ctx, groupdb.CreateNewTagParams{
-		TagName:    category,
+		TagName:    tagName,
 		IconUrl:    utils.ConvertStringToSqlNullString("https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/postphoto%2F3.jpeg?alt=media"),
 		CategoryID: utils.ConvertIntToSqlNullInt32(rand.Intn(5) + 1),
 	})
@@ -914,7 +947,7 @@ func (u *groupUsecase) createOrGetTagByCategory(ctx context.Context, category st
 		return 0, err
 	}
 
-	existingTags[category] = newTag.TagID
+	existingTags[tagName] = newTag.TagID
 	return newTag.TagID, nil
 }
 
@@ -1165,4 +1198,8 @@ func (u *groupUsecase) GetPostsForFollowingFeedByMemberId(pctx context.Context, 
 	}
 
 	return result, nil
+}
+
+func (u *groupUsecase) SearchGroupByGroupName(ctx context.Context, groupname string) ([]groupdb.SearchGroupByGroupNameRow, error) {
+	return u.store.SearchGroupByGroupName(ctx, utils.ConvertStringToSqlNullString(groupname))
 }

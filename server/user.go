@@ -51,6 +51,8 @@ func (s *server) userService() {
 	user.DELETE("/deleteuser", httpHandler.DeleteUser)
 	user.PATCH("/editphoto", httpHandler.EditUserPhoto)
 
+	user.GET("/search", httpHandler.SearchUsersByUsername)
+
 	friend := s.app.Group("/friend_v1")
 
 	friend.GET("/", httpHandler.FriendInfo)

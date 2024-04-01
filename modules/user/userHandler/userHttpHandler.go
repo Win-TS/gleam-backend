@@ -216,7 +216,11 @@ func (h *userHttpHandler) UploadProfilePhoto(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
 
-	return response.SuccessResponse(c, http.StatusCreated, fmt.Sprintf("File %s uploaded successfully to Firebase Storage: %s", file.Filename, url))
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"success": true,
+		"message": "Successfully uploaded profile photo",
+		"url":     url,
+	})
 }
 
 // EditUsername updates the database with new username from query parameter of user_id and new_username.

@@ -87,3 +87,8 @@ SET
     photourl = $2
 WHERE
     id = $1;
+
+-- name: SearchUsersByUsername :many
+SELECT id, username, email, firstname, lastname, photourl
+FROM users
+WHERE username ILIKE '%' || $1 || '%';

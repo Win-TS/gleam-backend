@@ -13,10 +13,34 @@ INSERT INTO groups (
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 RETURNING *;
 
+-- name: SearchGroupByGroupName :many
+SELECT groups.group_id,
+    groups.group_name,
+    groups.photo_url,
+    groups.group_creator_id,
+    groups.frequency,
+    groups.max_members,
+    groups.group_type,
+    groups.visibility,
+    groups.description,
+    groups.created_at,
+    tags.tag_name,
+    (SELECT COUNT(*)
+    FROM group_members A
+    WHERE A.group_id = groups.group_id) AS total_member
+FROM groups
+JOIN tags ON groups.tag_id = tags.tag_id
+WHERE groups.group_name ILIKE '%' || $1 || '%';
+
 -- name: AddGroupMember :one
 INSERT INTO group_members (group_id, member_id, role)
 VALUES ($1, $2, $3)
 RETURNING *;
+
+-- name: NumberMemberInGroup :one
+SELECT COUNT(*)
+FROM group_members
+WHERE group_id = $1;
 
 -- name: SendRequestToJoinGroup :one
 INSERT INTO group_requests (group_id, member_id, description)
@@ -52,9 +76,12 @@ SELECT groups.group_id,
     groups.visibility,
     groups.description,
     groups.created_at,
-    tags.tag_name
+    tags.tag_name,
+    (SELECT COUNT(*)
+    FROM group_members A
+    WHERE A.group_id = $1) AS total_member
 FROM groups
-    JOIN tags ON groups.tag_id = tags.tag_id
+JOIN tags ON groups.tag_id = tags.tag_id
 WHERE group_id = $1;
 
 -- name: GetMembersByGroupID :many
@@ -63,10 +90,25 @@ FROM group_members
 WHERE group_id = $1;
 
 -- name: ListGroups :many
-SELECT *
+SELECT groups.group_id,
+    groups.group_name,
+    groups.photo_url,
+    groups.group_creator_id,
+    groups.frequency,
+    groups.max_members,
+    groups.group_type,
+    groups.visibility,
+    groups.description,
+    groups.created_at,
+    tags.tag_name,
+    (SELECT COUNT(*)
+    FROM group_members S
+    WHERE S.group_id = groups.group_id) AS total_member
 FROM groups
+JOIN tags ON groups.tag_id = tags.tag_id
 ORDER BY group_id
 LIMIT $1 OFFSET $2;
+
 
 -- name: EditGroupName :exec
 UPDATE groups

@@ -32,7 +32,7 @@ type (
 		GetUserJoinRequests(pctx context.Context, userId int) ([]groupdb.GroupRequest, error)
 		GetGroupById(pctx context.Context, groupId int) (groupdb.GetGroupByIDRow, error)
 		GetGroupMembersByGroupId(pctx context.Context, groupId int, grpcUrl string) ([]group.GroupMemberRes, error)
-		ListGroups(pctx context.Context, args groupdb.ListGroupsParams) ([]groupdb.Group, error)
+		ListGroups(pctx context.Context, args groupdb.ListGroupsParams) ([]groupdb.ListGroupsRow, error)
 		EditGroupName(pctx context.Context, args groupdb.EditGroupNameParams, editorId int32) (groupdb.GetGroupByIDRow, error)
 		EditGroupPhoto(pctx context.Context, args groupdb.EditGroupPhotoParams, editorId int32) (groupdb.GetGroupByIDRow, error)
 		EditGroupVisibility(pctx context.Context, args groupdb.EditGroupVisibilityParams, editorId int32) (groupdb.GetGroupByIDRow, error)
@@ -78,6 +78,7 @@ type (
 		GetBatchUserProfiles(pctx context.Context, grpcUrl string, ids []int32) (*userPb.GetBatchUserProfileRes, error)
 		GetUserProfile(pctx context.Context, grpcUrl string, req *userPb.GetUserProfileReq) (*userPb.GetUserProfileRes, error)
 		GetPostsForFollowingFeedByMemberId(pctx context.Context, userId int32, grpcUrl string) ([]group.PostsForFeedRes, error)
+		SearchGroupByGroupName(ctx context.Context, groupname string) ([]groupdb.SearchGroupByGroupNameRow, error)
 	}
 
 	groupUsecase struct {
@@ -167,6 +168,7 @@ func (u *groupUsecase) CreateNewGroup(pctx context.Context, args groupdb.CreateG
 	return newGroup, nil
 }
 
+// จะดัก member ตรงนี้ด้วยมั้ย
 func (u *groupUsecase) SendRequestToJoinGroup(pctx context.Context, args groupdb.SendRequestToJoinGroupParams) (groupdb.GroupRequest, error) {
 	_, err := u.store.GetMemberInfo(pctx, groupdb.GetMemberInfoParams{
 		MemberID: args.MemberID,
@@ -192,6 +194,16 @@ func (u *groupUsecase) AcceptGroupRequest(pctx context.Context, args groupdb.Acc
 	}
 	if role != group.Admin && role != group.Moderator {
 		return groupdb.GroupMember{}, errors.New("no permission")
+	}
+	groupInfo, err := u.store.GetGroupByID(pctx, int32(args.GroupID))
+	if err != nil {
+		return groupdb.GroupMember{}, err
+	}
+
+	numMember, err := u.store.NumberMemberInGroup(pctx, int32(args.GroupID))
+	if err != nil || numMember > int64(groupInfo.MaxMembers) {
+		return groupdb.GroupMember{}, errors.New("group is full")
+
 	}
 
 	newMember, err := u.store.AcceptGroupRequest(pctx, args)
@@ -299,10 +311,10 @@ func (u *groupUsecase) GetGroupMembersByGroupId(pctx context.Context, groupId in
 	return GroupMemberRes, nil
 }
 
-func (u *groupUsecase) ListGroups(pctx context.Context, args groupdb.ListGroupsParams) ([]groupdb.Group, error) {
+func (u *groupUsecase) ListGroups(pctx context.Context, args groupdb.ListGroupsParams) ([]groupdb.ListGroupsRow, error) {
 	groups, err := u.store.ListGroups(pctx, args)
 	if err != nil {
-		return []groupdb.Group{}, err
+		return nil, err
 	}
 	return groups, nil
 }
@@ -548,11 +560,11 @@ func (u *groupUsecase) DeletePost(pctx context.Context, postId int) error {
 }
 
 func (u *groupUsecase) GetPostsForOngoingFeedByMemberId(pctx context.Context, userId int, grpcUrl string) ([]group.PostsForFeedRes, error) {
-    posts, err := u.store.GetPostsForOngoingFeedByMemberID(pctx, int32(userId))
+	posts, err := u.store.GetPostsForOngoingFeedByMemberID(pctx, int32(userId))
 	if err != nil {
 		return []group.PostsForFeedRes{}, err
 	}
-	
+
 	var memberIds []int32
 	for _, post := range posts {
 		memberIds = append(memberIds, post.MemberID)
@@ -570,23 +582,23 @@ func (u *groupUsecase) GetPostsForOngoingFeedByMemberId(pctx context.Context, us
 		profilePhotoUrls[profile.UserId] = profile.Photourl
 	}
 
-    result := make([]group.PostsForFeedRes, len(posts))
-    for i, post := range posts {
-        result[i] = group.PostsForFeedRes{
-            PostID:         post.PostID,
-            MemberID:       post.MemberID,
-            GroupID:        post.GroupID,
-            PhotoUrl:       post.PhotoUrl,
-            Description:    post.Description,
-            CreatedAt:      post.CreatedAt,
-            GroupName:      post.GroupName,
-            GroupPhotoUrl:  post.GroupPhotoUrl,
-            PosterUsername: profileUsernames[post.MemberID],
-            PosterPhotoUrl: profilePhotoUrls[post.MemberID],
-        }
-    }
+	result := make([]group.PostsForFeedRes, len(posts))
+	for i, post := range posts {
+		result[i] = group.PostsForFeedRes{
+			PostID:         post.PostID,
+			MemberID:       post.MemberID,
+			GroupID:        post.GroupID,
+			PhotoUrl:       post.PhotoUrl,
+			Description:    post.Description,
+			CreatedAt:      post.CreatedAt,
+			GroupName:      post.GroupName,
+			GroupPhotoUrl:  post.GroupPhotoUrl,
+			PosterUsername: profileUsernames[post.MemberID],
+			PosterPhotoUrl: profilePhotoUrls[post.MemberID],
+		}
+	}
 
-    return result, nil
+	return result, nil
 }
 
 func (u *groupUsecase) CreateReaction(pctx context.Context, args groupdb.CreateReactionParams) (groupdb.PostReaction, error) {
@@ -794,14 +806,39 @@ func (u *groupUsecase) GroupMockData(pctx context.Context, count int) error {
 		return err
 	}
 
-	tagCategories := []string{"tag1", "tag2", "tag5", "tag4", "tag6", "tag7"}
+	tagCategories := map[string][]string{
+		"Sports and Fitness": {
+			"Football", "Rock Climbing", "Basketball", "Volleyball", "Golf",
+			"Boxing", "Badminton", "Bowling", "Ice skating", "Racquet",
+			"Tennis", "Table tennis", "Snooker", "Pool", "Swimming",
+			"Running", "Yoga and Pilates", "Karate", "Taekwondo", "Hiking",
+			"Cycling", "Hockey", "Figure Skating", "Skiing",
+		},
+		"Learning and Development": {
+			"Online courses", "Exam prep", "Investing", "Programming",
+			"Language", "Public speaking", "SAT", "IELTS", "Midterm exam",
+			"Final exam",
+		},
+		"Health and Wellness": {
+			"Fitness and gym", "Dietary", "Bulking", "Vegan and J", "Meditation",
+		},
+		"Entertainment and Media": {
+			"Movies", "Series", "Music", "Theater", "Podcasts",
+		},
+		"Hobbies and Leisure": {
+			"Cooking", "Baking", "Gardening", "Planting", "Knitting",
+			"Pottery", "Caligraphy", "Travelling", "Board games",
+		},
+	}
 
 	existingTags := make(map[string]int32)
 
-	for _, category := range tagCategories {
-		_, err := u.createOrGetTagByCategory(ctx, category, existingTags)
-		if err != nil {
-			return err
+	for category, tagNames := range tagCategories {
+		for _, tagName := range tagNames {
+			_, err := u.createOrGetTagByCategory(ctx, category, tagName, existingTags)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -815,12 +852,18 @@ func (u *groupUsecase) GroupMockData(pctx context.Context, count int) error {
 		creatorID := int32(rand.Intn(10) + 1)
 		tagID := rand.Intn(len(tagCategories)) + 1
 
+		fake := faker.NewWithSeed(rand.NewSource(time.Now().UnixNano() + int64(i)))
+
 		group, err := u.store.CreateGroup(ctx, groupdb.CreateGroupParams{
 			GroupName:      groupName,
 			GroupCreatorID: creatorID,
-			PhotoUrl:       utils.ConvertStringToSqlNullString("https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/groupphoto%2F1.jpg?alt=media"),
+			PhotoUrl:       utils.ConvertStringToSqlNullString("https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/groupphoto%2F15.webp?alt=media"),
 			TagID:          int32(tagID),
 			Frequency:      sql.NullInt32{Int32: randomFrequency(), Valid: true},
+			MaxMembers:     25,
+			GroupType:      "social",
+			Description:    utils.ConvertStringToSqlNullString(fake.Lorem().Sentence(5)),
+			Visibility:     true,
 		})
 		if err != nil {
 			return err
@@ -889,14 +932,14 @@ func (u *groupUsecase) GroupMockData(pctx context.Context, count int) error {
 	return nil
 }
 
-func (u *groupUsecase) createOrGetTagByCategory(ctx context.Context, category string, existingTags map[string]int32) (int32, error) {
-	tagID, ok := existingTags[category]
+func (u *groupUsecase) createOrGetTagByCategory(ctx context.Context, category, tagName string, existingTags map[string]int32) (int32, error) {
+	tagID, ok := existingTags[tagName]
 	if ok {
 		return tagID, nil
 	}
 
 	newTag, err := u.store.CreateNewTag(ctx, groupdb.CreateNewTagParams{
-		TagName:    category,
+		TagName:    tagName,
 		IconUrl:    utils.ConvertStringToSqlNullString("https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/postphoto%2F3.jpeg?alt=media"),
 		CategoryID: utils.ConvertIntToSqlNullInt32(rand.Intn(5) + 1),
 	})
@@ -904,7 +947,7 @@ func (u *groupUsecase) createOrGetTagByCategory(ctx context.Context, category st
 		return 0, err
 	}
 
-	existingTags[category] = newTag.TagID
+	existingTags[tagName] = newTag.TagID
 	return newTag.TagID, nil
 }
 
@@ -1111,48 +1154,64 @@ func (u *groupUsecase) EditGroupTag(pctx context.Context, args groupdb.EditGroup
 }
 
 func (u *groupUsecase) GetPostsForFollowingFeedByMemberId(pctx context.Context, userId int32, grpcUrl string) ([]group.PostsForFeedRes, error) {
-    conn, err := grpcconn.NewGrpcClient(grpcUrl)
-    if err != nil {
-        log.Printf("error - gRPC connection failed: %s", err.Error())
-        return nil, errors.New("error: gRPC connection failed")
-    }
+	conn, err := grpcconn.NewGrpcClient(grpcUrl)
+	if err != nil {
+		log.Printf("error - gRPC connection failed: %s", err.Error())
+		return nil, errors.New("error: gRPC connection failed")
+	}
 
-    friends, err := conn.User().GetUserFriends(pctx, &userPb.GetUserFriendsReq{UserId: userId})
-    if err != nil {
-        log.Printf("error - gRPC GetUserFriends failed: %s", err.Error())
-        return nil, errors.New("error: gRPC GetUserFriends failed")
-    }
+	friends, err := conn.User().GetUserFriends(pctx, &userPb.GetUserFriendsReq{UserId: userId})
+	if err != nil {
+		log.Printf("error - gRPC GetUserFriends failed: %s", err.Error())
+		return nil, errors.New("error: gRPC GetUserFriends failed")
+	}
 
-    friendIdArr := make([]int32, len(friends.Friends))
-    friendUsernames := make(map[int32]string)
-    friendPhotoUrls := make(map[int32]string)
+	friendIdArr := make([]int32, len(friends.Friends))
+	friendUsernames := make(map[int32]string)
+	friendPhotoUrls := make(map[int32]string)
 
-    for i, friend := range friends.Friends {
-        friendIdArr[i] = friend.UserId
-        friendUsernames[friend.UserId] = friend.Username
-        friendPhotoUrls[friend.UserId] = friend.Photourl
-    }
+	for i, friend := range friends.Friends {
+		friendIdArr[i] = friend.UserId
+		friendUsernames[friend.UserId] = friend.Username
+		friendPhotoUrls[friend.UserId] = friend.Photourl
+	}
 
-    posts, err := u.store.GetPostsForFollowingFeedByMemberId(pctx, friendIdArr)
-    if err != nil {
-        return nil, err
-    }
+	posts, err := u.store.GetPostsForFollowingFeedByMemberId(pctx, friendIdArr)
+	if err != nil {
+		return nil, err
+	}
 
-    result := make([]group.PostsForFeedRes, len(posts))
-    for i, post := range posts {
-        result[i] = group.PostsForFeedRes{
-            PostID:         post.PostID,
-            MemberID:       post.MemberID,
-            GroupID:        post.GroupID,
-            PhotoUrl:       post.PhotoUrl,
-            Description:    post.Description,
-            CreatedAt:      post.CreatedAt,
-            GroupName:      post.GroupName,
-            GroupPhotoUrl:  post.GroupPhotoUrl,
-            PosterUsername: friendUsernames[post.MemberID],
-            PosterPhotoUrl: friendPhotoUrls[post.MemberID],
-        }
-    }
+	result := make([]group.PostsForFeedRes, len(posts))
+	for i, post := range posts {
+		result[i] = group.PostsForFeedRes{
+			PostID:         post.PostID,
+			MemberID:       post.MemberID,
+			GroupID:        post.GroupID,
+			PhotoUrl:       post.PhotoUrl,
+			Description:    post.Description,
+			CreatedAt:      post.CreatedAt,
+			GroupName:      post.GroupName,
+			GroupPhotoUrl:  post.GroupPhotoUrl,
+			PosterUsername: friendUsernames[post.MemberID],
+			PosterPhotoUrl: friendPhotoUrls[post.MemberID],
+		}
+	}
 
-    return result, nil
+	return result, nil
+}
+
+func (u *groupUsecase) SearchGroupByGroupName(ctx context.Context, groupname string) ([]groupdb.SearchGroupByGroupNameRow, error) {
+	groups, err := u.store.SearchGroupByGroupName(ctx, utils.ConvertStringToSqlNullString(groupname))
+	if err != nil {
+		return nil, err
+	}
+
+	var visibleGroups []groupdb.SearchGroupByGroupNameRow
+	for _, g := range groups {
+		if g.Visibility && g.GroupType == "social" {
+			visibleGroups = append(visibleGroups, g)
+		}
+	}
+
+	return visibleGroups, nil
 }

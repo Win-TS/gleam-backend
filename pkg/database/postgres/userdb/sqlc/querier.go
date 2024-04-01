@@ -33,6 +33,7 @@ type Querier interface {
 	GetUserForUpdate(ctx context.Context, id int32) (User, error)
 	ListFriendsByUserId(ctx context.Context, userId1 sql.NullInt32) ([]ListFriendsByUserIdRow, error)
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error)
+	SearchUsersByUsername(ctx context.Context, dollar_1 sql.NullString) ([]SearchUsersByUsernameRow, error)
 	UpdateProfile(ctx context.Context, arg UpdateProfileParams) error
 }
 

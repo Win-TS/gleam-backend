@@ -397,6 +397,51 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]User, e
 	return items, nil
 }
 
+const searchUsersByUsername = `-- name: SearchUsersByUsername :many
+SELECT id, username, email, firstname, lastname, photourl
+FROM users
+WHERE username ILIKE '%' || $1 || '%'
+`
+
+type SearchUsersByUsernameRow struct {
+	ID        int32          `json:"id"`
+	Username  string         `json:"username"`
+	Email     string         `json:"email"`
+	Firstname string         `json:"firstname"`
+	Lastname  string         `json:"lastname"`
+	Photourl  sql.NullString `json:"photourl"`
+}
+
+func (q *Queries) SearchUsersByUsername(ctx context.Context, dollar_1 sql.NullString) ([]SearchUsersByUsernameRow, error) {
+	rows, err := q.db.QueryContext(ctx, searchUsersByUsername, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []SearchUsersByUsernameRow{}
+	for rows.Next() {
+		var i SearchUsersByUsernameRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Username,
+			&i.Email,
+			&i.Firstname,
+			&i.Lastname,
+			&i.Photourl,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateProfile = `-- name: UpdateProfile :exec
 UPDATE users SET username = $2 AND photourl = $3
 WHERE id = $1

@@ -403,9 +403,12 @@ SELECT groups.group_id,
     groups.visibility,
     groups.description,
     groups.created_at,
-    tags.tag_name
+    tags.tag_name,
+    (SELECT COUNT(*)
+    FROM group_members A
+    WHERE A.group_id = $1) AS total_member
 FROM groups
-    JOIN tags ON groups.tag_id = tags.tag_id
+JOIN tags ON groups.tag_id = tags.tag_id
 WHERE group_id = $1
 `
 
@@ -421,6 +424,7 @@ type GetGroupByIDRow struct {
 	Description    sql.NullString `json:"description"`
 	CreatedAt      time.Time      `json:"created_at"`
 	TagName        string         `json:"tag_name"`
+	TotalMember    int64          `json:"total_member"`
 }
 
 func (q *Queries) GetGroupByID(ctx context.Context, groupID int32) (GetGroupByIDRow, error) {
@@ -438,6 +442,7 @@ func (q *Queries) GetGroupByID(ctx context.Context, groupID int32) (GetGroupByID
 		&i.Description,
 		&i.CreatedAt,
 		&i.TagName,
+		&i.TotalMember,
 	)
 	return i, err
 }
@@ -833,8 +838,22 @@ func (q *Queries) InitializeCategory(ctx context.Context) error {
 }
 
 const listGroups = `-- name: ListGroups :many
-SELECT group_id, group_name, group_creator_id, description, photo_url, tag_id, frequency, max_members, group_type, visibility, created_at
+SELECT groups.group_id,
+    groups.group_name,
+    groups.photo_url,
+    groups.group_creator_id,
+    groups.frequency,
+    groups.max_members,
+    groups.group_type,
+    groups.visibility,
+    groups.description,
+    groups.created_at,
+    tags.tag_name,
+    (SELECT COUNT(*)
+    FROM group_members S
+    WHERE S.group_id = groups.group_id) AS total_member
 FROM groups
+JOIN tags ON groups.tag_id = tags.tag_id
 ORDER BY group_id
 LIMIT $1 OFFSET $2
 `
@@ -844,27 +863,127 @@ type ListGroupsParams struct {
 	Offset int32 `json:"offset"`
 }
 
-func (q *Queries) ListGroups(ctx context.Context, arg ListGroupsParams) ([]Group, error) {
+type ListGroupsRow struct {
+	GroupID        int32          `json:"group_id"`
+	GroupName      string         `json:"group_name"`
+	PhotoUrl       sql.NullString `json:"photo_url"`
+	GroupCreatorID int32          `json:"group_creator_id"`
+	Frequency      sql.NullInt32  `json:"frequency"`
+	MaxMembers     int32          `json:"max_members"`
+	GroupType      string         `json:"group_type"`
+	Visibility     bool           `json:"visibility"`
+	Description    sql.NullString `json:"description"`
+	CreatedAt      time.Time      `json:"created_at"`
+	TagName        string         `json:"tag_name"`
+	TotalMember    int64          `json:"total_member"`
+}
+
+func (q *Queries) ListGroups(ctx context.Context, arg ListGroupsParams) ([]ListGroupsRow, error) {
 	rows, err := q.db.QueryContext(ctx, listGroups, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Group{}
+	items := []ListGroupsRow{}
 	for rows.Next() {
-		var i Group
+		var i ListGroupsRow
 		if err := rows.Scan(
 			&i.GroupID,
 			&i.GroupName,
-			&i.GroupCreatorID,
-			&i.Description,
 			&i.PhotoUrl,
-			&i.TagID,
+			&i.GroupCreatorID,
 			&i.Frequency,
 			&i.MaxMembers,
 			&i.GroupType,
 			&i.Visibility,
+			&i.Description,
 			&i.CreatedAt,
+			&i.TagName,
+			&i.TotalMember,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const numberMemberInGroup = `-- name: NumberMemberInGroup :one
+SELECT COUNT(*)
+FROM group_members
+WHERE group_id = $1
+`
+
+func (q *Queries) NumberMemberInGroup(ctx context.Context, groupID int32) (int64, error) {
+	row := q.db.QueryRowContext(ctx, numberMemberInGroup, groupID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const searchGroupByGroupName = `-- name: SearchGroupByGroupName :many
+SELECT groups.group_id,
+    groups.group_name,
+    groups.photo_url,
+    groups.group_creator_id,
+    groups.frequency,
+    groups.max_members,
+    groups.group_type,
+    groups.visibility,
+    groups.description,
+    groups.created_at,
+    tags.tag_name,
+    (SELECT COUNT(*)
+    FROM group_members A
+    WHERE A.group_id = groups.group_id) AS total_member
+FROM groups
+JOIN tags ON groups.tag_id = tags.tag_id
+WHERE groups.group_name ILIKE '%' || $1 || '%'
+`
+
+type SearchGroupByGroupNameRow struct {
+	GroupID        int32          `json:"group_id"`
+	GroupName      string         `json:"group_name"`
+	PhotoUrl       sql.NullString `json:"photo_url"`
+	GroupCreatorID int32          `json:"group_creator_id"`
+	Frequency      sql.NullInt32  `json:"frequency"`
+	MaxMembers     int32          `json:"max_members"`
+	GroupType      string         `json:"group_type"`
+	Visibility     bool           `json:"visibility"`
+	Description    sql.NullString `json:"description"`
+	CreatedAt      time.Time      `json:"created_at"`
+	TagName        string         `json:"tag_name"`
+	TotalMember    int64          `json:"total_member"`
+}
+
+func (q *Queries) SearchGroupByGroupName(ctx context.Context, dollar_1 sql.NullString) ([]SearchGroupByGroupNameRow, error) {
+	rows, err := q.db.QueryContext(ctx, searchGroupByGroupName, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []SearchGroupByGroupNameRow{}
+	for rows.Next() {
+		var i SearchGroupByGroupNameRow
+		if err := rows.Scan(
+			&i.GroupID,
+			&i.GroupName,
+			&i.PhotoUrl,
+			&i.GroupCreatorID,
+			&i.Frequency,
+			&i.MaxMembers,
+			&i.GroupType,
+			&i.Visibility,
+			&i.Description,
+			&i.CreatedAt,
+			&i.TagName,
+			&i.TotalMember,
 		); err != nil {
 			return nil, err
 		}

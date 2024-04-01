@@ -50,6 +50,8 @@ func (s *server) groupService() {
 	group.DELETE("/group", httpHandler.DeleteGroup)
 	group.DELETE("/groupmember", httpHandler.DeleteGroupMember)
 
+	group.GET("/search", httpHandler.SearchGroupByGroupName)
+
 	// Post Mock data
 	post.POST("/mock", httpHandler.PostMockData)
 

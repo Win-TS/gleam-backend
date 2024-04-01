@@ -36,9 +36,9 @@ func (s *server) authService() {
 
 	auth.GET("", s.healthCheckService)
 	auth.POST("/signup", httpHandler.RegisterUser)
-	//auth.GET("/verify", httpHandler.VerifyToken)
-	auth.POST("/find/email", httpHandler.FindUserByEmail)
-	auth.POST("/find/phone", httpHandler.FindUserByPhoneNo)
-	auth.POST("/find/uid", httpHandler.FindUserByUID)
-
+	auth.GET("/find/email", httpHandler.FindUserByEmail)
+	auth.GET("/find/phone", httpHandler.FindUserByPhoneNo)
+	auth.GET("/find/uid", httpHandler.FindUserByUID)
+	auth.DELETE("/delete", httpHandler.DeleteUser)
+	auth.PUT("/update-password", httpHandler.UpdatePassword)
 }

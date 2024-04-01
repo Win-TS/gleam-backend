@@ -6,16 +6,19 @@ import (
 
 	firebase "firebase.google.com/go"
 	"firebase.google.com/go/auth"
+	authModel "github.com/Win-TS/gleam-backend.git/modules/auth"
 )
 
 type (
 	AuthRepositoryService interface{
-		CreateUserWithEmailPhoneAndPassword(pctx context.Context, email, phoneNumber, password string) (*auth.UserRecord, error)
+		CreateUserWithEmailPhoneAndPassword(pctx context.Context, req *authModel.RequestPayload) (*auth.UserRecord, error)
 		VerifyToken(pctx context.Context, token string) (*auth.Token, error)
 		FindUserByUID(ctx context.Context, uid string) (*auth.UserRecord, error)
 		FindUserByEmail(ctx context.Context, email string) (*auth.UserRecord, error)
 		FindUserByPhoneNo(ctx context.Context, phoneNo string) (*auth.UserRecord, error)
 		DeleteUser(ctx context.Context, uid string) error
+		UpdatePassword(ctx context.Context, req *authModel.UpdatePasswordReq) (*auth.UserRecord, error)
+		AddUserIdToTokenClaim(ctx context.Context, uid string, userId int) error
 	}
 	authRepository struct{
 		authClient *auth.Client
@@ -32,15 +35,20 @@ func NewAuthRepository(app *firebase.App) AuthRepositoryService {
 }
 
 // CreateUserWithEmailPhoneAndPassword creates and authenticates a user using email, phone number, and password.
-func (r *authRepository) CreateUserWithEmailPhoneAndPassword(pctx context.Context, email, phoneNumber, password string) (*auth.UserRecord, error) {
+func (r *authRepository) CreateUserWithEmailPhoneAndPassword(pctx context.Context, req *authModel.RequestPayload) (*auth.UserRecord, error) {
 	params := (&auth.UserToCreate{}).
-		Email(email).
-		PhoneNumber(phoneNumber).
-		Password(password)
+		Email(req.Email).
+		PhoneNumber(req.PhoneNumber).
+		Password(req.Password).
+		DisplayName(req.Username)
 
 	user, err := r.authClient.CreateUser(pctx, params)
 	if err != nil {
 		log.Printf("Error - authenticating user with email and password: %v\n", err)
+		return nil, err
+	}
+
+	if err := r.AddUserIdToTokenClaim(pctx, user.UID, req.UserId); err != nil {
 		return nil, err
 	}
 
@@ -86,6 +94,29 @@ func (r *authRepository) FindUserByPhoneNo(ctx context.Context, phoneNo string) 
 func (r *authRepository) DeleteUser(ctx context.Context, uid string) error {
 	if err := r.authClient.DeleteUser(ctx, uid); err != nil {
 		log.Fatalf("error deleting user: %v\n", err)
+		return err
+	}
+	return nil
+}
+
+// updatePassword updates the password of a user.
+func (r *authRepository) UpdatePassword(ctx context.Context, req *authModel.UpdatePasswordReq) (*auth.UserRecord, error) {
+	params := (&auth.UserToUpdate{}).
+		Password(req.Password)
+
+	res, err := r.authClient.UpdateUser(ctx, req.UID, params)
+	if err != nil {
+		log.Fatalf("error updating user: %v\n", err)
+		return nil, err
+	}
+
+	return res, nil
+}
+
+// AddUserIdToTokenClaim adds the userId to the token claim.
+func (r *authRepository) AddUserIdToTokenClaim(ctx context.Context, uid string, userId int) error {
+	if err := r.authClient.SetCustomUserClaims(ctx, uid, map[string]interface{}{"userId": userId}); err != nil {
+		log.Printf("Error - adding claims to token: %v\n", err)
 		return err
 	}
 	return nil

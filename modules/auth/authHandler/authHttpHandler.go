@@ -16,10 +16,11 @@ import (
 type (
 	AuthHttpHandlerService interface {
 		RegisterUser(c echo.Context) error
-		VerifyToken(c echo.Context) error
 		FindUserByEmail(c echo.Context) error
 		FindUserByPhoneNo(c echo.Context) error
 		FindUserByUID(c echo.Context) error
+		DeleteUser(c echo.Context) error
+		UpdatePassword(c echo.Context) error
 	}
 
 	authHttpHandler struct {
@@ -42,7 +43,7 @@ func (h *authHttpHandler) RegisterUser(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 
-	user, err := h.authUsecase.RegisterUserWithEmailPhoneAndPassword(ctx, req.Email, req.PhoneNumber, req.Password)
+	user, err := h.authUsecase.RegisterUserWithEmailPhoneAndPassword(ctx, req)
 	if err != nil {
 		log.Printf("Error - registering user: %v\n", err)
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
@@ -51,36 +52,11 @@ func (h *authHttpHandler) RegisterUser(c echo.Context) error {
 	return response.SuccessResponse(c, http.StatusCreated, user)
 }
 
-func (h *authHttpHandler) VerifyToken(c echo.Context) error {
-	ctx := context.Background()
-
-	wrapper := request.ContextWrapper(c)
-	token := wrapper.GetAuthorizationHeader()
-
-	if token == "" {
-		return response.ErrResponse(c, http.StatusUnauthorized, "error: token not in header")
-	}
-
-	authToken, err := h.authUsecase.VerifyToken(ctx, token)
-	if err != nil {
-		log.Printf("Error - verifying token: %v\n", err)
-		return response.ErrResponse(c, http.StatusUnauthorized, err.Error())
-	}
-
-	return response.SuccessResponse(c, http.StatusOK, authToken)
-}
-
 func (h *authHttpHandler) FindUserByEmail(c echo.Context) error {
 	ctx := context.Background()
-	wrapper := request.ContextWrapper(c)
+	email := c.QueryParam("email")
 
-	req := new(auth.EmailCheck)
-
-	if err := wrapper.Bind(req); err != nil {
-		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
-	}
-
-	user, err := h.authUsecase.FindUserByEmail(ctx, req.Email)
+	user, err := h.authUsecase.FindUserByEmail(ctx, email)
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
@@ -90,15 +66,9 @@ func (h *authHttpHandler) FindUserByEmail(c echo.Context) error {
 
 func (h *authHttpHandler) FindUserByPhoneNo(c echo.Context) error {
 	ctx := context.Background()
-	wrapper := request.ContextWrapper(c)
+	phoneNumber := ("+" + c.QueryParam("phone_no"))
 
-	req := new(auth.PhoneCheck)
-
-	if err := wrapper.Bind(req); err != nil {
-		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
-	}
-
-	user, err := h.authUsecase.FindUserByPhoneNo(ctx, req.PhoneNumber)
+	user, err := h.authUsecase.FindUserByPhoneNo(ctx, phoneNumber)
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
@@ -108,18 +78,42 @@ func (h *authHttpHandler) FindUserByPhoneNo(c echo.Context) error {
 
 func (h *authHttpHandler) FindUserByUID(c echo.Context) error {
 	ctx := context.Background()
-	wrapper := request.ContextWrapper(c)
+	uid := c.QueryParam("uid")
 
-	req := new(auth.UIDCheck)
-
-	if err := wrapper.Bind(req); err != nil {
-		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
-	}
-
-	user, err := h.authUsecase.FindUserByUID(ctx, req.UID)
+	user, err := h.authUsecase.FindUserByUID(ctx, uid)
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
 
 	return response.SuccessResponse(c, http.StatusOK, user)
+}
+
+func (h *authHttpHandler) DeleteUser(c echo.Context) error {
+	ctx := context.Background()
+	uid := c.QueryParam("uid")
+
+	err := h.authUsecase.DeleteUser(ctx, uid)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	return response.SuccessResponse(c, http.StatusOK, "user deleted")
+}
+
+func (h *authHttpHandler) UpdatePassword(c echo.Context) error {
+	ctx := context.Background()
+	wrapper := request.ContextWrapper(c)
+
+	req := new(auth.UpdatePasswordReq)
+
+	if err := wrapper.Bind(req); err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	res, err := h.authUsecase.UpdatePassword(ctx, req)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	return response.SuccessResponse(c, http.StatusOK, res)
 }

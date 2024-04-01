@@ -40,3 +40,15 @@ func (g *authGrpcHandler) GetUidFromEmail(ctx context.Context, req *authPb.GetUi
 		Email: user.UserInfo.Email,
 	}, nil
 }
+
+func (g *authGrpcHandler) VerifyToken(ctx context.Context, req *authPb.VerifyTokenReq) (*authPb.VerifyTokenRes, error) {
+	token, err := g.authUsecase.VerifyToken(ctx, req.Token)
+	if err != nil {
+		return nil, err
+	}
+	
+	return &authPb.VerifyTokenRes{
+		Uid: token.UID,
+		Success: true,
+	}, nil
+}

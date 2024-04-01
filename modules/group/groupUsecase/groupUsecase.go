@@ -176,6 +176,16 @@ func (u *groupUsecase) SendRequestToJoinGroup(pctx context.Context, args groupdb
 	})
 	if err != nil {
 		if err == sql.ErrNoRows {
+			groupInfo, err := u.store.GetGroupByID(pctx, int32(args.GroupID))
+			if err != nil {
+				return groupdb.GroupRequest{}, err
+			}
+
+			numMember, err := u.store.NumberMemberInGroup(pctx, int32(args.GroupID))
+			if err != nil || numMember > int64(groupInfo.MaxMembers) {
+				return groupdb.GroupRequest{}, errors.New("group is full")
+			}
+
 			newRequest, err := u.store.SendRequestToJoinGroup(pctx, args)
 			if err != nil {
 				return groupdb.GroupRequest{}, err
@@ -833,9 +843,9 @@ func (u *groupUsecase) GroupMockData(pctx context.Context, count int) error {
 
 	existingTags := make(map[string]int32)
 
-	for category, tagNames := range tagCategories {
+	for _, tagNames := range tagCategories {
 		for _, tagName := range tagNames {
-			_, err := u.createOrGetTagByCategory(ctx, category, tagName, existingTags)
+			_, err := u.createOrGetTagByCategory(ctx, tagName, existingTags)
 			if err != nil {
 				return err
 			}
@@ -932,7 +942,7 @@ func (u *groupUsecase) GroupMockData(pctx context.Context, count int) error {
 	return nil
 }
 
-func (u *groupUsecase) createOrGetTagByCategory(ctx context.Context, category, tagName string, existingTags map[string]int32) (int32, error) {
+func (u *groupUsecase) createOrGetTagByCategory(ctx context.Context, tagName string, existingTags map[string]int32) (int32, error) {
 	tagID, ok := existingTags[tagName]
 	if ok {
 		return tagID, nil

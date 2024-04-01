@@ -23,12 +23,9 @@ func NewMiddlewareUsecase(middlewareRepository middlewareRepository.MiddlewareRe
 func (u *middlewareUsecase) FirebaseAuthorization(c echo.Context, cfg *config.Config, token string) (echo.Context, error) {
 	ctx := c.Request().Context()
 
-	uid, err := u.middlewareRepository.VerifyToken(ctx, cfg.Grpc.AuthUrl, token)
-	if err != nil {
+	if err := u.middlewareRepository.VerifyToken(ctx, cfg.Grpc.AuthUrl, token); err != nil {
 		return nil, err
 	}
-
-	c.Set("uid", uid)
 
 	return c, nil
 }

@@ -115,7 +115,7 @@ func (r *authRepository) UpdatePassword(ctx context.Context, req *authModel.Upda
 
 // AddUserIdToTokenClaim adds the userId to the token claim.
 func (r *authRepository) AddUserIdToTokenClaim(ctx context.Context, uid string, userId int) error {
-	if err := r.authClient.SetCustomUserClaims(ctx, uid, map[string]interface{}{"userId": userId}); err != nil {
+	if err := r.authClient.SetCustomUserClaims(ctx, uid, map[string]interface{}{"gleamUserId": userId}); err != nil {
 		log.Printf("Error - adding claims to token: %v\n", err)
 		return err
 	}

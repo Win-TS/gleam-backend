@@ -130,7 +130,7 @@ func (h *userHttpHandler) RegisterNewUser(c echo.Context) error {
 		}
 	}
 
-	res, err := h.userUsecase.RegisterNewUser(ctx, req, url)
+	res, err := h.userUsecase.RegisterNewUser(ctx, req, h.cfg.Grpc.AuthUrl, url)
 	if err != nil {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}

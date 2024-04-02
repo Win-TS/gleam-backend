@@ -7,7 +7,6 @@ CREATE TABLE users (
     phone_no VARCHAR UNIQUE NOT NULL,
     private_account BOOLEAN NOT NULL DEFAULT false,
     nationality VARCHAR NOT NULL,
-    age INTEGER NOT NULL,
     birthday DATE NOT NULL,
     gender VARCHAR NOT NULL,
     photourl VARCHAR,

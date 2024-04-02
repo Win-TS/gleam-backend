@@ -25,6 +25,7 @@ type AuthGrpcServiceClient interface {
 	DeleteUser(ctx context.Context, in *DeleteUserReq, opts ...grpc.CallOption) (*DeleteUserRes, error)
 	GetUidFromEmail(ctx context.Context, in *GetUidFromEmailReq, opts ...grpc.CallOption) (*GetUidFromEmailRes, error)
 	VerifyToken(ctx context.Context, in *VerifyTokenReq, opts ...grpc.CallOption) (*VerifyTokenRes, error)
+	RegisterNewUser(ctx context.Context, in *RegisterNewUserReq, opts ...grpc.CallOption) (*RegisterNewUserRes, error)
 }
 
 type authGrpcServiceClient struct {
@@ -62,6 +63,15 @@ func (c *authGrpcServiceClient) VerifyToken(ctx context.Context, in *VerifyToken
 	return out, nil
 }
 
+func (c *authGrpcServiceClient) RegisterNewUser(ctx context.Context, in *RegisterNewUserReq, opts ...grpc.CallOption) (*RegisterNewUserRes, error) {
+	out := new(RegisterNewUserRes)
+	err := c.cc.Invoke(ctx, "/AuthGrpcService/RegisterNewUser", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AuthGrpcServiceServer is the server API for AuthGrpcService service.
 // All implementations must embed UnimplementedAuthGrpcServiceServer
 // for forward compatibility
@@ -69,6 +79,7 @@ type AuthGrpcServiceServer interface {
 	DeleteUser(context.Context, *DeleteUserReq) (*DeleteUserRes, error)
 	GetUidFromEmail(context.Context, *GetUidFromEmailReq) (*GetUidFromEmailRes, error)
 	VerifyToken(context.Context, *VerifyTokenReq) (*VerifyTokenRes, error)
+	RegisterNewUser(context.Context, *RegisterNewUserReq) (*RegisterNewUserRes, error)
 	mustEmbedUnimplementedAuthGrpcServiceServer()
 }
 
@@ -84,6 +95,9 @@ func (UnimplementedAuthGrpcServiceServer) GetUidFromEmail(context.Context, *GetU
 }
 func (UnimplementedAuthGrpcServiceServer) VerifyToken(context.Context, *VerifyTokenReq) (*VerifyTokenRes, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method VerifyToken not implemented")
+}
+func (UnimplementedAuthGrpcServiceServer) RegisterNewUser(context.Context, *RegisterNewUserReq) (*RegisterNewUserRes, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RegisterNewUser not implemented")
 }
 func (UnimplementedAuthGrpcServiceServer) mustEmbedUnimplementedAuthGrpcServiceServer() {}
 
@@ -152,6 +166,24 @@ func _AuthGrpcService_VerifyToken_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthGrpcService_RegisterNewUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RegisterNewUserReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthGrpcServiceServer).RegisterNewUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/AuthGrpcService/RegisterNewUser",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthGrpcServiceServer).RegisterNewUser(ctx, req.(*RegisterNewUserReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AuthGrpcService_ServiceDesc is the grpc.ServiceDesc for AuthGrpcService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -170,6 +202,10 @@ var AuthGrpcService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "VerifyToken",
 			Handler:    _AuthGrpcService_VerifyToken_Handler,
+		},
+		{
+			MethodName: "RegisterNewUser",
+			Handler:    _AuthGrpcService_RegisterNewUser_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

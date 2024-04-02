@@ -3,8 +3,10 @@ package userUsecase
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"io"
+	"log"
 
 	//"log"
 	"math/rand"
@@ -15,8 +17,9 @@ import (
 	"firebase.google.com/go/storage"
 	"github.com/Win-TS/gleam-backend.git/modules/user"
 
-	// authPb "github.com/Win-TS/gleam-backend.git/modules/auth/authPb"
+	authPb "github.com/Win-TS/gleam-backend.git/modules/auth/authPb"
 	userdb "github.com/Win-TS/gleam-backend.git/pkg/database/postgres/userdb/sqlc"
+	"github.com/Win-TS/gleam-backend.git/pkg/grpcconn"
 
 	//userPb "github.com/Win-TS/gleam-backend.git/modules/user/userPb"
 	//"github.com/Win-TS/gleam-backend.git/pkg/grpcconn"
@@ -30,7 +33,7 @@ type UserUsecaseService interface {
 	GetUserProfileByEmail(pctx context.Context, email string) (user.UserProfile, error)
 	GetUserProfileByUsername(pctx context.Context, username string) (user.UserProfile, error)
 	GetLatestId(pctx context.Context) (int, error)
-	RegisterNewUser(pctx context.Context, payload *user.NewUserReq, photoUrl string) (userdb.User, error)
+	RegisterNewUser(pctx context.Context, payload *user.NewUserReq, grpcUrl, photoUrl string) (*user.NewUserRes, error)
 	SaveToFirebaseStorage(pctx context.Context, bucketName, objectPath, filename string, file io.Reader) (string, error)
 	GetUserInfo(pctx context.Context, id int) (userdb.User, error)
 	GetUserInfoByEmail(pctx context.Context, email string) (userdb.User, error)
@@ -168,27 +171,70 @@ func (u *userUsecase) GetLatestId(pctx context.Context) (int, error) {
 	return int(latestId + 1), nil
 }
 
-func (u *userUsecase) RegisterNewUser(pctx context.Context, payload *user.NewUserReq, photoUrl string) (userdb.User, error) {
+func (u *userUsecase) RegisterNewUser(pctx context.Context, payload *user.NewUserReq, grpcUrl, photoUrl string) (*user.NewUserRes, error) {
 
 	birthdayTime, err := time.Parse("2006-01-02", payload.Birthday)
 	if err != nil {
-		return userdb.User{}, err
+		return &user.NewUserRes{}, err
 	}
 
 	sqlPhotoUrl := utils.ConvertStringToSqlNullString(photoUrl)
 
-	return u.store.CreateUser(pctx, userdb.CreateUserParams{
+	newUser, err := u.store.CreateUser(pctx, userdb.CreateUserParams{
 		Username:    payload.Username,
 		Firstname:   payload.Firstname,
 		Lastname:    payload.Lastname,
 		PhoneNo:     payload.PhoneNo,
 		Email:       payload.Email,
 		Nationality: payload.Nationality,
-		Age:         int32(payload.Age),
 		Birthday:    birthdayTime,
 		Gender:      payload.Gender,
 		Photourl:    sqlPhotoUrl,
 	})
+	if err != nil {
+		return &user.NewUserRes{}, err
+	}
+
+	conn, err := grpcconn.NewGrpcClient(grpcUrl)
+	if err != nil {
+		u.DeleteUser(pctx, int(newUser.ID), grpcUrl)
+		log.Printf("error - gRPC connection failed: %s", err.Error())
+		return &user.NewUserRes{}, errors.New("error: gRPC connection failed")
+	}
+
+	result, err := conn.Auth().RegisterNewUser(pctx, &authPb.RegisterNewUserReq{
+		Email:    payload.Email,
+		PhoneNo:  "+" +(payload.PhoneNo),
+		Password: payload.Password,
+		Username: payload.Username,
+		UserId:   int32(newUser.ID),
+	})
+	if err != nil {
+		u.DeleteUser(pctx, int(newUser.ID), grpcUrl)
+		log.Printf("error - RegisterNewUser failed: %s", err.Error())
+		return &user.NewUserRes{}, errors.New("error: RegisterNewUser failed")
+	}
+
+	if !result.Success {
+		u.DeleteUser(pctx, int(newUser.ID), grpcUrl)
+		return &user.NewUserRes{}, errors.New("error: RegisterNewUser failed")
+	}
+
+	return &user.NewUserRes{
+		ID:             newUser.ID,
+		FirebaseUID:    result.Uid,
+		Username:       newUser.Username,
+		Email:          newUser.Email,
+		Firstname:      newUser.Firstname,
+		Lastname:       newUser.Lastname,
+		PhoneNo:        newUser.PhoneNo,
+		PrivateAccount: newUser.PrivateAccount,
+		Nationality:    newUser.Nationality,
+		Birthday:       newUser.Birthday,
+		Gender:         newUser.Gender,
+		Photourl:       newUser.Photourl,
+		CreatedAt:      newUser.CreatedAt,
+	}, nil
 }
 
 func (u *userUsecase) EditUserPhoto(pctx context.Context, args userdb.EditUserProfilePictureParams) (user.UserProfile, error) {
@@ -360,7 +406,6 @@ func (u *userUsecase) createUser(ctx context.Context, seed int16) (userdb.User, 
 	fake := faker.NewWithSeed(rand.NewSource(time.Now().UnixNano() + int64(seed)))
 
 	userData.Nationality = "Thai"
-	userData.Age = int32(rand.Intn(40-10+1) + 10)
 	userData.Gender = fake.Person().Gender()
 
 	phoneNumber := fmt.Sprintf("%010d", rand.Intn(10000000000))

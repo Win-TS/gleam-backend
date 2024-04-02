@@ -26,7 +26,6 @@ type User struct {
 	PhoneNo        string         `json:"phone_no"`
 	PrivateAccount bool           `json:"private_account"`
 	Nationality    string         `json:"nationality"`
-	Age            int32          `json:"age"`
 	Birthday       time.Time      `json:"birthday"`
 	Gender         string         `json:"gender"`
 	Photourl       sql.NullString `json:"photourl"`

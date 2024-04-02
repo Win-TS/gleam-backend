@@ -32,9 +32,27 @@ message VerifyTokenRes {
     bool success = 2;
 }
 
+message RegisterNewUserReq {
+    string email = 1;
+    string password = 2;
+    string phone_no = 3;
+    string username = 4;
+    int32 userId = 5;
+}
+
+message RegisterNewUserRes {
+    string uid = 1;
+    string email = 2;
+    string phone_no = 3;
+    string username = 4;
+    int32 userId = 5;
+    bool success = 6;
+}
+
 // Methods
 service AuthGrpcService {
     rpc DeleteUser(DeleteUserReq) returns (DeleteUserRes);
     rpc GetUidFromEmail(GetUidFromEmailReq) returns (GetUidFromEmailRes);
     rpc VerifyToken(VerifyTokenReq) returns (VerifyTokenRes);
+    rpc RegisterNewUser(RegisterNewUserReq) returns (RegisterNewUserRes);
 }

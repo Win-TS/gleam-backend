@@ -149,6 +149,10 @@ func TestRegisterNewUser(t *testing.T) {
 	mockService := mocks.NewMockUserUsecaseService(ctrl)
 	birthdayStr := "2005-05-16"
 	birthday, err := time.Parse("2006-01-02", birthdayStr)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+		return
+	}
 	payload := &user.NewUserReq{
 		Username:    "john_doe",
 		Firstname:   "John",
@@ -156,7 +160,6 @@ func TestRegisterNewUser(t *testing.T) {
 		PhoneNo:     "123456789",
 		Email:       "john@example.com",
 		Nationality: "US",
-		Age:         30,
 		Birthday:    birthdayStr,
 		Gender:      "male",
 	}
@@ -169,7 +172,6 @@ func TestRegisterNewUser(t *testing.T) {
 		PhoneNo:     "123456789",
 		Email:       "john@example.com",
 		Nationality: "US",
-		Age:         30,
 		Birthday:    birthday,
 		Gender:      "male",
 	}
@@ -351,7 +353,7 @@ func TestEditPhoneNumber(t *testing.T) {
 		PhoneNo: "123456789",
 	}
 
-	expectedUser := userdb.User{ID: 123, Username: "john_doe", Firstname: "John", Lastname: "Doe", PhoneNo: "123456789", Email: "john@example.com", Nationality: "US", Age: 30, Birthday: time.Now(), Gender: "male"}
+	expectedUser := userdb.User{ID: 123, Username: "john_doe", Firstname: "John", Lastname: "Doe", PhoneNo: "123456789", Email: "john@example.com", Nationality: "US", Birthday: time.Now(), Gender: "male"}
 	mockService.EXPECT().EditPhoneNumber(gomock.Any(), args).Return(expectedUser, nil)
 
 	returnedUser, err := mockService.EditPhoneNumber(context.Background(), args)

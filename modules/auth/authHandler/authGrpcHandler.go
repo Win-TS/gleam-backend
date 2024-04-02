@@ -3,6 +3,7 @@ package authHandler
 import (
 	"context"
 
+	authModel "github.com/Win-TS/gleam-backend.git/modules/auth"
 	authPb "github.com/Win-TS/gleam-backend.git/modules/auth/authPb"
 	"github.com/Win-TS/gleam-backend.git/modules/auth/authUsecase"
 )
@@ -49,6 +50,30 @@ func (g *authGrpcHandler) VerifyToken(ctx context.Context, req *authPb.VerifyTok
 	
 	return &authPb.VerifyTokenRes{
 		Uid: token.UID,
+		Success: true,
+	}, nil
+}
+
+func (g *authGrpcHandler) RegisterNewUser(ctx context.Context, req *authPb.RegisterNewUserReq) (*authPb.RegisterNewUserRes, error) {
+	payload := &authModel.RequestPayload{
+		Email: req.Email,
+		PhoneNumber: req.PhoneNo,
+		Password: req.Password,
+		Username: req.Username,
+		UserId: int(req.UserId),
+	}
+
+	user, err := g.authUsecase.RegisterUserWithEmailPhoneAndPassword(ctx, payload)
+	if err != nil {
+		return nil, err
+	}
+
+	return &authPb.RegisterNewUserRes{
+		Uid: user.UserInfo.UID,
+		Email: user.UserInfo.Email,
+		PhoneNo: user.UserInfo.PhoneNumber,
+		Username: user.UserInfo.DisplayName,
+		UserId: req.UserId,
 		Success: true,
 	}, nil
 }

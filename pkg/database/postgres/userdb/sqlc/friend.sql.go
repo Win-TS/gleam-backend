@@ -105,7 +105,7 @@ func (q *Queries) GetFriendsCountByID(ctx context.Context, userId1 sql.NullInt32
 }
 
 const getFriendsPendingList = `-- name: GetFriendsPendingList :many
-SELECT users.id, users.username, users.email, users.firstname, users.lastname, users.phone_no, users.private_account, users.nationality, users.age, users.birthday, users.gender, users.photourl, users.created_at FROM friends JOIN users ON friends.user_id1 = users.id
+SELECT users.id, users.username, users.email, users.firstname, users.lastname, users.phone_no, users.private_account, users.nationality, users.birthday, users.gender, users.photourl, users.created_at FROM friends JOIN users ON friends.user_id1 = users.id
 WHERE user_id2 = $1 AND status = 'Pending'
 `
 
@@ -127,7 +127,6 @@ func (q *Queries) GetFriendsPendingList(ctx context.Context, userId2 sql.NullInt
 			&i.PhoneNo,
 			&i.PrivateAccount,
 			&i.Nationality,
-			&i.Age,
 			&i.Birthday,
 			&i.Gender,
 			&i.Photourl,
@@ -147,7 +146,7 @@ func (q *Queries) GetFriendsPendingList(ctx context.Context, userId2 sql.NullInt
 }
 
 const getFriendsRequestedList = `-- name: GetFriendsRequestedList :many
-SELECT users.id, users.username, users.email, users.firstname, users.lastname, users.phone_no, users.private_account, users.nationality, users.age, users.birthday, users.gender, users.photourl, users.created_at FROM friends JOIN users ON friends.user_id2 = users.id
+SELECT users.id, users.username, users.email, users.firstname, users.lastname, users.phone_no, users.private_account, users.nationality, users.birthday, users.gender, users.photourl, users.created_at FROM friends JOIN users ON friends.user_id2 = users.id
 WHERE user_id1 = $1 AND status = 'Pending'
 `
 
@@ -169,7 +168,6 @@ func (q *Queries) GetFriendsRequestedList(ctx context.Context, userId1 sql.NullI
 			&i.PhoneNo,
 			&i.PrivateAccount,
 			&i.Nationality,
-			&i.Age,
 			&i.Birthday,
 			&i.Gender,
 			&i.Photourl,
@@ -194,7 +192,7 @@ SELECT
         WHEN user_id1 = $1 THEN user_id2
         ELSE user_id1
     END AS friend_id,
-    users.id, users.username, users.email, users.firstname, users.lastname, users.phone_no, users.private_account, users.nationality, users.age, users.birthday, users.gender, users.photourl, users.created_at
+    users.id, users.username, users.email, users.firstname, users.lastname, users.phone_no, users.private_account, users.nationality, users.birthday, users.gender, users.photourl, users.created_at
 FROM friends JOIN users ON friends.user_id2 = users.id
 WHERE (user_id1 = $1 OR user_id2 = $1)
 AND status = 'Accepted'
@@ -211,7 +209,6 @@ type ListFriendsByUserIdRow struct {
 	PhoneNo        string         `json:"phone_no"`
 	PrivateAccount bool           `json:"private_account"`
 	Nationality    string         `json:"nationality"`
-	Age            int32          `json:"age"`
 	Birthday       time.Time      `json:"birthday"`
 	Gender         string         `json:"gender"`
 	Photourl       sql.NullString `json:"photourl"`
@@ -237,7 +234,6 @@ func (q *Queries) ListFriendsByUserId(ctx context.Context, userId1 sql.NullInt32
 			&i.PhoneNo,
 			&i.PrivateAccount,
 			&i.Nationality,
-			&i.Age,
 			&i.Birthday,
 			&i.Gender,
 			&i.Photourl,

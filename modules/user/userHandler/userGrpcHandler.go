@@ -3,6 +3,7 @@ package userHandler
 import (
 	"context"
 	"errors"
+	"log"
 
 	userPb "github.com/Win-TS/gleam-backend.git/modules/user/userPb"
 	"github.com/Win-TS/gleam-backend.git/modules/user/userUsecase"
@@ -55,6 +56,8 @@ func (g *userGrpcHandler) GetBatchUserProfiles(ctx context.Context, req *userPb.
 	if err != nil {
 		return nil, err
 	}
+
+	log.Println(users)
 
 	var userProfileRes []*userPb.GetBatchUserProfileRes_UserProfile
 	for _, user := range users {

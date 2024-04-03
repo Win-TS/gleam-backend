@@ -113,10 +113,22 @@ func (u *userUsecase) GetUserProfile(pctx context.Context, id int) (user.UserPro
 }
 
 func (u *userUsecase) GetBatchUserProfiles(pctx context.Context, ids []int32) ([]userdb.GetBatchUserProfilesRow, error) {
-	userData, err := u.store.GetBatchUserProfiles(pctx, ids)
-	if err != nil {
-		return []userdb.GetBatchUserProfilesRow{}, err
+	userData := make([]userdb.GetBatchUserProfilesRow, 0, len(ids))
+	for _, id := range ids {
+		user, err := u.GetUserInfo(pctx, int(id))
+		if err != nil {
+			return []userdb.GetBatchUserProfilesRow{}, err
+		}
+		userData = append(userData, userdb.GetBatchUserProfilesRow{
+			ID:        int32(id),
+			Username:  user.Username,
+			Email:     user.Email,
+			Firstname: user.Firstname,
+			Lastname:  user.Lastname,
+			Photourl:  utils.ConvertStringToSqlNullString(user.Photourl.String),
+		})
 	}
+
 	return userData, nil
 }
 
@@ -204,7 +216,7 @@ func (u *userUsecase) RegisterNewUser(pctx context.Context, payload *user.NewUse
 
 	result, err := conn.Auth().RegisterNewUser(pctx, &authPb.RegisterNewUserReq{
 		Email:    payload.Email,
-		PhoneNo:  "+" +(payload.PhoneNo),
+		PhoneNo:  "+" + (payload.PhoneNo),
 		Password: payload.Password,
 		Username: payload.Username,
 		UserId:   int32(newUser.ID),

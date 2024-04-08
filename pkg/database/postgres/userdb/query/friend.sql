@@ -30,10 +30,18 @@ SELECT
         ELSE user_id1
     END AS friend_id,
     users.*
-FROM friends JOIN users ON friends.user_id2 = users.id
-WHERE (user_id1 = $1 OR user_id2 = $1)
-AND status = 'Accepted'
-ORDER BY friend_id;
+FROM 
+    friends 
+JOIN 
+    users ON (CASE
+                WHEN user_id1 = $1 THEN user_id2
+                ELSE user_id1
+            END) = users.id
+WHERE 
+    (user_id1 = $1 OR user_id2 = $1)
+    AND status = 'Accepted'
+ORDER BY 
+    friend_id;
 
 -- name: EditFriendStatusAccepted :exec
 UPDATE friends SET status = 'Accepted'

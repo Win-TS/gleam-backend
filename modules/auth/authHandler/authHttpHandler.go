@@ -21,6 +21,7 @@ type (
 		FindUserByUID(c echo.Context) error
 		DeleteUser(c echo.Context) error
 		UpdatePassword(c echo.Context) error
+		VerifyToken(c echo.Context) error
 	}
 
 	authHttpHandler struct {
@@ -116,4 +117,16 @@ func (h *authHttpHandler) UpdatePassword(c echo.Context) error {
 	}
 
 	return response.SuccessResponse(c, http.StatusOK, res)
+}
+
+func (h *authHttpHandler) VerifyToken(c echo.Context) error {
+	ctx := context.Background()
+	token := c.Request().Header.Get("Authorization")
+
+	authToken, err := h.authUsecase.VerifyToken(ctx, token)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	return response.SuccessResponse(c, http.StatusOK, authToken)
 }

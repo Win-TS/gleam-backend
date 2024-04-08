@@ -193,10 +193,18 @@ SELECT
         ELSE user_id1
     END AS friend_id,
     users.id, users.username, users.email, users.firstname, users.lastname, users.phone_no, users.private_account, users.nationality, users.birthday, users.gender, users.photourl, users.created_at
-FROM friends JOIN users ON friends.user_id2 = users.id
-WHERE (user_id1 = $1 OR user_id2 = $1)
-AND status = 'Accepted'
-ORDER BY friend_id
+FROM 
+    friends 
+JOIN 
+    users ON (CASE
+                WHEN user_id1 = $1 THEN user_id2
+                ELSE user_id1
+            END) = users.id
+WHERE 
+    (user_id1 = $1 OR user_id2 = $1)
+    AND status = 'Accepted'
+ORDER BY 
+    friend_id
 `
 
 type ListFriendsByUserIdRow struct {

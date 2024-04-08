@@ -41,4 +41,5 @@ func (s *server) authService() {
 	auth.GET("/find/uid", httpHandler.FindUserByUID)
 	auth.DELETE("/delete", httpHandler.DeleteUser)
 	auth.PUT("/update-password", httpHandler.UpdatePassword)
+	auth.GET("/verify-token", httpHandler.VerifyToken)
 }

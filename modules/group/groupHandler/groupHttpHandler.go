@@ -339,7 +339,12 @@ func (h *groupHttpHandler) GetGroupById(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 
-	groupInfo, err := h.groupUsecase.GetGroupById(ctx, groupId)
+	userId, err := strconv.Atoi(c.QueryParam("user_id"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	groupInfo, err := h.groupUsecase.GetGroupById(ctx, groupId, userId)
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}

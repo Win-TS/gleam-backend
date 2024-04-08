@@ -368,7 +368,7 @@ func (h *userHttpHandler) FriendsCount(c echo.Context) error {
 // GetFriendsRequestedList returns a list of pending friend requests for a given user ID.
 func (h *userHttpHandler) FriendsRequestedList(c echo.Context) error {
 	ctx := context.Background()
-	userIDStr := c.QueryParam("user_id1")
+	userIDStr := c.QueryParam("user_id")
 	userID, err := strconv.Atoi(userIDStr)
 	if err != nil {
 		return response.ErrResponse(c, http.StatusBadRequest, "Invalid user ID")
@@ -384,7 +384,7 @@ func (h *userHttpHandler) FriendsRequestedList(c echo.Context) error {
 // GetFriendsPendingList returns a list of pending friend requests for a given user ID.
 func (h *userHttpHandler) FriendsPendingList(c echo.Context) error {
 	ctx := context.Background()
-	userIDStr := c.QueryParam("user_id2")
+	userIDStr := c.QueryParam("user_id")
 	userID, err := strconv.Atoi(userIDStr)
 	if err != nil {
 		return response.ErrResponse(c, http.StatusBadRequest, "Invalid user ID")

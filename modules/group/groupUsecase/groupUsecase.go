@@ -30,7 +30,7 @@ type (
 		DeclineGroupRequest(pctx context.Context, args groupdb.DeleteRequestToJoinGroupParams, declinerId int) error
 		GetGroupJoinRequests(pctx context.Context, groupId int, grpcUrl string) ([]group.GroupRequestRes, error)
 		GetUserJoinRequests(pctx context.Context, userId int) ([]groupdb.GroupRequest, error)
-		GetGroupById(pctx context.Context, groupId int) (groupdb.GetGroupByIDRow, error)
+		GetGroupById(pctx context.Context, groupId, userId int) (group.GetGroupByIdRes, error)
 		GetGroupMembersByGroupId(pctx context.Context, groupId int, grpcUrl string) ([]group.GroupMemberRes, error)
 		ListGroups(pctx context.Context, args groupdb.ListGroupsParams) ([]groupdb.ListGroupsRow, error)
 		EditGroupName(pctx context.Context, args groupdb.EditGroupNameParams, editorId int32) (groupdb.GetGroupByIDRow, error)
@@ -279,12 +279,36 @@ func (u *groupUsecase) GetUserJoinRequests(pctx context.Context, userId int) ([]
 	return requests, nil
 }
 
-func (u *groupUsecase) GetGroupById(pctx context.Context, groupId int) (groupdb.GetGroupByIDRow, error) {
+func (u *groupUsecase) GetGroupById(pctx context.Context, groupId, userId int) (group.GetGroupByIdRes, error) {
 	groupData, err := u.store.GetGroupByID(pctx, int32(groupId))
 	if err != nil {
-		return groupdb.GetGroupByIDRow{}, err
+		return group.GetGroupByIdRes{}, err
 	}
-	return groupData, nil
+
+	memberInfo := groupdb.GetMemberInfoRow{}
+
+	if userId != -1 {
+		memberInfo, err = u.store.GetMemberInfo(pctx, groupdb.GetMemberInfoParams{
+			MemberID: int32(userId),
+			GroupID:  int32(groupId),
+		})
+	}
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return group.GetGroupByIdRes{
+				GroupInfo: groupData,
+				UserId:    int32(userId),
+				Status:    "non-member",
+			}, nil
+		}
+		return group.GetGroupByIdRes{}, err
+	}
+	return group.GetGroupByIdRes{
+		GroupInfo: groupData,
+		UserId:    int32(userId),
+		Status:    memberInfo.Role,
+	}, nil
 }
 
 func (u *groupUsecase) GetGroupMembersByGroupId(pctx context.Context, groupId int, grpcUrl string) ([]group.GroupMemberRes, error) {
@@ -343,12 +367,12 @@ func (u *groupUsecase) EditGroupName(pctx context.Context, args groupdb.EditGrou
 		return groupdb.GetGroupByIDRow{}, err
 	}
 
-	updatedGroup, err := u.GetGroupById(pctx, int(args.GroupID))
+	updatedGroup, err := u.GetGroupById(pctx, int(args.GroupID), -1)
 	if err != nil {
 		return groupdb.GetGroupByIDRow{}, err
 	}
 
-	return updatedGroup, nil
+	return updatedGroup.GroupInfo, nil
 }
 
 func (u *groupUsecase) EditGroupPhoto(pctx context.Context, args groupdb.EditGroupPhotoParams, editorId int32) (groupdb.GetGroupByIDRow, error) {
@@ -363,12 +387,12 @@ func (u *groupUsecase) EditGroupPhoto(pctx context.Context, args groupdb.EditGro
 	if err := u.store.EditGroupPhoto(pctx, args); err != nil {
 		return groupdb.GetGroupByIDRow{}, err
 	}
-	groupData, err := u.GetGroupById(pctx, int(args.GroupID))
+	groupData, err := u.GetGroupById(pctx, int(args.GroupID), -1)
 	if err != nil {
 		return groupdb.GetGroupByIDRow{}, err
 	}
 
-	return groupData, nil
+	return groupData.GroupInfo, nil
 }
 
 func (u *groupUsecase) EditGroupVisibility(pctx context.Context, args groupdb.EditGroupVisibilityParams, editorId int32) (groupdb.GetGroupByIDRow, error) {
@@ -384,11 +408,11 @@ func (u *groupUsecase) EditGroupVisibility(pctx context.Context, args groupdb.Ed
 		return groupdb.GetGroupByIDRow{}, err
 	}
 
-	groupData, err := u.GetGroupById(pctx, int(args.GroupID))
+	groupData, err := u.GetGroupById(pctx, int(args.GroupID), -1)
 	if err != nil {
 		return groupdb.GetGroupByIDRow{}, err
 	}
-	return groupData, nil
+	return groupData.GroupInfo, nil
 }
 
 func (u *groupUsecase) EditGroupDescription(pctx context.Context, args groupdb.EditGroupDescriptionParams, editorId int32) (groupdb.GetGroupByIDRow, error) {
@@ -405,12 +429,12 @@ func (u *groupUsecase) EditGroupDescription(pctx context.Context, args groupdb.E
 		return groupdb.GetGroupByIDRow{}, err
 	}
 
-	updatedGroup, err := u.GetGroupById(pctx, int(args.GroupID))
+	updatedGroup, err := u.GetGroupById(pctx, int(args.GroupID), -1)
 	if err != nil {
 		return groupdb.GetGroupByIDRow{}, err
 	}
 
-	return updatedGroup, nil
+	return updatedGroup.GroupInfo, nil
 }
 
 func (u *groupUsecase) EditMemberRole(pctx context.Context, args groupdb.EditMemberRoleParams, editorId int32) (groupdb.GetMemberInfoRow, error) {

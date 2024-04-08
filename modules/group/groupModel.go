@@ -3,6 +3,8 @@ package group
 import (
 	"database/sql"
 	"time"
+
+	groupdb "github.com/Win-TS/gleam-backend.git/pkg/database/postgres/groupdb/sqlc"
 	//groupdb "github.com/Win-TS/gleam-backend.git/pkg/database/postgres/groupdb/sqlc"
 )
 
@@ -128,5 +130,11 @@ type (
 		CreatedAt      time.Time      `json:"created_at"`
 		TagName        string         `json:"tag_name"`
 		TotalMember    int32          `json:"total_member"`
+	}
+
+	GetGroupByIdRes struct {
+		GroupInfo groupdb.GetGroupByIDRow `json:"group_info"`
+		UserId    int32                   `json:"user_id"`
+		Status    string                  `json:"status"`
 	}
 )

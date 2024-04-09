@@ -15,8 +15,8 @@ CREATE TABLE users (
 
 CREATE TABLE friends (
     id SERIAL PRIMARY KEY,
-    user_id1 INTEGER REFERENCES users(id),
-    user_id2 INTEGER REFERENCES users(id),
+    user_id1 INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    user_id2 INTEGER REFERENCES users(id) ON DELETE CASCADE,
     status VARCHAR DEFAULT 'Pending',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
 );

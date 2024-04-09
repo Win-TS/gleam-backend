@@ -239,3 +239,18 @@ UPDATE groups
 SET tag_id = $2
 WHERE group_id = $1
 RETURNING *;
+
+-- name: DeleteGroupMembers :exec
+DELETE FROM group_members WHERE member_id = $1;
+
+-- name: DeleteGroupRequests :exec
+DELETE FROM group_requests WHERE member_id = $1;
+
+-- name: DeletePosts :exec
+DELETE FROM posts WHERE member_id = $1;
+
+-- name: DeletePostReactions :exec
+DELETE FROM post_reactions WHERE member_id = $1;
+
+-- name: DeletePostComments :exec
+DELETE FROM post_comments WHERE member_id = $1;

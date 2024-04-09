@@ -20,8 +20,13 @@ type Querier interface {
 	CreateStreakSet(ctx context.Context, arg CreateStreakSetParams) (StreakSet, error)
 	DeleteComment(ctx context.Context, commentID int32) error
 	DeleteGroup(ctx context.Context, groupID int32) error
+	DeleteGroupMembers(ctx context.Context, memberID int32) error
+	DeleteGroupRequests(ctx context.Context, memberID int32) error
 	DeleteMember(ctx context.Context, arg DeleteMemberParams) error
 	DeletePost(ctx context.Context, postID int32) error
+	DeletePostComments(ctx context.Context, memberID int32) error
+	DeletePostReactions(ctx context.Context, memberID int32) error
+	DeletePosts(ctx context.Context, memberID int32) error
 	DeleteReaction(ctx context.Context, reactionID int32) error
 	DeleteRequestToJoinGroup(ctx context.Context, arg DeleteRequestToJoinGroupParams) error
 	DeleteTag(ctx context.Context, tagID int32) error

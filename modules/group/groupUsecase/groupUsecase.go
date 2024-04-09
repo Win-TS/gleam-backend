@@ -79,6 +79,7 @@ type (
 		GetUserProfile(pctx context.Context, grpcUrl string, req *userPb.GetUserProfileReq) (*userPb.GetUserProfileRes, error)
 		GetPostsForFollowingFeedByMemberId(pctx context.Context, userId int32, grpcUrl string) ([]group.PostsForFeedRes, error)
 		SearchGroupByGroupName(ctx context.Context, groupname string) ([]groupdb.SearchGroupByGroupNameRow, error)
+		DeleteUserData(ctx context.Context, userID int32) error
 	}
 
 	groupUsecase struct {
@@ -1248,4 +1249,28 @@ func (u *groupUsecase) SearchGroupByGroupName(ctx context.Context, groupname str
 	}
 
 	return visibleGroups, nil
+}
+
+func (u *groupUsecase) DeleteUserData(ctx context.Context, userID int32) error {
+	if err := u.store.DeleteGroupMembers(ctx, userID); err != nil {
+		return fmt.Errorf("failed to delete group members: %v", err)
+	}
+
+	if err := u.store.DeleteGroupRequests(ctx, userID); err != nil {
+		return fmt.Errorf("failed to delete group requests: %v", err)
+	}
+
+	if err := u.store.DeletePosts(ctx, userID); err != nil {
+		return fmt.Errorf("failed to delete posts: %v", err)
+	}
+
+	if err := u.store.DeletePostReactions(ctx, userID); err != nil {
+		return fmt.Errorf("failed to delete post reactions: %v", err)
+	}
+
+	if err := u.store.DeletePostComments(ctx, userID); err != nil {
+		return fmt.Errorf("failed to delete post comments: %v", err)
+	}
+
+	return nil
 }

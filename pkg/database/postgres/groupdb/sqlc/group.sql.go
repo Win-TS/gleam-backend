@@ -126,6 +126,24 @@ func (q *Queries) DeleteGroup(ctx context.Context, groupID int32) error {
 	return err
 }
 
+const deleteGroupMembers = `-- name: DeleteGroupMembers :exec
+DELETE FROM group_members WHERE member_id = $1
+`
+
+func (q *Queries) DeleteGroupMembers(ctx context.Context, memberID int32) error {
+	_, err := q.db.ExecContext(ctx, deleteGroupMembers, memberID)
+	return err
+}
+
+const deleteGroupRequests = `-- name: DeleteGroupRequests :exec
+DELETE FROM group_requests WHERE member_id = $1
+`
+
+func (q *Queries) DeleteGroupRequests(ctx context.Context, memberID int32) error {
+	_, err := q.db.ExecContext(ctx, deleteGroupRequests, memberID)
+	return err
+}
+
 const deleteMember = `-- name: DeleteMember :exec
 DELETE FROM group_members
 WHERE member_id = $1
@@ -139,6 +157,33 @@ type DeleteMemberParams struct {
 
 func (q *Queries) DeleteMember(ctx context.Context, arg DeleteMemberParams) error {
 	_, err := q.db.ExecContext(ctx, deleteMember, arg.MemberID, arg.GroupID)
+	return err
+}
+
+const deletePostComments = `-- name: DeletePostComments :exec
+DELETE FROM post_comments WHERE member_id = $1
+`
+
+func (q *Queries) DeletePostComments(ctx context.Context, memberID int32) error {
+	_, err := q.db.ExecContext(ctx, deletePostComments, memberID)
+	return err
+}
+
+const deletePostReactions = `-- name: DeletePostReactions :exec
+DELETE FROM post_reactions WHERE member_id = $1
+`
+
+func (q *Queries) DeletePostReactions(ctx context.Context, memberID int32) error {
+	_, err := q.db.ExecContext(ctx, deletePostReactions, memberID)
+	return err
+}
+
+const deletePosts = `-- name: DeletePosts :exec
+DELETE FROM posts WHERE member_id = $1
+`
+
+func (q *Queries) DeletePosts(ctx context.Context, memberID int32) error {
+	_, err := q.db.ExecContext(ctx, deletePosts, memberID)
 	return err
 }
 

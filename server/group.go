@@ -6,6 +6,8 @@ import (
 	"github.com/Win-TS/gleam-backend.git/modules/group/groupHandler"
 	"github.com/Win-TS/gleam-backend.git/modules/group/groupUsecase"
 	groupdb "github.com/Win-TS/gleam-backend.git/pkg/database/postgres/groupdb/sqlc"
+	groupPb "github.com/Win-TS/gleam-backend.git/modules/group/groupPb"
+	"github.com/Win-TS/gleam-backend.git/pkg/grpcconn"
 )
 
 func (s *server) groupService() {
@@ -18,7 +20,13 @@ func (s *server) groupService() {
 	httpHandler := groupHandler.NewGroupHttpHandler(s.cfg, usecase)
 	grpcHandler := groupHandler.NewGroupGrpcHandler(usecase)
 
-	_ = grpcHandler
+	// gRPC
+	go func() {
+		grpcServer, lis := grpcconn.NewGrpcServer(s.cfg, s.cfg.Grpc.GroupUrl)
+		groupPb.RegisterGroupGrpcServiceServer(grpcServer, grpcHandler)
+		log.Printf("User gRPC server listening on %s", s.cfg.Grpc.GroupUrl)
+		grpcServer.Serve(lis)
+	}()
 
 	group := s.app.Group("/group_v1")
 	post := s.app.Group("/post_v1")

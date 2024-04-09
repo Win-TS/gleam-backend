@@ -8,7 +8,6 @@ import (
 	"io"
 	"log"
 
-	//"log"
 	"math/rand"
 	"time"
 
@@ -18,11 +17,10 @@ import (
 	"github.com/Win-TS/gleam-backend.git/modules/user"
 
 	authPb "github.com/Win-TS/gleam-backend.git/modules/auth/authPb"
+	groupPb "github.com/Win-TS/gleam-backend.git/modules/group/groupPb"
 	userdb "github.com/Win-TS/gleam-backend.git/pkg/database/postgres/userdb/sqlc"
 	"github.com/Win-TS/gleam-backend.git/pkg/grpcconn"
 
-	//userPb "github.com/Win-TS/gleam-backend.git/modules/user/userPb"
-	//"github.com/Win-TS/gleam-backend.git/pkg/grpcconn"
 	"github.com/Win-TS/gleam-backend.git/pkg/utils"
 	"github.com/jaswdr/faker"
 )
@@ -41,7 +39,7 @@ type UserUsecaseService interface {
 	EditUsername(pctx context.Context, args userdb.ChangeUsernameParams) (user.UserProfile, error)
 	EditPhoneNumber(pctx context.Context, args userdb.ChangePhoneNoParams) (userdb.User, error)
 	EditName(ctx context.Context, userID int32, firstName, lastName string) (user.UserProfile, error)
-	DeleteUser(pctx context.Context, id int, grpcUrl string) error
+	DeleteUser(pctx context.Context, id int, authGrpcUrl, groupGrpcUrl string) error
 	FriendInfo(ctx context.Context, args userdb.GetFriendParams) ([]userdb.Friend, error)
 	FriendListById(pctx context.Context, id int) ([]userdb.ListFriendsByUserIdRow, error)
 	FriendsCount(pctx context.Context, userId1 sql.NullInt32) (int64, error)
@@ -209,7 +207,7 @@ func (u *userUsecase) RegisterNewUser(pctx context.Context, payload *user.NewUse
 
 	conn, err := grpcconn.NewGrpcClient(grpcUrl)
 	if err != nil {
-		u.DeleteUser(pctx, int(newUser.ID), grpcUrl)
+		u.DeleteUser(pctx, int(newUser.ID), grpcUrl, "")
 		log.Printf("error - gRPC connection failed: %s", err.Error())
 		return &user.NewUserRes{}, errors.New("error: gRPC connection failed")
 	}
@@ -222,13 +220,13 @@ func (u *userUsecase) RegisterNewUser(pctx context.Context, payload *user.NewUse
 		UserId:   int32(newUser.ID),
 	})
 	if err != nil {
-		u.DeleteUser(pctx, int(newUser.ID), grpcUrl)
+		u.DeleteUser(pctx, int(newUser.ID), grpcUrl, "")
 		log.Printf("error - RegisterNewUser failed: %s", err.Error())
 		return &user.NewUserRes{}, errors.New("error: RegisterNewUser failed")
 	}
 
 	if !result.Success {
-		u.DeleteUser(pctx, int(newUser.ID), grpcUrl)
+		u.DeleteUser(pctx, int(newUser.ID), grpcUrl, "")
 		return &user.NewUserRes{}, errors.New("error: RegisterNewUser failed")
 	}
 
@@ -287,29 +285,44 @@ func (u *userUsecase) EditPhoneNumber(pctx context.Context, args userdb.ChangePh
 	return u.GetUserInfo(pctx, int(args.ID))
 }
 
-func (u *userUsecase) DeleteUser(pctx context.Context, id int, grpcUrl string) error {
+func (u *userUsecase) DeleteUser(pctx context.Context, id int, authGrpcUrl, groupGrpcUrl string) error {
 	if err := u.store.DeleteUser(pctx, int32(id)); err != nil {
 		return err
 	}
+
+	ctx, cancel := context.WithTimeout(pctx, 30*time.Second)
+	defer cancel()
 
 	// user, err := u.GetUserInfo(pctx, id)
 	// if err != nil {
 	// 	return err
 	// }
 
-	// conn, err := grpcconn.NewGrpcClient(grpcUrl)
+	groupConn, err := grpcconn.NewGrpcClient(groupGrpcUrl)
+	if err != nil {
+		log.Printf("error - gRPC connection failed: %s", err.Error())
+		return errors.New("error: gRPC connection failed")
+	}
+
+	_, err = groupConn.Group().DeleteUserData(ctx, &groupPb.DeleteUserDataReq{UserId: int32(id)})
+	if err != nil {
+		log.Printf("error - DeleteUserData failed: %s", err.Error())
+		return errors.New("error: DeleteUserData failed")
+	}
+
+	// authConn, err := grpcconn.NewGrpcClient(authGrpcUrl)
 	// if err != nil {
 	// 	log.Printf("error - gRPC connection failed: %s", err.Error())
 	// 	return errors.New("error: gRPC connection failed")
 	// }
 
-	// uidRes, err := conn.Auth().GetUidFromEmail(pctx, &authPb.GetUidFromEmailReq{Email: user.Email})
+	// uidRes, err := authConn.Auth().GetUidFromEmail(pctx, &authPb.GetUidFromEmailReq{Email: user.Email})
 	// if err != nil {
 	// 	log.Printf("error - DeleteUser (GetUidFromEmail) failed: %s", err.Error())
 	// 	return errors.New("error: DeleteUser failed")
 	// }
 
-	// result, err := conn.Auth().DeleteUser(pctx, &authPb.DeleteUserReq{Uid: uidRes.Uid})
+	// result, err := authConn.Auth().DeleteUser(pctx, &authPb.DeleteUserReq{Uid: uidRes.Uid})
 	// if err != nil {
 	// 	log.Printf("error - DeleteUser (DeleteUser) failed: %s", err.Error())
 	// 	return errors.New("error: DeleteUser failed")
@@ -438,8 +451,7 @@ func (u *userUsecase) createUser(ctx context.Context, seed int16) (userdb.User, 
 	}
 	userData.Birthday = fakeBirthday
 
-	fakeImageFile := fake.Image().Image(200, 200)
-	filename := fakeImageFile.Name()
+	filename := "https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/groupphoto%2F18.webp?alt=media"
 	userData.Photourl = sql.NullString{String: filename, Valid: true}
 
 	createdUser, err := u.store.CreateUser(ctx, userData)

@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
+option go_package = "github.com/Win-TS/gleam-backend";
+
+// Structure
+message DeleteUserDataReq {
+    int32 userId = 1;
+}
+
+service GroupGrpcService {
+    rpc DeleteUserData(DeleteUserDataReq) returns (google.protobuf.Empty);
+}

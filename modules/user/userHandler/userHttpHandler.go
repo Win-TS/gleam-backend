@@ -41,6 +41,7 @@ type (
 		UserMockData(c echo.Context) error
 		EditUserPhoto(c echo.Context) error
 		SearchUsersByUsername(c echo.Context) error
+		EditPrivateAccount(c echo.Context) error
 	}
 
 	userHttpHandler struct {
@@ -463,4 +464,29 @@ func (h *userHttpHandler) SearchUsersByUsername(c echo.Context) error {
 	}
 
 	return response.SuccessResponse(c, http.StatusOK, userInfo)
+}
+
+func (h *userHttpHandler) EditPrivateAccount(c echo.Context) error {
+	ctx := context.Background()
+	userId, err := strconv.Atoi(c.QueryParam("user_id"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	privateAccount, err := strconv.ParseBool(c.FormValue("private_account"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, "Invalid private account")
+	}
+
+	args := userdb.EditPrivateAccountParams{
+		ID:             int32(userId),
+		PrivateAccount: privateAccount,
+	}
+
+	user, err := h.userUsecase.EditPrivateAccount(ctx, args)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	return response.SuccessResponse(c, http.StatusOK, user)
 }

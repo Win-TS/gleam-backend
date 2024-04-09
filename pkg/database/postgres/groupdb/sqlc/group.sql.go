@@ -933,6 +933,48 @@ func (q *Queries) GetTagByTagID(ctx context.Context, tagID int32) (Tag, error) {
 	return i, err
 }
 
+const getUserGroups = `-- name: GetUserGroups :many
+SELECT g.group_id, g.group_name, g.photo_url, g.group_type
+FROM group_members gm
+JOIN groups g ON g.group_id = gm.group_id
+WHERE gm.member_id = $1
+`
+
+type GetUserGroupsRow struct {
+	GroupID   int32          `json:"group_id"`
+	GroupName string         `json:"group_name"`
+	PhotoUrl  sql.NullString `json:"photo_url"`
+	GroupType string         `json:"group_type"`
+}
+
+func (q *Queries) GetUserGroups(ctx context.Context, memberID int32) ([]GetUserGroupsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getUserGroups, memberID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetUserGroupsRow{}
+	for rows.Next() {
+		var i GetUserGroupsRow
+		if err := rows.Scan(
+			&i.GroupID,
+			&i.GroupName,
+			&i.PhotoUrl,
+			&i.GroupType,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const initializeCategory = `-- name: InitializeCategory :exec
 INSERT INTO tag_category (category_name)
 VALUES ('Sports and Fitness'), 

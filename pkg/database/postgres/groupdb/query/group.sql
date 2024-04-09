@@ -271,3 +271,9 @@ FROM group_requests gr
 JOIN group_members gm ON gr.group_id = gm.group_id
 WHERE gm.member_id = $1 AND gm.role != 'member'
 GROUP BY gm.member_id;
+
+-- name: GetUserGroups :many
+SELECT g.group_id, g.group_name, g.photo_url, g.group_type
+FROM group_members gm
+JOIN groups g ON g.group_id = gm.group_id
+WHERE gm.member_id = $1;

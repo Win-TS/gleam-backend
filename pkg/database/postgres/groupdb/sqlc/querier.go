@@ -78,6 +78,7 @@ type Querier interface {
 	GetTagByGroupId(ctx context.Context, groupID int32) (GetTagByGroupIdRow, error)
 	GetTagByTagID(ctx context.Context, tagID int32) (Tag, error)
 	GetUnendedStreakSetByUserID(ctx context.Context, userID int32) ([]StreakSet, error)
+	GetUserGroups(ctx context.Context, memberID int32) ([]GetUserGroupsRow, error)
 	InitializeCategory(ctx context.Context) error
 	ListGroups(ctx context.Context, arg ListGroupsParams) ([]ListGroupsRow, error)
 	NumberMemberInGroup(ctx context.Context, groupID int32) (int64, error)

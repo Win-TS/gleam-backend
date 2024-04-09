@@ -137,4 +137,9 @@ type (
 		UserId    int32                   `json:"user_id"`
 		Status    string                  `json:"status"`
 	}
+
+	GetUserGroupRes struct {
+		SocialGroups   []groupdb.GetUserGroupsRow `json:"social_groups"`
+		PersonalGroups []groupdb.GetUserGroupsRow `json:"personal_groups"`
+	}
 )

@@ -50,6 +50,7 @@ func (s *server) userService() {
 	user.PATCH("/editname", httpHandler.EditName)
 	user.DELETE("/deleteuser", httpHandler.DeleteUser)
 	user.PATCH("/editphoto", httpHandler.EditUserPhoto)
+	user.PATCH("/editprivateaccount", httpHandler.EditPrivateAccount)
 
 	user.GET("/search", httpHandler.SearchUsersByUsername)
 

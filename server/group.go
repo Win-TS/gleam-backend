@@ -60,6 +60,7 @@ func (s *server) groupService() {
 	group.GET("/search", httpHandler.SearchGroupByGroupName)
 	group.GET("/acceptorrequests", httpHandler.GetAcceptorGroupRequests)
 	group.GET("/acceptorrequestscount", httpHandler.GetAcceptorGroupRequestsCount)
+	group.GET("/usergroups", httpHandler.GetUserGroups)
 
 	// Post Mock data
 	post.POST("/mock", httpHandler.PostMockData)

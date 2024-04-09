@@ -50,6 +50,7 @@ type UserUsecaseService interface {
 	UserMockData(ctx context.Context, count int16) error
 	EditUserPhoto(pctx context.Context, args userdb.EditUserProfilePictureParams) (user.UserProfile, error)
 	SearchUsersByUsername(ctx context.Context, username string) ([]userdb.SearchUsersByUsernameRow, error)
+	EditPrivateAccount(ctx context.Context, args userdb.EditPrivateAccountParams) (userdb.User, error)
 }
 
 type userUsecase struct {
@@ -552,4 +553,12 @@ func (u *userUsecase) editBothNames(ctx context.Context, userID int32, firstName
 
 func (u *userUsecase) SearchUsersByUsername(ctx context.Context, username string) ([]userdb.SearchUsersByUsernameRow, error) {
 	return u.store.SearchUsersByUsername(ctx, utils.ConvertStringToSqlNullString(username))
+}
+
+func (u *userUsecase) EditPrivateAccount(ctx context.Context, args userdb.EditPrivateAccountParams) (userdb.User, error) {
+	if err := u.store.EditPrivateAccount(ctx, args); err != nil {
+		return userdb.User{}, err
+	}
+
+	return u.GetUserInfo(ctx, int(args.ID))
 }

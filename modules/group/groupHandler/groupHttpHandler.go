@@ -71,6 +71,7 @@ type (
 		SearchGroupByGroupName(c echo.Context) error
 		GetAcceptorGroupRequests(c echo.Context) error
 		GetAcceptorGroupRequestsCount(c echo.Context) error
+		GetUserGroups(c echo.Context) error
 	}
 
 	groupHttpHandler struct {
@@ -1587,4 +1588,19 @@ func (h *groupHttpHandler) GetAcceptorGroupRequestsCount(c echo.Context) error {
 	}
 
 	return response.SuccessResponse(c, http.StatusOK, groupRequestsCount)
+}
+
+func (h *groupHttpHandler) GetUserGroups(c echo.Context) error {
+	ctx := context.Background()
+	userId, err := strconv.Atoi(c.QueryParam("user_id"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	groups, err := h.groupUsecase.GetUserGroups(ctx, int32(userId))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	return response.SuccessResponse(c, http.StatusOK, groups)
 }

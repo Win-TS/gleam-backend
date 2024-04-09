@@ -166,6 +166,24 @@ func (q *Queries) EditLastNameOnly(ctx context.Context, arg EditLastNameOnlyPara
 	return err
 }
 
+const editPrivateAccount = `-- name: EditPrivateAccount :exec
+UPDATE users
+SET
+    private_account = $2
+WHERE
+    id = $1
+`
+
+type EditPrivateAccountParams struct {
+	ID             int32 `json:"id"`
+	PrivateAccount bool  `json:"private_account"`
+}
+
+func (q *Queries) EditPrivateAccount(ctx context.Context, arg EditPrivateAccountParams) error {
+	_, err := q.db.ExecContext(ctx, editPrivateAccount, arg.ID, arg.PrivateAccount)
+	return err
+}
+
 const editUserProfilePicture = `-- name: EditUserProfilePicture :exec
 UPDATE users
 SET

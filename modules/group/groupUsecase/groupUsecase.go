@@ -82,6 +82,7 @@ type (
 		DeleteUserData(ctx context.Context, userID int32) error
 		GetAcceptorGroupRequests(ctx context.Context, userId int32) ([]groupdb.GetAcceptorGroupRequestsRow, error)
 		GetAcceptorGroupRequestsCount(ctx context.Context, userId int32) (groupdb.GetAcceptorGroupRequestsCountRow, error)
+		GetUserGroups(ctx context.Context, userId int32) (group.GetUserGroupRes, error)
 	}
 
 	groupUsecase struct {
@@ -1291,4 +1292,27 @@ func (u *groupUsecase) GetAcceptorGroupRequestsCount(ctx context.Context, userId
 		return groupdb.GetAcceptorGroupRequestsCountRow{}, err
 	}
 	return count, nil
+}
+
+func (u *groupUsecase) GetUserGroups(ctx context.Context, userId int32) (group.GetUserGroupRes, error) {
+	groups, err := u.store.GetUserGroups(ctx, userId)
+	if err != nil {
+		return group.GetUserGroupRes{}, err
+	}
+
+	social := make([]groupdb.GetUserGroupsRow, 0)
+	personal := make([]groupdb.GetUserGroupsRow, 0)
+
+	for _, g := range groups {
+		if g.GroupType == "social" {
+			social = append(social, g)
+		} else {
+			personal = append(personal, g)
+		}
+	}
+
+	return group.GetUserGroupRes{
+		SocialGroups:   social,
+		PersonalGroups: personal,
+	}, nil
 }

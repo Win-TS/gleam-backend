@@ -91,3 +91,10 @@ WHERE
 SELECT id, username, email, firstname, lastname, photourl
 FROM users
 WHERE username ILIKE '%' || $1 || '%';
+
+-- name: EditPrivateAccount :exec
+UPDATE users
+SET
+    private_account = $2
+WHERE
+    id = $1;

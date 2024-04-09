@@ -69,6 +69,8 @@ type (
 		PostMockData(c echo.Context) error
 		GetPostsForFollowingFeedByMemberId(c echo.Context) error
 		SearchGroupByGroupName(c echo.Context) error
+		GetAcceptorGroupRequests(c echo.Context) error
+		GetAcceptorGroupRequestsCount(c echo.Context) error
 	}
 
 	groupHttpHandler struct {
@@ -1555,4 +1557,34 @@ func (h *groupHttpHandler) SearchGroupByGroupName(c echo.Context) error {
 	}
 
 	return response.SuccessResponse(c, http.StatusOK, groupInfo)
+}
+
+func (h *groupHttpHandler) GetAcceptorGroupRequests(c echo.Context) error {
+	ctx := context.Background()
+	userId, err := strconv.Atoi(c.QueryParam("user_id"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	groupRequests, err := h.groupUsecase.GetAcceptorGroupRequests(ctx, int32(userId))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	return response.SuccessResponse(c, http.StatusOK, groupRequests)
+}
+
+func (h *groupHttpHandler) GetAcceptorGroupRequestsCount(c echo.Context) error {
+	ctx := context.Background()
+	userId, err := strconv.Atoi(c.QueryParam("user_id"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	groupRequestsCount, err := h.groupUsecase.GetAcceptorGroupRequestsCount(ctx, int32(userId))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	return response.SuccessResponse(c, http.StatusOK, groupRequestsCount)
 }

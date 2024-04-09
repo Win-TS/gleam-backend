@@ -254,3 +254,20 @@ DELETE FROM post_reactions WHERE member_id = $1;
 
 -- name: DeletePostComments :exec
 DELETE FROM post_comments WHERE member_id = $1;
+
+-- name: GetAcceptorGroupRequests :many
+SELECT g.group_id, g.group_name, g.photo_url,
+       COUNT(*) AS request_count
+FROM group_requests gr 
+JOIN group_members gm ON gr.group_id = gm.group_id
+JOIN groups g ON gr.group_id = g.group_id
+WHERE gm.member_id = $1 AND gm.role != 'member'
+GROUP BY g.group_id, g.group_name, g.photo_url;
+
+-- name: GetAcceptorGroupRequestsCount :one
+SELECT gm.member_id,
+       COUNT(*) AS request_count
+FROM group_requests gr 
+JOIN group_members gm ON gr.group_id = gm.group_id
+WHERE gm.member_id = $1 AND gm.role != 'member'
+GROUP BY gm.member_id;

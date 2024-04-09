@@ -57,8 +57,9 @@ func (s *server) groupService() {
 	group.PATCH("/editgroupdescription", httpHandler.EditGroupDescription)
 	group.DELETE("/group", httpHandler.DeleteGroup)
 	group.DELETE("/groupmember", httpHandler.DeleteGroupMember)
-
 	group.GET("/search", httpHandler.SearchGroupByGroupName)
+	group.GET("/acceptorrequests", httpHandler.GetAcceptorGroupRequests)
+	group.GET("/acceptorrequestscount", httpHandler.GetAcceptorGroupRequestsCount)
 
 	// Post Mock data
 	post.POST("/mock", httpHandler.PostMockData)

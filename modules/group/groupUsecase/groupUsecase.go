@@ -80,6 +80,8 @@ type (
 		GetPostsForFollowingFeedByMemberId(pctx context.Context, userId int32, grpcUrl string) ([]group.PostsForFeedRes, error)
 		SearchGroupByGroupName(ctx context.Context, groupname string) ([]groupdb.SearchGroupByGroupNameRow, error)
 		DeleteUserData(ctx context.Context, userID int32) error
+		GetAcceptorGroupRequests(ctx context.Context, userId int32) ([]groupdb.GetAcceptorGroupRequestsRow, error)
+		GetAcceptorGroupRequestsCount(ctx context.Context, userId int32) (groupdb.GetAcceptorGroupRequestsCountRow, error)
 	}
 
 	groupUsecase struct {
@@ -1273,4 +1275,20 @@ func (u *groupUsecase) DeleteUserData(ctx context.Context, userID int32) error {
 	}
 
 	return nil
+}
+
+func (u *groupUsecase) GetAcceptorGroupRequests(ctx context.Context, userId int32) ([]groupdb.GetAcceptorGroupRequestsRow, error) {
+	requests, err := u.store.GetAcceptorGroupRequests(ctx, userId)
+	if err != nil {
+		return nil, err
+	}
+	return requests, nil
+}
+
+func (u *groupUsecase) GetAcceptorGroupRequestsCount(ctx context.Context, userId int32) (groupdb.GetAcceptorGroupRequestsCountRow, error) {
+	count, err := u.store.GetAcceptorGroupRequestsCount(ctx, userId)
+	if err != nil {
+		return groupdb.GetAcceptorGroupRequestsCountRow{}, err
+	}
+	return count, nil
 }

@@ -374,6 +374,72 @@ func (q *Queries) EditTagName(ctx context.Context, arg EditTagNameParams) error 
 	return err
 }
 
+const getAcceptorGroupRequests = `-- name: GetAcceptorGroupRequests :many
+SELECT g.group_id, g.group_name, g.photo_url,
+       COUNT(*) AS request_count
+FROM group_requests gr 
+JOIN group_members gm ON gr.group_id = gm.group_id
+JOIN groups g ON gr.group_id = g.group_id
+WHERE gm.member_id = $1 AND gm.role != 'member'
+GROUP BY g.group_id, g.group_name, g.photo_url
+`
+
+type GetAcceptorGroupRequestsRow struct {
+	GroupID      int32          `json:"group_id"`
+	GroupName    string         `json:"group_name"`
+	PhotoUrl     sql.NullString `json:"photo_url"`
+	RequestCount int64          `json:"request_count"`
+}
+
+func (q *Queries) GetAcceptorGroupRequests(ctx context.Context, memberID int32) ([]GetAcceptorGroupRequestsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getAcceptorGroupRequests, memberID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetAcceptorGroupRequestsRow{}
+	for rows.Next() {
+		var i GetAcceptorGroupRequestsRow
+		if err := rows.Scan(
+			&i.GroupID,
+			&i.GroupName,
+			&i.PhotoUrl,
+			&i.RequestCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getAcceptorGroupRequestsCount = `-- name: GetAcceptorGroupRequestsCount :one
+SELECT gm.member_id,
+       COUNT(*) AS request_count
+FROM group_requests gr 
+JOIN group_members gm ON gr.group_id = gm.group_id
+WHERE gm.member_id = $1 AND gm.role != 'member'
+GROUP BY gm.member_id
+`
+
+type GetAcceptorGroupRequestsCountRow struct {
+	MemberID     int32 `json:"member_id"`
+	RequestCount int64 `json:"request_count"`
+}
+
+func (q *Queries) GetAcceptorGroupRequestsCount(ctx context.Context, memberID int32) (GetAcceptorGroupRequestsCountRow, error) {
+	row := q.db.QueryRowContext(ctx, getAcceptorGroupRequestsCount, memberID)
+	var i GetAcceptorGroupRequestsCountRow
+	err := row.Scan(&i.MemberID, &i.RequestCount)
+	return i, err
+}
+
 const getAvailableCategory = `-- name: GetAvailableCategory :many
 SELECT category_id, category_name
 FROM tag_category

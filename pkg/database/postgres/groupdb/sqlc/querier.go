@@ -43,6 +43,8 @@ type Querier interface {
 	EditTagIcon(ctx context.Context, arg EditTagIconParams) error
 	EditTagName(ctx context.Context, arg EditTagNameParams) error
 	EndStreakSet(ctx context.Context, streakSetID int32) error
+	GetAcceptorGroupRequests(ctx context.Context, memberID int32) ([]GetAcceptorGroupRequestsRow, error)
+	GetAcceptorGroupRequestsCount(ctx context.Context, memberID int32) (GetAcceptorGroupRequestsCountRow, error)
 	GetAvailableCategory(ctx context.Context) ([]TagCategory, error)
 	GetAvailableTags(ctx context.Context) ([]Tag, error)
 	GetCommentByCommentId(ctx context.Context, commentID int32) (PostComment, error)

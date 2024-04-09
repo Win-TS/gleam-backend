@@ -30,6 +30,7 @@ services:
       dockerfile: Dockerfile.auth
     ports:
       - "9000:1323"
+      - "1423:1423"
 
   user-api:
     container_name: gleam-user-api
@@ -38,6 +39,7 @@ services:
       dockerfile: Dockerfile.user
     ports:
       - "9001:1324"
+      - "1523:1523"
     depends_on:
       - user-db
 
@@ -48,5 +50,6 @@ services:
       dockerfile: Dockerfile.group
     ports:
       - "9002:1325"
+      - "1623:1623"
     depends_on:
       - group-db

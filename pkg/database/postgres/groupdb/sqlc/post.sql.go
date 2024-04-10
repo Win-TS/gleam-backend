@@ -130,11 +130,17 @@ func (q *Queries) DeletePost(ctx context.Context, postID int32) error {
 
 const deleteReaction = `-- name: DeleteReaction :exec
 DELETE FROM post_reactions
-WHERE reaction_id = $1
+WHERE post_id = $1 AND member_id = $2 AND reaction = $3
 `
 
-func (q *Queries) DeleteReaction(ctx context.Context, reactionID int32) error {
-	_, err := q.db.ExecContext(ctx, deleteReaction, reactionID)
+type DeleteReactionParams struct {
+	PostID   int32  `json:"post_id"`
+	MemberID int32  `json:"member_id"`
+	Reaction string `json:"reaction"`
+}
+
+func (q *Queries) DeleteReaction(ctx context.Context, arg DeleteReactionParams) error {
+	_, err := q.db.ExecContext(ctx, deleteReaction, arg.PostID, arg.MemberID, arg.Reaction)
 	return err
 }
 

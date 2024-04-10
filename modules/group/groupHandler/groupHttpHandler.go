@@ -1117,12 +1117,14 @@ func (h *groupHttpHandler) EditReaction(c echo.Context) error {
 
 func (h *groupHttpHandler) DeleteReaction(c echo.Context) error {
 	ctx := context.Background()
-	reactionId, err := strconv.Atoi(c.QueryParam("reaction_id"))
-	if err != nil {
+	wrapper := request.ContextWrapper(c)
+
+	req := new(groupdb.DeleteReactionParams)
+	if err := wrapper.Bind(req); err != nil {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 
-	if err := h.groupUsecase.DeleteReaction(ctx, reactionId); err != nil {
+	if err := h.groupUsecase.DeleteReaction(ctx, *req); err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
 

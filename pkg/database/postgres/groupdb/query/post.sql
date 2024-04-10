@@ -93,7 +93,7 @@ WHERE post_id = $1;
 
 -- name: DeleteReaction :exec
 DELETE FROM post_reactions
-WHERE reaction_id = $1;
+WHERE post_id = $1 AND member_id = $2 AND reaction = $3;
 
 -- name: DeleteComment :exec
 DELETE FROM post_comments

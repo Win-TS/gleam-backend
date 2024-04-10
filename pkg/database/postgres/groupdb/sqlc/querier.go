@@ -27,7 +27,7 @@ type Querier interface {
 	DeletePostComments(ctx context.Context, memberID int32) error
 	DeletePostReactions(ctx context.Context, memberID int32) error
 	DeletePosts(ctx context.Context, memberID int32) error
-	DeleteReaction(ctx context.Context, reactionID int32) error
+	DeleteReaction(ctx context.Context, arg DeleteReactionParams) error
 	DeleteRequestToJoinGroup(ctx context.Context, arg DeleteRequestToJoinGroupParams) error
 	DeleteTag(ctx context.Context, tagID int32) error
 	EditComment(ctx context.Context, arg EditCommentParams) error

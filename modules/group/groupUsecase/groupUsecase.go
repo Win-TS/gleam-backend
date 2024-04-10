@@ -52,7 +52,7 @@ type (
 		GetReactionsByPostId(pctx context.Context, postId int, grpcUrl string) ([]group.ReactionPostRes, error)
 		GetReactionsCountByPostId(pctx context.Context, postId int) (int, error)
 		EditReaction(pctx context.Context, args groupdb.EditReactionParams) (groupdb.PostReaction, error)
-		DeleteReaction(pctx context.Context, reactionId int) error
+		DeleteReaction(pctx context.Context, args groupdb.DeleteReactionParams) error
 		CreateComment(pctx context.Context, args groupdb.CreateCommentParams) (groupdb.PostComment, error)
 		GetCommentsByPostId(pctx context.Context, postId int, grpcUrl string) ([]group.CommentRes, error)
 		GetCommentCountByPostId(pctx context.Context, postId int) (int, error)
@@ -702,8 +702,8 @@ func (u *groupUsecase) EditReaction(pctx context.Context, args groupdb.EditReact
 	return updatedReaction, nil
 }
 
-func (u *groupUsecase) DeleteReaction(pctx context.Context, reactionId int) error {
-	if err := u.store.DeleteReaction(pctx, int32(reactionId)); err != nil {
+func (u *groupUsecase) DeleteReaction(pctx context.Context, args groupdb.DeleteReactionParams) error {
+	if err := u.store.DeleteReaction(pctx, args); err != nil {
 		return err
 	}
 	return nil

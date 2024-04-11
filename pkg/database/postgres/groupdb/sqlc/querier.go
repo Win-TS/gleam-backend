@@ -83,7 +83,7 @@ type Querier interface {
 	InitializeCategory(ctx context.Context) error
 	ListGroups(ctx context.Context, arg ListGroupsParams) ([]ListGroupsRow, error)
 	NumberMemberInGroup(ctx context.Context, groupID int32) (int64, error)
-	SearchGroupByGroupName(ctx context.Context, dollar_1 sql.NullString) ([]SearchGroupByGroupNameRow, error)
+	SearchGroupByGroupName(ctx context.Context, arg SearchGroupByGroupNameParams) ([]SearchGroupByGroupNameRow, error)
 	SendRequestToJoinGroup(ctx context.Context, arg SendRequestToJoinGroupParams) (GroupRequest, error)
 	UpdateStreakSetCount(ctx context.Context, arg UpdateStreakSetCountParams) error
 }

@@ -1143,7 +1143,14 @@ SELECT groups.group_id,
 FROM groups
 JOIN tags ON groups.tag_id = tags.tag_id
 WHERE groups.group_name ILIKE '%' || $1 || '%'
+LIMIT $2 OFFSET $3
 `
+
+type SearchGroupByGroupNameParams struct {
+	Column1 sql.NullString `json:"column_1"`
+	Limit   int32          `json:"limit"`
+	Offset  int32          `json:"offset"`
+}
 
 type SearchGroupByGroupNameRow struct {
 	GroupID        int32          `json:"group_id"`
@@ -1160,8 +1167,8 @@ type SearchGroupByGroupNameRow struct {
 	TotalMember    int64          `json:"total_member"`
 }
 
-func (q *Queries) SearchGroupByGroupName(ctx context.Context, dollar_1 sql.NullString) ([]SearchGroupByGroupNameRow, error) {
-	rows, err := q.db.QueryContext(ctx, searchGroupByGroupName, dollar_1)
+func (q *Queries) SearchGroupByGroupName(ctx context.Context, arg SearchGroupByGroupNameParams) ([]SearchGroupByGroupNameRow, error) {
+	rows, err := q.db.QueryContext(ctx, searchGroupByGroupName, arg.Column1, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}

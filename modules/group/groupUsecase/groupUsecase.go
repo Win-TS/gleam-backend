@@ -78,7 +78,7 @@ type (
 		GetBatchUserProfiles(pctx context.Context, grpcUrl string, ids []int32) (*userPb.GetBatchUserProfileRes, error)
 		GetUserProfile(pctx context.Context, grpcUrl string, req *userPb.GetUserProfileReq) (*userPb.GetUserProfileRes, error)
 		GetPostsForFollowingFeedByMemberId(pctx context.Context, userId, limit, offset int, grpcUrl string) ([]group.PostsForFeedRes, error)
-		SearchGroupByGroupName(ctx context.Context, groupname string) ([]groupdb.SearchGroupByGroupNameRow, error)
+		SearchGroupByGroupName(ctx context.Context, args groupdb.SearchGroupByGroupNameParams) ([]groupdb.SearchGroupByGroupNameRow, error)
 		DeleteUserData(ctx context.Context, userID int32) error
 		GetAcceptorGroupRequests(ctx context.Context, userId int32) ([]groupdb.GetAcceptorGroupRequestsRow, error)
 		GetAcceptorGroupRequestsCount(ctx context.Context, userId int32) (groupdb.GetAcceptorGroupRequestsCountRow, error)
@@ -1239,8 +1239,8 @@ func (u *groupUsecase) GetPostsForFollowingFeedByMemberId(pctx context.Context, 
 	return result, nil
 }
 
-func (u *groupUsecase) SearchGroupByGroupName(ctx context.Context, groupname string) ([]groupdb.SearchGroupByGroupNameRow, error) {
-	groups, err := u.store.SearchGroupByGroupName(ctx, utils.ConvertStringToSqlNullString(groupname))
+func (u *groupUsecase) SearchGroupByGroupName(ctx context.Context, args groupdb.SearchGroupByGroupNameParams) ([]groupdb.SearchGroupByGroupNameRow, error) {
+	groups, err := u.store.SearchGroupByGroupName(ctx, args)
 	if err != nil {
 		return nil, err
 	}

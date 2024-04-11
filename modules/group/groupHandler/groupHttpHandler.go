@@ -1273,7 +1273,7 @@ func (h *groupHttpHandler) GetCommentsByPostId(c echo.Context) error {
 
 	comments, err := h.groupUsecase.GetCommentsByPostId(ctx, groupdb.GetCommentsByPostIDParams{
 		PostID: int32(postId),
-		Limit: int32(limit),
+		Limit:  int32(limit),
 		Offset: int32(offset),
 	}, h.cfg.Grpc.UserUrl)
 	if err != nil {
@@ -1676,7 +1676,21 @@ func (h *groupHttpHandler) SearchGroupByGroupName(c echo.Context) error {
 	ctx := context.Background()
 	groupname := c.QueryParam("groupname")
 
-	groupInfo, err := h.groupUsecase.SearchGroupByGroupName(ctx, groupname)
+	limit, err := strconv.Atoi(c.QueryParam("limit"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	offset, err := strconv.Atoi(c.QueryParam("offset"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	groupInfo, err := h.groupUsecase.SearchGroupByGroupName(ctx, groupdb.SearchGroupByGroupNameParams{
+		Column1: utils.ConvertStringToSqlNullString(groupname),
+		Limit:   int32(limit),
+		Offset:  int32(offset),
+	})
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}

@@ -30,7 +30,8 @@ SELECT groups.group_id,
     WHERE A.group_id = groups.group_id) AS total_member
 FROM groups
 JOIN tags ON groups.tag_id = tags.tag_id
-WHERE groups.group_name ILIKE '%' || $1 || '%';
+WHERE groups.group_name ILIKE '%' || $1 || '%'
+LIMIT $2 OFFSET $3;
 
 -- name: AddGroupMember :one
 INSERT INTO group_members (group_id, member_id, role)

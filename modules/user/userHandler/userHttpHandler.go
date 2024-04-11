@@ -342,7 +342,22 @@ func (h *userHttpHandler) FriendListById(c echo.Context) error {
 	if err != nil {
 		return response.ErrResponse(c, http.StatusBadRequest, "Invalid user ID")
 	}
-	friends, err := h.userUsecase.FriendListById(ctx, userID)
+
+	limit, err := strconv.Atoi(c.QueryParam("limit"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, "Invalid limit")
+	}
+
+	offset, err := strconv.Atoi(c.QueryParam("offset"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, "Invalid offset")
+	}
+
+	friends, err := h.userUsecase.FriendListById(ctx, userdb.ListFriendsByUserIdParams{
+		UserId1: utils.ConvertIntToSqlNullInt32(userID),
+		Limit:   int32(limit),
+		Offset:  int32(offset),
+	})
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
@@ -374,7 +389,22 @@ func (h *userHttpHandler) FriendsRequestedList(c echo.Context) error {
 	if err != nil {
 		return response.ErrResponse(c, http.StatusBadRequest, "Invalid user ID")
 	}
-	requestedFriends, err := h.userUsecase.FriendsRequestedList(ctx, sql.NullInt32{Int32: int32(userID), Valid: true})
+
+	limit, err := strconv.Atoi(c.QueryParam("limit"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, "Invalid limit")
+	}
+
+	offset, err := strconv.Atoi(c.QueryParam("offset"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, "Invalid offset")
+	}
+
+	requestedFriends, err := h.userUsecase.FriendsRequestedList(ctx, userdb.GetFriendsRequestedListParams{
+		UserId1: utils.ConvertIntToSqlNullInt32(userID),
+		Limit:   int32(limit),
+		Offset:  int32(offset),
+	})
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
@@ -390,7 +420,22 @@ func (h *userHttpHandler) FriendsPendingList(c echo.Context) error {
 	if err != nil {
 		return response.ErrResponse(c, http.StatusBadRequest, "Invalid user ID")
 	}
-	pendingFriends, err := h.userUsecase.FriendsPendingList(ctx, sql.NullInt32{Int32: int32(userID), Valid: true})
+
+	limit, err := strconv.Atoi(c.QueryParam("limit"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, "Invalid limit")
+	}
+
+	offset, err := strconv.Atoi(c.QueryParam("offset"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, "Invalid offset")
+	}
+
+	pendingFriends, err := h.userUsecase.FriendsPendingList(ctx, userdb.GetFriendsPendingListParams{
+		UserId2: utils.ConvertIntToSqlNullInt32(userID),
+		Limit:   int32(limit),
+		Offset:  int32(offset),
+	})
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
@@ -458,7 +503,21 @@ func (h *userHttpHandler) SearchUsersByUsername(c echo.Context) error {
 	ctx := context.Background()
 	username := c.QueryParam("username")
 
-	userInfo, err := h.userUsecase.SearchUsersByUsername(ctx, username)
+	limit, err := strconv.Atoi(c.QueryParam("limit"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, "Invalid limit")
+	}
+
+	offset, err := strconv.Atoi(c.QueryParam("offset"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, "Invalid offset")
+	}
+
+	userInfo, err := h.userUsecase.SearchUsersByUsername(ctx, userdb.SearchUsersByUsernameParams{
+		Column1: utils.ConvertStringToSqlNullString(username),
+		Limit:   int32(limit),
+		Offset:  int32(offset),
+	})
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}

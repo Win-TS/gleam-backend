@@ -33,34 +33,40 @@ WHERE post_id = $1;
 -- name: GetPostsByGroupID :many
 SELECT * FROM posts
 WHERE group_id = $1
-ORDER BY created_at DESC;
+ORDER BY created_at DESC
+LIMIT $2 OFFSET $3;
 
 -- name: GetPostsByGroupAndMemberID :many
 SELECT * FROM posts
 WHERE group_id = $1 AND member_id = $2
-ORDER BY created_at DESC;
+ORDER BY created_at DESC
+LIMIT $3 OFFSET $4;
 
 -- name: GetPostsForOngoingFeedByMemberID :many
 SELECT DISTINCT posts.*, groups.group_name, groups.photo_url AS group_photo_url FROM posts
 JOIN group_members ON posts.group_id = group_members.group_id JOIN groups ON posts.group_id = groups.group_id
 WHERE group_members.member_id = $1
-ORDER BY posts.created_at DESC;
+ORDER BY posts.created_at DESC
+LIMIT $2 OFFSET $3;
 
 -- name: GetPostsForFollowingFeedByMemberId :many
 SELECT posts.*, groups.group_name, groups.photo_url AS group_photo_url FROM posts
 JOIN groups ON posts.group_id = groups.group_id
 WHERE posts.member_id = ANY($1::int[]) AND visibility = true
-ORDER BY posts.created_at DESC;
+ORDER BY posts.created_at DESC
+LIMIT $2 OFFSET $3;
 
 -- name: GetPostsByMemberID :many
 SELECT * FROM posts
 WHERE member_id = $1
-ORDER BY created_at DESC;
+ORDER BY created_at DESC
+LIMIT $2 OFFSET $3;
 
 -- name: GetReactionsByPostID :many
 SELECT * FROM post_reactions
 WHERE post_id = $1
-ORDER BY created_at DESC;
+ORDER BY created_at DESC
+LIMIT $2 OFFSET $3;
 
 -- name: GetReactionsCountByPostID :one
 SELECT COUNT(*) FROM post_reactions
@@ -69,7 +75,8 @@ WHERE post_id = $1;
 -- name: GetCommentsByPostID :many
 SELECT * FROM post_comments
 WHERE post_id = $1
-ORDER BY created_at DESC;
+ORDER BY created_at DESC
+LIMIT $2 OFFSET $3;
 
 -- name: GetCommentsCountByPostID :one
 SELECT COUNT(*) FROM post_comments

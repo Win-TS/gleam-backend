@@ -212,10 +212,17 @@ const getCommentsByPostID = `-- name: GetCommentsByPostID :many
 SELECT comment_id, post_id, member_id, comment, created_at FROM post_comments
 WHERE post_id = $1
 ORDER BY created_at DESC
+LIMIT $2 OFFSET $3
 `
 
-func (q *Queries) GetCommentsByPostID(ctx context.Context, postID int32) ([]PostComment, error) {
-	rows, err := q.db.QueryContext(ctx, getCommentsByPostID, postID)
+type GetCommentsByPostIDParams struct {
+	PostID int32 `json:"post_id"`
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+func (q *Queries) GetCommentsByPostID(ctx context.Context, arg GetCommentsByPostIDParams) ([]PostComment, error) {
+	rows, err := q.db.QueryContext(ctx, getCommentsByPostID, arg.PostID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -289,15 +296,23 @@ const getPostsByGroupAndMemberID = `-- name: GetPostsByGroupAndMemberID :many
 SELECT post_id, member_id, group_id, photo_url, description, created_at FROM posts
 WHERE group_id = $1 AND member_id = $2
 ORDER BY created_at DESC
+LIMIT $3 OFFSET $4
 `
 
 type GetPostsByGroupAndMemberIDParams struct {
 	GroupID  int32 `json:"group_id"`
 	MemberID int32 `json:"member_id"`
+	Limit    int32 `json:"limit"`
+	Offset   int32 `json:"offset"`
 }
 
 func (q *Queries) GetPostsByGroupAndMemberID(ctx context.Context, arg GetPostsByGroupAndMemberIDParams) ([]Post, error) {
-	rows, err := q.db.QueryContext(ctx, getPostsByGroupAndMemberID, arg.GroupID, arg.MemberID)
+	rows, err := q.db.QueryContext(ctx, getPostsByGroupAndMemberID,
+		arg.GroupID,
+		arg.MemberID,
+		arg.Limit,
+		arg.Offset,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -330,10 +345,17 @@ const getPostsByGroupID = `-- name: GetPostsByGroupID :many
 SELECT post_id, member_id, group_id, photo_url, description, created_at FROM posts
 WHERE group_id = $1
 ORDER BY created_at DESC
+LIMIT $2 OFFSET $3
 `
 
-func (q *Queries) GetPostsByGroupID(ctx context.Context, groupID int32) ([]Post, error) {
-	rows, err := q.db.QueryContext(ctx, getPostsByGroupID, groupID)
+type GetPostsByGroupIDParams struct {
+	GroupID int32 `json:"group_id"`
+	Limit   int32 `json:"limit"`
+	Offset  int32 `json:"offset"`
+}
+
+func (q *Queries) GetPostsByGroupID(ctx context.Context, arg GetPostsByGroupIDParams) ([]Post, error) {
+	rows, err := q.db.QueryContext(ctx, getPostsByGroupID, arg.GroupID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -366,10 +388,17 @@ const getPostsByMemberID = `-- name: GetPostsByMemberID :many
 SELECT post_id, member_id, group_id, photo_url, description, created_at FROM posts
 WHERE member_id = $1
 ORDER BY created_at DESC
+LIMIT $2 OFFSET $3
 `
 
-func (q *Queries) GetPostsByMemberID(ctx context.Context, memberID int32) ([]Post, error) {
-	rows, err := q.db.QueryContext(ctx, getPostsByMemberID, memberID)
+type GetPostsByMemberIDParams struct {
+	MemberID int32 `json:"member_id"`
+	Limit    int32 `json:"limit"`
+	Offset   int32 `json:"offset"`
+}
+
+func (q *Queries) GetPostsByMemberID(ctx context.Context, arg GetPostsByMemberIDParams) ([]Post, error) {
+	rows, err := q.db.QueryContext(ctx, getPostsByMemberID, arg.MemberID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -403,7 +432,14 @@ SELECT posts.post_id, posts.member_id, posts.group_id, posts.photo_url, posts.de
 JOIN groups ON posts.group_id = groups.group_id
 WHERE posts.member_id = ANY($1::int[]) AND visibility = true
 ORDER BY posts.created_at DESC
+LIMIT $2 OFFSET $3
 `
+
+type GetPostsForFollowingFeedByMemberIdParams struct {
+	Column1 []int32 `json:"column_1"`
+	Limit   int32   `json:"limit"`
+	Offset  int32   `json:"offset"`
+}
 
 type GetPostsForFollowingFeedByMemberIdRow struct {
 	PostID        int32          `json:"post_id"`
@@ -416,8 +452,8 @@ type GetPostsForFollowingFeedByMemberIdRow struct {
 	GroupPhotoUrl sql.NullString `json:"group_photo_url"`
 }
 
-func (q *Queries) GetPostsForFollowingFeedByMemberId(ctx context.Context, dollar_1 []int32) ([]GetPostsForFollowingFeedByMemberIdRow, error) {
-	rows, err := q.db.QueryContext(ctx, getPostsForFollowingFeedByMemberId, pq.Array(dollar_1))
+func (q *Queries) GetPostsForFollowingFeedByMemberId(ctx context.Context, arg GetPostsForFollowingFeedByMemberIdParams) ([]GetPostsForFollowingFeedByMemberIdRow, error) {
+	rows, err := q.db.QueryContext(ctx, getPostsForFollowingFeedByMemberId, pq.Array(arg.Column1), arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -453,7 +489,14 @@ SELECT DISTINCT posts.post_id, posts.member_id, posts.group_id, posts.photo_url,
 JOIN group_members ON posts.group_id = group_members.group_id JOIN groups ON posts.group_id = groups.group_id
 WHERE group_members.member_id = $1
 ORDER BY posts.created_at DESC
+LIMIT $2 OFFSET $3
 `
+
+type GetPostsForOngoingFeedByMemberIDParams struct {
+	MemberID int32 `json:"member_id"`
+	Limit    int32 `json:"limit"`
+	Offset   int32 `json:"offset"`
+}
 
 type GetPostsForOngoingFeedByMemberIDRow struct {
 	PostID        int32          `json:"post_id"`
@@ -466,8 +509,8 @@ type GetPostsForOngoingFeedByMemberIDRow struct {
 	GroupPhotoUrl sql.NullString `json:"group_photo_url"`
 }
 
-func (q *Queries) GetPostsForOngoingFeedByMemberID(ctx context.Context, memberID int32) ([]GetPostsForOngoingFeedByMemberIDRow, error) {
-	rows, err := q.db.QueryContext(ctx, getPostsForOngoingFeedByMemberID, memberID)
+func (q *Queries) GetPostsForOngoingFeedByMemberID(ctx context.Context, arg GetPostsForOngoingFeedByMemberIDParams) ([]GetPostsForOngoingFeedByMemberIDRow, error) {
+	rows, err := q.db.QueryContext(ctx, getPostsForOngoingFeedByMemberID, arg.MemberID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -502,10 +545,17 @@ const getReactionsByPostID = `-- name: GetReactionsByPostID :many
 SELECT reaction_id, post_id, member_id, reaction, created_at FROM post_reactions
 WHERE post_id = $1
 ORDER BY created_at DESC
+LIMIT $2 OFFSET $3
 `
 
-func (q *Queries) GetReactionsByPostID(ctx context.Context, postID int32) ([]PostReaction, error) {
-	rows, err := q.db.QueryContext(ctx, getReactionsByPostID, postID)
+type GetReactionsByPostIDParams struct {
+	PostID int32 `json:"post_id"`
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+func (q *Queries) GetReactionsByPostID(ctx context.Context, arg GetReactionsByPostIDParams) ([]PostReaction, error) {
+	rows, err := q.db.QueryContext(ctx, getReactionsByPostID, arg.PostID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}

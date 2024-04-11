@@ -41,16 +41,17 @@ type UserUsecaseService interface {
 	EditName(ctx context.Context, userID int32, firstName, lastName string) (user.UserProfile, error)
 	DeleteUser(pctx context.Context, id int, authGrpcUrl, groupGrpcUrl string) error
 	FriendInfo(ctx context.Context, args userdb.GetFriendParams) ([]userdb.Friend, error)
-	FriendListById(pctx context.Context, id int) ([]userdb.ListFriendsByUserIdRow, error)
+	FriendListById(pctx context.Context, args userdb.ListFriendsByUserIdParams) ([]userdb.ListFriendsByUserIdRow, error)
 	FriendsCount(pctx context.Context, userId1 sql.NullInt32) (int64, error)
-	FriendsRequestedList(pctx context.Context, userId1 sql.NullInt32) ([]userdb.User, error)
-	FriendsPendingList(pctx context.Context, userId2 sql.NullInt32) ([]userdb.User, error)
+	FriendsRequestedList(pctx context.Context, args userdb.GetFriendsRequestedListParams) ([]userdb.User, error)
+	FriendsPendingList(pctx context.Context, args userdb.GetFriendsPendingListParams) ([]userdb.User, error)
 	AddFriend(pctx context.Context, args user.CreateFriendReq) (userdb.Friend, error)
 	FriendAccept(pctx context.Context, args user.EditFriendStatusAcceptedReq) error
 	UserMockData(ctx context.Context, count int16) error
 	EditUserPhoto(pctx context.Context, args userdb.EditUserProfilePictureParams) (user.UserProfile, error)
-	SearchUsersByUsername(ctx context.Context, username string) ([]userdb.SearchUsersByUsernameRow, error)
+	SearchUsersByUsername(ctx context.Context, args userdb.SearchUsersByUsernameParams) ([]userdb.SearchUsersByUsernameRow, error)
 	EditPrivateAccount(ctx context.Context, args userdb.EditPrivateAccountParams) (userdb.User, error)
+	FriendListByIdNoPaginate(ctx context.Context, userId int) ([]userdb.ListFriendsByUserIdNoPaginateRow, error)
 }
 
 type userUsecase struct {
@@ -344,8 +345,8 @@ func (u *userUsecase) FriendInfo(pctx context.Context, args userdb.GetFriendPara
 	return []userdb.Friend{friend}, nil
 }
 
-func (u *userUsecase) FriendListById(pctx context.Context, id int) ([]userdb.ListFriendsByUserIdRow, error) {
-	friends, err := u.store.ListFriendsByUserId(pctx, utils.ConvertIntToSqlNullInt32(id))
+func (u *userUsecase) FriendListById(pctx context.Context, args userdb.ListFriendsByUserIdParams) ([]userdb.ListFriendsByUserIdRow, error) {
+	friends, err := u.store.ListFriendsByUserId(pctx, args)
 	if err != nil {
 		return nil, err
 	}
@@ -360,8 +361,8 @@ func (u *userUsecase) FriendsCount(pctx context.Context, userId1 sql.NullInt32) 
 	return count, nil
 }
 
-func (u *userUsecase) FriendsRequestedList(pctx context.Context, userId1 sql.NullInt32) ([]userdb.User, error) {
-	friends, err := u.store.GetFriendsRequestedList(pctx, userId1)
+func (u *userUsecase) FriendsRequestedList(pctx context.Context, args userdb.GetFriendsRequestedListParams) ([]userdb.User, error) {
+	friends, err := u.store.GetFriendsRequestedList(pctx, args)
 	if err != nil {
 		return nil, err
 	}
@@ -369,8 +370,8 @@ func (u *userUsecase) FriendsRequestedList(pctx context.Context, userId1 sql.Nul
 	return friends, nil
 }
 
-func (u *userUsecase) FriendsPendingList(pctx context.Context, userId2 sql.NullInt32) ([]userdb.User, error) {
-	friends, err := u.store.GetFriendsPendingList(pctx, userId2)
+func (u *userUsecase) FriendsPendingList(pctx context.Context, args userdb.GetFriendsPendingListParams) ([]userdb.User, error) {
+	friends, err := u.store.GetFriendsPendingList(pctx, args)
 	if err != nil {
 		return nil, err
 	}
@@ -551,8 +552,8 @@ func (u *userUsecase) editBothNames(ctx context.Context, userID int32, firstName
 	})
 }
 
-func (u *userUsecase) SearchUsersByUsername(ctx context.Context, username string) ([]userdb.SearchUsersByUsernameRow, error) {
-	return u.store.SearchUsersByUsername(ctx, utils.ConvertStringToSqlNullString(username))
+func (u *userUsecase) SearchUsersByUsername(ctx context.Context, args userdb.SearchUsersByUsernameParams) ([]userdb.SearchUsersByUsernameRow, error) {
+	return u.store.SearchUsersByUsername(ctx, args)
 }
 
 func (u *userUsecase) EditPrivateAccount(ctx context.Context, args userdb.EditPrivateAccountParams) (userdb.User, error) {
@@ -561,4 +562,8 @@ func (u *userUsecase) EditPrivateAccount(ctx context.Context, args userdb.EditPr
 	}
 
 	return u.GetUserInfo(ctx, int(args.ID))
+}
+
+func (u *userUsecase) FriendListByIdNoPaginate(ctx context.Context, userId int) ([]userdb.ListFriendsByUserIdNoPaginateRow, error) {
+	return u.store.ListFriendsByUserIdNoPaginate(ctx, utils.ConvertIntToSqlNullInt32(userId))
 }

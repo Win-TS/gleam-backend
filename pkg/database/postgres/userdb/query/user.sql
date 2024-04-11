@@ -90,7 +90,8 @@ WHERE
 -- name: SearchUsersByUsername :many
 SELECT id, username, email, firstname, lastname, photourl
 FROM users
-WHERE username ILIKE '%' || $1 || '%';
+WHERE username ILIKE '%' || $1 || '%'
+LIMIT $2 OFFSET $3;
 
 -- name: EditPrivateAccount :exec
 UPDATE users

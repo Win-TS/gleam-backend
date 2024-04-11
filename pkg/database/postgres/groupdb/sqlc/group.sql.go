@@ -35,6 +35,28 @@ func (q *Queries) AddGroupMember(ctx context.Context, arg AddGroupMemberParams) 
 	return i, err
 }
 
+const checkMemberInGroup = `-- name: CheckMemberInGroup :one
+SELECT group_id, member_id, role, created_at FROM group_members
+WHERE group_id = $1 AND member_id = $2
+`
+
+type CheckMemberInGroupParams struct {
+	GroupID  int32 `json:"group_id"`
+	MemberID int32 `json:"member_id"`
+}
+
+func (q *Queries) CheckMemberInGroup(ctx context.Context, arg CheckMemberInGroupParams) (GroupMember, error) {
+	row := q.db.QueryRowContext(ctx, checkMemberInGroup, arg.GroupID, arg.MemberID)
+	var i GroupMember
+	err := row.Scan(
+		&i.GroupID,
+		&i.MemberID,
+		&i.Role,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const createGroup = `-- name: CreateGroup :one
 INSERT INTO groups (
         group_name,
@@ -596,10 +618,18 @@ func (q *Queries) GetGroupRequest(ctx context.Context, arg GetGroupRequestParams
 const getGroupRequests = `-- name: GetGroupRequests :many
 SELECT group_id, member_id, description, created_at FROM group_requests
 WHERE group_id = $1
+ORDER BY created_at DESC
+LIMIT $2 OFFSET $3
 `
 
-func (q *Queries) GetGroupRequests(ctx context.Context, groupID int32) ([]GroupRequest, error) {
-	rows, err := q.db.QueryContext(ctx, getGroupRequests, groupID)
+type GetGroupRequestsParams struct {
+	GroupID int32 `json:"group_id"`
+	Limit   int32 `json:"limit"`
+	Offset  int32 `json:"offset"`
+}
+
+func (q *Queries) GetGroupRequests(ctx context.Context, arg GetGroupRequestsParams) ([]GroupRequest, error) {
+	rows, err := q.db.QueryContext(ctx, getGroupRequests, arg.GroupID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -765,10 +795,18 @@ func (q *Queries) GetMemberInfo(ctx context.Context, arg GetMemberInfoParams) (G
 const getMemberPendingGroupRequests = `-- name: GetMemberPendingGroupRequests :many
 SELECT group_id, member_id, description, created_at FROM group_requests
 WHERE member_id = $1
+ORDER BY created_at DESC
+LIMIT $2 OFFSET $3
 `
 
-func (q *Queries) GetMemberPendingGroupRequests(ctx context.Context, memberID int32) ([]GroupRequest, error) {
-	rows, err := q.db.QueryContext(ctx, getMemberPendingGroupRequests, memberID)
+type GetMemberPendingGroupRequestsParams struct {
+	MemberID int32 `json:"member_id"`
+	Limit    int32 `json:"limit"`
+	Offset   int32 `json:"offset"`
+}
+
+func (q *Queries) GetMemberPendingGroupRequests(ctx context.Context, arg GetMemberPendingGroupRequestsParams) ([]GroupRequest, error) {
+	rows, err := q.db.QueryContext(ctx, getMemberPendingGroupRequests, arg.MemberID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -799,10 +837,17 @@ const getMembersByGroupID = `-- name: GetMembersByGroupID :many
 SELECT group_id, member_id, role, created_at
 FROM group_members
 WHERE group_id = $1
+LIMIT $2 OFFSET $3
 `
 
-func (q *Queries) GetMembersByGroupID(ctx context.Context, groupID int32) ([]GroupMember, error) {
-	rows, err := q.db.QueryContext(ctx, getMembersByGroupID, groupID)
+type GetMembersByGroupIDParams struct {
+	GroupID int32 `json:"group_id"`
+	Limit   int32 `json:"limit"`
+	Offset  int32 `json:"offset"`
+}
+
+func (q *Queries) GetMembersByGroupID(ctx context.Context, arg GetMembersByGroupIDParams) ([]GroupMember, error) {
+	rows, err := q.db.QueryContext(ctx, getMembersByGroupID, arg.GroupID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}

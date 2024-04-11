@@ -59,11 +59,15 @@ WHERE group_id = $1
 
 -- name: GetGroupRequests :many
 SELECT * FROM group_requests
-WHERE group_id = $1;
+WHERE group_id = $1
+ORDER BY created_at DESC
+LIMIT $2 OFFSET $3;
 
 -- name: GetMemberPendingGroupRequests :many
 SELECT * FROM group_requests
-WHERE member_id = $1;
+WHERE member_id = $1
+ORDER BY created_at DESC
+LIMIT $2 OFFSET $3;
 
 -- name: GetGroupByID :one
 SELECT groups.group_id,
@@ -87,7 +91,8 @@ WHERE group_id = $1;
 -- name: GetMembersByGroupID :many
 SELECT *
 FROM group_members
-WHERE group_id = $1;
+WHERE group_id = $1
+LIMIT $2 OFFSET $3;
 
 -- name: ListGroups :many
 SELECT groups.group_id,
@@ -277,3 +282,7 @@ SELECT g.group_id, g.group_name, g.photo_url, g.group_type
 FROM group_members gm
 JOIN groups g ON g.group_id = gm.group_id
 WHERE gm.member_id = $1;
+
+-- name: CheckMemberInGroup :one
+SELECT * FROM group_members
+WHERE group_id = $1 AND member_id = $2;

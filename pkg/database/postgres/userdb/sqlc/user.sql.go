@@ -410,7 +410,14 @@ const searchUsersByUsername = `-- name: SearchUsersByUsername :many
 SELECT id, username, email, firstname, lastname, photourl
 FROM users
 WHERE username ILIKE '%' || $1 || '%'
+LIMIT $2 OFFSET $3
 `
+
+type SearchUsersByUsernameParams struct {
+	Column1 sql.NullString `json:"column_1"`
+	Limit   int32          `json:"limit"`
+	Offset  int32          `json:"offset"`
+}
 
 type SearchUsersByUsernameRow struct {
 	ID        int32          `json:"id"`
@@ -421,8 +428,8 @@ type SearchUsersByUsernameRow struct {
 	Photourl  sql.NullString `json:"photourl"`
 }
 
-func (q *Queries) SearchUsersByUsername(ctx context.Context, dollar_1 sql.NullString) ([]SearchUsersByUsernameRow, error) {
-	rows, err := q.db.QueryContext(ctx, searchUsersByUsername, dollar_1)
+func (q *Queries) SearchUsersByUsername(ctx context.Context, arg SearchUsersByUsernameParams) ([]SearchUsersByUsernameRow, error) {
+	rows, err := q.db.QueryContext(ctx, searchUsersByUsername, arg.Column1, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}

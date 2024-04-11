@@ -305,7 +305,21 @@ func (h *groupHttpHandler) GetGroupJoinRequests(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 
-	joinRequests, err := h.groupUsecase.GetGroupJoinRequests(ctx, groupId, h.cfg.Grpc.UserUrl)
+	limit, err := strconv.Atoi(c.QueryParam("limit"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	offset, err := strconv.Atoi(c.QueryParam("offset"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	joinRequests, err := h.groupUsecase.GetGroupJoinRequests(ctx, groupdb.GetGroupRequestsParams{
+		GroupID: int32(groupId),
+		Limit:   int32(limit),
+		Offset:  int32(offset),
+	}, h.cfg.Grpc.UserUrl)
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
@@ -320,6 +334,16 @@ func (h *groupHttpHandler) GetUserJoinRequests(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 
+	limit, err := strconv.Atoi(c.QueryParam("limit"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	offset, err := strconv.Atoi(c.QueryParam("offset"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
 	_, err = h.groupUsecase.SearchUser(ctx, h.cfg.Grpc.UserUrl, &userPb.SearchUserReq{
 		UserId: int32(memberId),
 	})
@@ -327,7 +351,11 @@ func (h *groupHttpHandler) GetUserJoinRequests(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
 
-	userRequests, err := h.groupUsecase.GetUserJoinRequests(ctx, memberId)
+	userRequests, err := h.groupUsecase.GetUserJoinRequests(ctx, groupdb.GetMemberPendingGroupRequestsParams{
+		MemberID: int32(memberId),
+		Limit:    int32(limit),
+		Offset:   int32(offset),
+	})
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
@@ -362,7 +390,21 @@ func (h *groupHttpHandler) GetGroupMembersByGroupId(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 
-	groupMembers, err := h.groupUsecase.GetGroupMembersByGroupId(ctx, groupId, h.cfg.Grpc.UserUrl)
+	limit, err := strconv.Atoi(c.QueryParam("limit"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	offset, err := strconv.Atoi(c.QueryParam("offset"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	groupMembers, err := h.groupUsecase.GetGroupMembersByGroupId(ctx, groupdb.GetMembersByGroupIDParams{
+		GroupID: int32(groupId),
+		Limit:   int32(limit),
+		Offset:  int32(offset),
+	}, h.cfg.Grpc.UserUrl)
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
@@ -881,7 +923,21 @@ func (h *groupHttpHandler) GetPostsByGroupId(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 
-	postsInGroup, err := h.groupUsecase.GetPostsByGroupId(ctx, groupId, h.cfg.Grpc.UserUrl)
+	limit, err := strconv.Atoi(c.QueryParam("limit"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	offset, err := strconv.Atoi(c.QueryParam("offset"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	postsInGroup, err := h.groupUsecase.GetPostsByGroupId(ctx, groupdb.GetPostsByGroupIDParams{
+		GroupID: int32(groupId),
+		Limit:   int32(limit),
+		Offset:  int32(offset),
+	}, h.cfg.Grpc.UserUrl)
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
@@ -896,6 +952,16 @@ func (h *groupHttpHandler) GetPostsByUserId(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 
+	limit, err := strconv.Atoi(c.QueryParam("limit"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	offset, err := strconv.Atoi(c.QueryParam("offset"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
 	_, err = h.groupUsecase.SearchUser(ctx, h.cfg.Grpc.UserUrl, &userPb.SearchUserReq{
 		UserId: int32(userId),
 	})
@@ -903,7 +969,11 @@ func (h *groupHttpHandler) GetPostsByUserId(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
 
-	userPosts, err := h.groupUsecase.GetPostsByUserId(ctx, userId)
+	userPosts, err := h.groupUsecase.GetPostsByUserId(ctx, groupdb.GetPostsByMemberIDParams{
+		MemberID: int32(userId),
+		Limit:    int32(limit),
+		Offset:   int32(offset),
+	})
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
@@ -1009,6 +1079,16 @@ func (h *groupHttpHandler) GetPostsForOngoingFeedByMemberId(c echo.Context) erro
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 
+	limit, err := strconv.Atoi(c.QueryParam("limit"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	offset, err := strconv.Atoi(c.QueryParam("offset"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
 	_, err = h.groupUsecase.SearchUser(ctx, h.cfg.Grpc.UserUrl, &userPb.SearchUserReq{
 		UserId: int32(userId),
 	})
@@ -1016,7 +1096,11 @@ func (h *groupHttpHandler) GetPostsForOngoingFeedByMemberId(c echo.Context) erro
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
 
-	feedPosts, err := h.groupUsecase.GetPostsForOngoingFeedByMemberId(ctx, userId, h.cfg.Grpc.UserUrl)
+	feedPosts, err := h.groupUsecase.GetPostsForOngoingFeedByMemberId(ctx, groupdb.GetPostsForOngoingFeedByMemberIDParams{
+		MemberID: int32(userId),
+		Limit:    int32(limit),
+		Offset:   int32(offset),
+	}, h.cfg.Grpc.UserUrl)
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
@@ -1055,7 +1139,21 @@ func (h *groupHttpHandler) GetReactionsByPostId(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 
-	reactions, err := h.groupUsecase.GetReactionsByPostId(ctx, postId, h.cfg.Grpc.UserUrl)
+	limit, err := strconv.Atoi(c.QueryParam("limit"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	offset, err := strconv.Atoi(c.QueryParam("offset"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	reactions, err := h.groupUsecase.GetReactionsByPostId(ctx, groupdb.GetReactionsByPostIDParams{
+		PostID: int32(postId),
+		Limit:  int32(limit),
+		Offset: int32(offset),
+	}, h.cfg.Grpc.UserUrl)
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
@@ -1163,7 +1261,21 @@ func (h *groupHttpHandler) GetCommentsByPostId(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 
-	comments, err := h.groupUsecase.GetCommentsByPostId(ctx, postId, h.cfg.Grpc.UserUrl)
+	limit, err := strconv.Atoi(c.QueryParam("limit"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	offset, err := strconv.Atoi(c.QueryParam("offset"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	comments, err := h.groupUsecase.GetCommentsByPostId(ctx, groupdb.GetCommentsByPostIDParams{
+		PostID: int32(postId),
+		Limit: int32(limit),
+		Offset: int32(offset),
+	}, h.cfg.Grpc.UserUrl)
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
@@ -1542,7 +1654,17 @@ func (h *groupHttpHandler) GetPostsForFollowingFeedByMemberId(c echo.Context) er
 		return response.ErrResponse(c, http.StatusBadRequest, "Invalid userId")
 	}
 
-	feedPosts, err := h.groupUsecase.GetPostsForFollowingFeedByMemberId(ctx, int32(userId), h.cfg.Grpc.UserUrl)
+	limit, err := strconv.Atoi(c.QueryParam("limit"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	offset, err := strconv.Atoi(c.QueryParam("offset"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	feedPosts, err := h.groupUsecase.GetPostsForFollowingFeedByMemberId(ctx, userId, limit, offset, h.cfg.Grpc.UserUrl)
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}

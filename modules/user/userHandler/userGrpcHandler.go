@@ -77,7 +77,7 @@ func (g *userGrpcHandler) GetBatchUserProfiles(ctx context.Context, req *userPb.
 }
 
 func (g *userGrpcHandler) GetUserFriends(ctx context.Context, req *userPb.GetUserFriendsReq) (*userPb.GetUserFriendsRes, error) {
-	friends, err := g.userUsecase.FriendListById(ctx, int(req.UserId))
+	friends, err := g.userUsecase.FriendListByIdNoPaginate(ctx, int(req.UserId))
 	if err != nil {
 		return nil, err
 	}

@@ -25,16 +25,17 @@ type Querier interface {
 	GetBatchUserProfiles(ctx context.Context, dollar_1 []int32) ([]GetBatchUserProfilesRow, error)
 	GetFriend(ctx context.Context, arg GetFriendParams) (Friend, error)
 	GetFriendsCountByID(ctx context.Context, userId1 sql.NullInt32) (int64, error)
-	GetFriendsPendingList(ctx context.Context, userId2 sql.NullInt32) ([]User, error)
-	GetFriendsRequestedList(ctx context.Context, userId1 sql.NullInt32) ([]User, error)
+	GetFriendsPendingList(ctx context.Context, arg GetFriendsPendingListParams) ([]User, error)
+	GetFriendsRequestedList(ctx context.Context, arg GetFriendsRequestedListParams) ([]User, error)
 	GetLatestId(ctx context.Context) (int32, error)
 	GetUser(ctx context.Context, id int32) (User, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByUsername(ctx context.Context, username string) (User, error)
 	GetUserForUpdate(ctx context.Context, id int32) (User, error)
-	ListFriendsByUserId(ctx context.Context, userId1 sql.NullInt32) ([]ListFriendsByUserIdRow, error)
+	ListFriendsByUserId(ctx context.Context, arg ListFriendsByUserIdParams) ([]ListFriendsByUserIdRow, error)
+	ListFriendsByUserIdNoPaginate(ctx context.Context, userId1 sql.NullInt32) ([]ListFriendsByUserIdNoPaginateRow, error)
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error)
-	SearchUsersByUsername(ctx context.Context, dollar_1 sql.NullString) ([]SearchUsersByUsernameRow, error)
+	SearchUsersByUsername(ctx context.Context, arg SearchUsersByUsernameParams) ([]SearchUsersByUsernameRow, error)
 	UpdateProfile(ctx context.Context, arg UpdateProfileParams) error
 }
 

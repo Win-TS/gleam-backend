@@ -28,10 +28,10 @@ type (
 		SendRequestToJoinGroup(pctx context.Context, args groupdb.SendRequestToJoinGroupParams) (groupdb.GroupRequest, error)
 		AcceptGroupRequest(pctx context.Context, args groupdb.AcceptGroupRequestParams) (groupdb.GroupMember, error)
 		DeclineGroupRequest(pctx context.Context, args groupdb.DeleteRequestToJoinGroupParams, declinerId int) error
-		GetGroupJoinRequests(pctx context.Context, groupId int, grpcUrl string) ([]group.GroupRequestRes, error)
-		GetUserJoinRequests(pctx context.Context, userId int) ([]groupdb.GroupRequest, error)
+		GetGroupJoinRequests(pctx context.Context, args groupdb.GetGroupRequestsParams, grpcUrl string) ([]group.GroupRequestRes, error)
+		GetUserJoinRequests(pctx context.Context, args groupdb.GetMemberPendingGroupRequestsParams) ([]groupdb.GroupRequest, error)
 		GetGroupById(pctx context.Context, groupId, userId int) (group.GetGroupByIdRes, error)
-		GetGroupMembersByGroupId(pctx context.Context, groupId int, grpcUrl string) ([]group.GroupMemberRes, error)
+		GetGroupMembersByGroupId(pctx context.Context, args groupdb.GetMembersByGroupIDParams, grpcUrl string) ([]group.GroupMemberRes, error)
 		ListGroups(pctx context.Context, args groupdb.ListGroupsParams) ([]groupdb.ListGroupsRow, error)
 		EditGroupName(pctx context.Context, args groupdb.EditGroupNameParams, editorId int32) (groupdb.GetGroupByIDRow, error)
 		EditGroupPhoto(pctx context.Context, args groupdb.EditGroupPhotoParams, editorId int32) (groupdb.GetGroupByIDRow, error)
@@ -42,19 +42,19 @@ type (
 		DeleteGroupMember(pctx context.Context, args groupdb.DeleteMemberParams, editorId int32) error
 		CreatePost(pctx context.Context, args groupdb.CreatePostParams) (groupdb.Post, error)
 		GetPostByPostId(pctx context.Context, postId int, grpcUrl string) (groupdb.Post, *userPb.GetUserProfileRes, error)
-		GetPostsByGroupId(pctx context.Context, groupId int, grpcUrl string) ([]group.PostByGroupRes, error)
-		GetPostsByUserId(pctx context.Context, userId int) ([]groupdb.Post, error)
+		GetPostsByGroupId(pctx context.Context, args groupdb.GetPostsByGroupIDParams, grpcUrl string) ([]group.PostByGroupRes, error)
+		GetPostsByUserId(pctx context.Context, args groupdb.GetPostsByMemberIDParams) ([]groupdb.Post, error)
 		GetPostsByGroupAndMemberId(pctx context.Context, args groupdb.GetPostsByGroupAndMemberIDParams) ([]groupdb.Post, error)
 		EditPost(pctx context.Context, args groupdb.EditPostParams) (groupdb.Post, error)
 		DeletePost(pctx context.Context, postId int) error
-		GetPostsForOngoingFeedByMemberId(pctx context.Context, userId int, grpcUrl string) ([]group.PostsForFeedRes, error)
+		GetPostsForOngoingFeedByMemberId(pctx context.Context, args groupdb.GetPostsForOngoingFeedByMemberIDParams, grpcUrl string) ([]group.PostsForFeedRes, error)
 		CreateReaction(pctx context.Context, args groupdb.CreateReactionParams) (groupdb.PostReaction, error)
-		GetReactionsByPostId(pctx context.Context, postId int, grpcUrl string) ([]group.ReactionPostRes, error)
+		GetReactionsByPostId(pctx context.Context, args groupdb.GetReactionsByPostIDParams, grpcUrl string) ([]group.ReactionPostRes, error)
 		GetReactionsCountByPostId(pctx context.Context, postId int) (int, error)
 		EditReaction(pctx context.Context, args groupdb.EditReactionParams) (groupdb.PostReaction, error)
 		DeleteReaction(pctx context.Context, args groupdb.DeleteReactionParams) error
 		CreateComment(pctx context.Context, args groupdb.CreateCommentParams) (groupdb.PostComment, error)
-		GetCommentsByPostId(pctx context.Context, postId int, grpcUrl string) ([]group.CommentRes, error)
+		GetCommentsByPostId(pctx context.Context, args groupdb.GetCommentsByPostIDParams, grpcUrl string) ([]group.CommentRes, error)
 		GetCommentCountByPostId(pctx context.Context, postId int) (int, error)
 		EditComment(pctx context.Context, args groupdb.EditCommentParams) (groupdb.PostComment, error)
 		DeleteComment(pctx context.Context, commentId int) error
@@ -77,7 +77,7 @@ type (
 		PostMockData(ctx context.Context, count int) error
 		GetBatchUserProfiles(pctx context.Context, grpcUrl string, ids []int32) (*userPb.GetBatchUserProfileRes, error)
 		GetUserProfile(pctx context.Context, grpcUrl string, req *userPb.GetUserProfileReq) (*userPb.GetUserProfileRes, error)
-		GetPostsForFollowingFeedByMemberId(pctx context.Context, userId int32, grpcUrl string) ([]group.PostsForFeedRes, error)
+		GetPostsForFollowingFeedByMemberId(pctx context.Context, userId, limit, offset int, grpcUrl string) ([]group.PostsForFeedRes, error)
 		SearchGroupByGroupName(ctx context.Context, groupname string) ([]groupdb.SearchGroupByGroupNameRow, error)
 		DeleteUserData(ctx context.Context, userID int32) error
 		GetAcceptorGroupRequests(ctx context.Context, userId int32) ([]groupdb.GetAcceptorGroupRequestsRow, error)
@@ -242,8 +242,8 @@ func (u *groupUsecase) DeclineGroupRequest(pctx context.Context, args groupdb.De
 	return nil
 }
 
-func (u *groupUsecase) GetGroupJoinRequests(pctx context.Context, groupId int, grpcUrl string) ([]group.GroupRequestRes, error) {
-	requests, err := u.store.GetGroupRequests(pctx, int32(groupId))
+func (u *groupUsecase) GetGroupJoinRequests(pctx context.Context, args groupdb.GetGroupRequestsParams, grpcUrl string) ([]group.GroupRequestRes, error) {
+	requests, err := u.store.GetGroupRequests(pctx, args)
 	if err != nil {
 		return []group.GroupRequestRes{}, err
 	}
@@ -275,8 +275,8 @@ func (u *groupUsecase) GetGroupJoinRequests(pctx context.Context, groupId int, g
 	return groupRequestRes, nil
 }
 
-func (u *groupUsecase) GetUserJoinRequests(pctx context.Context, userId int) ([]groupdb.GroupRequest, error) {
-	requests, err := u.store.GetMemberPendingGroupRequests(pctx, int32(userId))
+func (u *groupUsecase) GetUserJoinRequests(pctx context.Context, args groupdb.GetMemberPendingGroupRequestsParams) ([]groupdb.GroupRequest, error) {
+	requests, err := u.store.GetMemberPendingGroupRequests(pctx, args)
 	if err != nil {
 		return []groupdb.GroupRequest{}, err
 	}
@@ -315,8 +315,8 @@ func (u *groupUsecase) GetGroupById(pctx context.Context, groupId, userId int) (
 	}, nil
 }
 
-func (u *groupUsecase) GetGroupMembersByGroupId(pctx context.Context, groupId int, grpcUrl string) ([]group.GroupMemberRes, error) {
-	groupMembers, err := u.store.GetMembersByGroupID(pctx, int32(groupId))
+func (u *groupUsecase) GetGroupMembersByGroupId(pctx context.Context, args groupdb.GetMembersByGroupIDParams, grpcUrl string) ([]group.GroupMemberRes, error) {
+	groupMembers, err := u.store.GetMembersByGroupID(pctx, args)
 	if err != nil {
 		return nil, err
 	}
@@ -523,8 +523,8 @@ func (u *groupUsecase) GetPostByPostId(pctx context.Context, postId int, grpcUrl
 	return postInfo, profile, nil
 }
 
-func (u *groupUsecase) GetPostsByGroupId(pctx context.Context, groupId int, grpcUrl string) ([]group.PostByGroupRes, error) {
-	posts, err := u.store.GetPostsByGroupID(pctx, int32(groupId))
+func (u *groupUsecase) GetPostsByGroupId(pctx context.Context, args groupdb.GetPostsByGroupIDParams, grpcUrl string) ([]group.PostByGroupRes, error) {
+	posts, err := u.store.GetPostsByGroupID(pctx, args)
 	if err != nil {
 		return nil, err
 	}
@@ -560,9 +560,8 @@ func (u *groupUsecase) GetPostsByGroupId(pctx context.Context, groupId int, grpc
 }
 
 // รอแก้
-func (u *groupUsecase) GetPostsByUserId(pctx context.Context, userId int) ([]groupdb.Post, error) {
-
-	posts, err := u.store.GetPostsByMemberID(pctx, int32(userId))
+func (u *groupUsecase) GetPostsByUserId(pctx context.Context, args groupdb.GetPostsByMemberIDParams) ([]groupdb.Post, error) {
+	posts, err := u.store.GetPostsByMemberID(pctx, args)
 	if err != nil {
 		return []groupdb.Post{}, err
 	}
@@ -597,8 +596,8 @@ func (u *groupUsecase) DeletePost(pctx context.Context, postId int) error {
 	return nil
 }
 
-func (u *groupUsecase) GetPostsForOngoingFeedByMemberId(pctx context.Context, userId int, grpcUrl string) ([]group.PostsForFeedRes, error) {
-	posts, err := u.store.GetPostsForOngoingFeedByMemberID(pctx, int32(userId))
+func (u *groupUsecase) GetPostsForOngoingFeedByMemberId(pctx context.Context, args groupdb.GetPostsForOngoingFeedByMemberIDParams, grpcUrl string) ([]group.PostsForFeedRes, error) {
+	posts, err := u.store.GetPostsForOngoingFeedByMemberID(pctx, args)
 	if err != nil {
 		return []group.PostsForFeedRes{}, err
 	}
@@ -647,8 +646,8 @@ func (u *groupUsecase) CreateReaction(pctx context.Context, args groupdb.CreateR
 	return newReaction, nil
 }
 
-func (u *groupUsecase) GetReactionsByPostId(pctx context.Context, postId int, grpcUrl string) ([]group.ReactionPostRes, error) {
-	reactions, err := u.store.GetReactionsByPostID(pctx, int32(postId))
+func (u *groupUsecase) GetReactionsByPostId(pctx context.Context, args groupdb.GetReactionsByPostIDParams, grpcUrl string) ([]group.ReactionPostRes, error) {
+	reactions, err := u.store.GetReactionsByPostID(pctx, args)
 	if err != nil {
 		return nil, err
 	}
@@ -717,8 +716,8 @@ func (u *groupUsecase) CreateComment(pctx context.Context, args groupdb.CreateCo
 	return newComment, nil
 }
 
-func (u *groupUsecase) GetCommentsByPostId(pctx context.Context, postId int, grpcUrl string) ([]group.CommentRes, error) {
-	comments, err := u.store.GetCommentsByPostID(pctx, int32(postId))
+func (u *groupUsecase) GetCommentsByPostId(pctx context.Context, args groupdb.GetCommentsByPostIDParams, grpcUrl string) ([]group.CommentRes, error) {
+	comments, err := u.store.GetCommentsByPostID(pctx, args)
 	if err != nil {
 		return []group.CommentRes{}, err
 	}
@@ -990,16 +989,14 @@ func (u *groupUsecase) createOrGetTagByCategory(ctx context.Context, tagName str
 }
 
 func (u *groupUsecase) memberExistsInGroup(ctx context.Context, groupID, memberID int32) (bool, error) {
-	members, err := u.store.GetMembersByGroupID(ctx, groupID)
+	_, err := u.store.CheckMemberInGroup(ctx, groupdb.CheckMemberInGroupParams{
+		GroupID:  groupID,
+		MemberID: memberID,
+	})
 	if err != nil {
-		return false, err
+		return false, nil
 	}
-	for _, member := range members {
-		if member.MemberID == memberID {
-			return true, nil
-		}
-	}
-	return false, nil
+	return true, nil
 }
 
 func (u *groupUsecase) PostMockData(ctx context.Context, count int) error {
@@ -1191,14 +1188,14 @@ func (u *groupUsecase) EditGroupTag(pctx context.Context, args groupdb.EditGroup
 	return updatedGroup, nil
 }
 
-func (u *groupUsecase) GetPostsForFollowingFeedByMemberId(pctx context.Context, userId int32, grpcUrl string) ([]group.PostsForFeedRes, error) {
+func (u *groupUsecase) GetPostsForFollowingFeedByMemberId(pctx context.Context, userId, limit, offset int, grpcUrl string) ([]group.PostsForFeedRes, error) {
 	conn, err := grpcconn.NewGrpcClient(grpcUrl)
 	if err != nil {
 		log.Printf("error - gRPC connection failed: %s", err.Error())
 		return nil, errors.New("error: gRPC connection failed")
 	}
 
-	friends, err := conn.User().GetUserFriends(pctx, &userPb.GetUserFriendsReq{UserId: userId})
+	friends, err := conn.User().GetUserFriends(pctx, &userPb.GetUserFriendsReq{UserId: int32(userId)})
 	if err != nil {
 		log.Printf("error - gRPC GetUserFriends failed: %s", err.Error())
 		return nil, errors.New("error: gRPC GetUserFriends failed")
@@ -1214,7 +1211,11 @@ func (u *groupUsecase) GetPostsForFollowingFeedByMemberId(pctx context.Context, 
 		friendPhotoUrls[friend.UserId] = friend.Photourl
 	}
 
-	posts, err := u.store.GetPostsForFollowingFeedByMemberId(pctx, friendIdArr)
+	posts, err := u.store.GetPostsForFollowingFeedByMemberId(pctx, groupdb.GetPostsForFollowingFeedByMemberIdParams{
+		Column1: friendIdArr,
+		Limit:  int32(limit),
+		Offset: int32(offset),
+	})
 	if err != nil {
 		return nil, err
 	}

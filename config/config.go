@@ -41,6 +41,7 @@ type (
 		AuthUrl  string
 		UserUrl  string
 		GroupUrl string
+		NotiUrl  string
 	}
 
 	Firebase struct {
@@ -81,6 +82,7 @@ func LoadConfig(path string) Config {
 			AuthUrl:  os.Getenv("GRPC_AUTH_URL"),
 			UserUrl:  os.Getenv("GRPC_USER_URL"),
 			GroupUrl: os.Getenv("GRPC_GROUP_URL"),
+			NotiUrl:  os.Getenv("GRPC_NOTI_URL"),
 		},
 		Firebase: Firebase{
 			Url:               os.Getenv("FB_URL"),

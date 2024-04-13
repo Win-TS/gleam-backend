@@ -87,6 +87,8 @@ func Start(pctx context.Context, cfg *config.Config, db any, storage *storage.Cl
 		s.userService()
 	case "group":
 		s.groupService()
+	case "noti":
+		s.notiService()
 	}
 
 	// Graceful Shutdown

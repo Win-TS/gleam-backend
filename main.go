@@ -8,7 +8,6 @@ import (
 
 	firebase "firebase.google.com/go"
 	"github.com/Win-TS/gleam-backend.git/config"
-	"github.com/Win-TS/gleam-backend.git/pkg/database/mongodb"
 	groupdb "github.com/Win-TS/gleam-backend.git/pkg/database/postgres/groupdb/sqlc"
 	userdb "github.com/Win-TS/gleam-backend.git/pkg/database/postgres/userdb/sqlc"
 	"github.com/Win-TS/gleam-backend.git/server"
@@ -41,11 +40,7 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	if cfg.DbType.Type == "mongodb" {
-		client := mongodb.MongoConn(ctx, &cfg)
-		defer client.Disconnect(ctx)
-		database = client
-	} else if cfg.DbType.Type == "firebase" {
+	if cfg.DbType.Type == "firebase" {
 		database = fbApp
 	} else if cfg.DbType.Type == "postgres" {
 		dbConn, err := sql.Open("postgres", cfg.Db.Url)

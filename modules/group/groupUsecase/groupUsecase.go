@@ -299,15 +299,34 @@ func (u *groupUsecase) GetGroupById(pctx context.Context, groupId, userId int) (
 	}
 
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if err != sql.ErrNoRows {
+			return group.GetGroupByIdRes{}, err
+		}
+
+		requestInfo, reqErr := u.store.GetRequestFromGroup(pctx, groupdb.GetRequestFromGroupParams{
+			GroupID:  int32(groupId),
+			MemberID: int32(userId),
+		})
+
+		if reqErr != nil {
+			return group.GetGroupByIdRes{}, reqErr
+		}
+
+		if requestInfo != nil {
 			return group.GetGroupByIdRes{
 				GroupInfo: groupData,
 				UserId:    int32(userId),
-				Status:    "non-member",
+				Status:    "requested",
 			}, nil
 		}
-		return group.GetGroupByIdRes{}, err
+
+		return group.GetGroupByIdRes{
+			GroupInfo: groupData,
+			UserId:    int32(userId),
+			Status:    "non-member",
+		}, nil
 	}
+
 	return group.GetGroupByIdRes{
 		GroupInfo: groupData,
 		UserId:    int32(userId),
@@ -491,7 +510,7 @@ func (u *groupUsecase) DeleteGroupMember(pctx context.Context, args groupdb.Dele
 		return err
 	}
 
-	if role != group.Admin && role != group.Moderator {
+	if role != group.Admin && role != group.Moderator && editorId != args.MemberID {
 		return errors.New("no permission")
 	}
 	if err := u.store.DeleteMember(pctx, args); err != nil {
@@ -1213,8 +1232,8 @@ func (u *groupUsecase) GetPostsForFollowingFeedByMemberId(pctx context.Context, 
 
 	posts, err := u.store.GetPostsForFollowingFeedByMemberId(pctx, groupdb.GetPostsForFollowingFeedByMemberIdParams{
 		Column1: friendIdArr,
-		Limit:  int32(limit),
-		Offset: int32(offset),
+		Limit:   int32(limit),
+		Offset:  int32(offset),
 	})
 	if err != nil {
 		return nil, err

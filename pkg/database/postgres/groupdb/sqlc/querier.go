@@ -71,6 +71,7 @@ type Querier interface {
 	GetReactionById(ctx context.Context, reactionID int32) (PostReaction, error)
 	GetReactionsByPostID(ctx context.Context, arg GetReactionsByPostIDParams) ([]PostReaction, error)
 	GetReactionsCountByPostID(ctx context.Context, postID int32) (int64, error)
+	GetRequestFromGroup(ctx context.Context, arg GetRequestFromGroupParams) ([]GroupRequest, error)
 	GetStreakByPostID(ctx context.Context, postID int32) (Streak, error)
 	GetStreakSetByUserID(ctx context.Context, userID int32) ([]StreakSet, error)
 	GetStreaksByGroupIDAndUserID(ctx context.Context, arg GetStreaksByGroupIDAndUserIDParams) ([]GetStreaksByGroupIDAndUserIDRow, error)

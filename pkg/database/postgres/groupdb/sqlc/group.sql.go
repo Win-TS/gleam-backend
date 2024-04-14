@@ -893,6 +893,44 @@ func (q *Queries) GetReactionById(ctx context.Context, reactionID int32) (PostRe
 	return i, err
 }
 
+const getRequestFromGroup = `-- name: GetRequestFromGroup :many
+SELECT group_id, member_id, description, created_at FROM group_requests
+WHERE group_id = $1 AND member_id = $2
+`
+
+type GetRequestFromGroupParams struct {
+	GroupID  int32 `json:"group_id"`
+	MemberID int32 `json:"member_id"`
+}
+
+func (q *Queries) GetRequestFromGroup(ctx context.Context, arg GetRequestFromGroupParams) ([]GroupRequest, error) {
+	rows, err := q.db.QueryContext(ctx, getRequestFromGroup, arg.GroupID, arg.MemberID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GroupRequest{}
+	for rows.Next() {
+		var i GroupRequest
+		if err := rows.Scan(
+			&i.GroupID,
+			&i.MemberID,
+			&i.Description,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getTagByCategory = `-- name: GetTagByCategory :many
 SELECT tag_id, tag_name, icon_url, category_id
 FROM tags

@@ -594,3 +594,31 @@ func (q *Queries) GetReactionsCountByPostID(ctx context.Context, postID int32) (
 	err := row.Scan(&count)
 	return count, err
 }
+
+const getReactionsWithTypeByPostID = `-- name: GetReactionsWithTypeByPostID :many
+SELECT reaction FROM post_reactions
+WHERE post_id = $1
+`
+
+func (q *Queries) GetReactionsWithTypeByPostID(ctx context.Context, postID int32) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, getReactionsWithTypeByPostID, postID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []string{}
+	for rows.Next() {
+		var reaction string
+		if err := rows.Scan(&reaction); err != nil {
+			return nil, err
+		}
+		items = append(items, reaction)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

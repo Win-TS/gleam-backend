@@ -50,7 +50,7 @@ type (
 		GetPostsForOngoingFeedByMemberId(pctx context.Context, args groupdb.GetPostsForOngoingFeedByMemberIDParams, grpcUrl string) ([]group.PostsForFeedRes, error)
 		CreateReaction(pctx context.Context, args groupdb.CreateReactionParams) (groupdb.PostReaction, error)
 		GetReactionsByPostId(pctx context.Context, args groupdb.GetReactionsByPostIDParams, grpcUrl string) ([]group.ReactionPostRes, error)
-		GetReactionsCountByPostId(pctx context.Context, postId int) (int, error)
+		GetReactionsCountByPostId(pctx context.Context, postId int) (map[string]int, int, error)
 		EditReaction(pctx context.Context, args groupdb.EditReactionParams) (groupdb.PostReaction, error)
 		DeleteReaction(pctx context.Context, args groupdb.DeleteReactionParams) error
 		CreateComment(pctx context.Context, args groupdb.CreateCommentParams) (groupdb.PostComment, error)
@@ -299,15 +299,34 @@ func (u *groupUsecase) GetGroupById(pctx context.Context, groupId, userId int) (
 	}
 
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if err != sql.ErrNoRows {
+			return group.GetGroupByIdRes{}, err
+		}
+
+		requestInfo, reqErr := u.store.GetRequestFromGroup(pctx, groupdb.GetRequestFromGroupParams{
+			GroupID:  int32(groupId),
+			MemberID: int32(userId),
+		})
+
+		if reqErr != nil {
+			return group.GetGroupByIdRes{}, reqErr
+		}
+
+		if requestInfo != nil {
 			return group.GetGroupByIdRes{
 				GroupInfo: groupData,
 				UserId:    int32(userId),
-				Status:    "non-member",
+				Status:    "requested",
 			}, nil
 		}
-		return group.GetGroupByIdRes{}, err
+
+		return group.GetGroupByIdRes{
+			GroupInfo: groupData,
+			UserId:    int32(userId),
+			Status:    "non-member",
+		}, nil
 	}
+
 	return group.GetGroupByIdRes{
 		GroupInfo: groupData,
 		UserId:    int32(userId),
@@ -491,7 +510,7 @@ func (u *groupUsecase) DeleteGroupMember(pctx context.Context, args groupdb.Dele
 		return err
 	}
 
-	if role != group.Admin && role != group.Moderator {
+	if role != group.Admin && role != group.Moderator && editorId != args.MemberID {
 		return errors.New("no permission")
 	}
 	if err := u.store.DeleteMember(pctx, args); err != nil {
@@ -680,12 +699,19 @@ func (u *groupUsecase) GetReactionsByPostId(pctx context.Context, args groupdb.G
 	return ReactionRes, nil
 }
 
-func (u *groupUsecase) GetReactionsCountByPostId(pctx context.Context, postId int) (int, error) {
-	reactionCount, err := u.store.GetReactionsCountByPostID(pctx, int32(postId))
+func (u *groupUsecase) GetReactionsCountByPostId(pctx context.Context, postId int) (map[string]int, int, error) {
+	reactionTypes, err := u.store.GetReactionsWithTypeByPostID(pctx, int32(postId))
 	if err != nil {
-		return -1, err
+		return nil, -1, err
 	}
-	return int(reactionCount), nil
+	totalReactions := 0
+	reactionCount := make(map[string]int)
+	for _, reaction := range reactionTypes {
+		reactionCount[reaction]++
+		totalReactions++
+	}
+
+	return reactionCount, totalReactions, nil
 }
 
 func (u *groupUsecase) EditReaction(pctx context.Context, args groupdb.EditReactionParams) (groupdb.PostReaction, error) {
@@ -1213,8 +1239,8 @@ func (u *groupUsecase) GetPostsForFollowingFeedByMemberId(pctx context.Context, 
 
 	posts, err := u.store.GetPostsForFollowingFeedByMemberId(pctx, groupdb.GetPostsForFollowingFeedByMemberIdParams{
 		Column1: friendIdArr,
-		Limit:  int32(limit),
-		Offset: int32(offset),
+		Limit:   int32(limit),
+		Offset:  int32(offset),
 	})
 	if err != nil {
 		return nil, err

@@ -72,6 +72,10 @@ LIMIT $2 OFFSET $3;
 SELECT COUNT(*) FROM post_reactions
 WHERE post_id = $1;
 
+-- name: GetReactionsWithTypeByPostID :many
+SELECT reaction FROM post_reactions
+WHERE post_id = $1;
+
 -- name: GetCommentsByPostID :many
 SELECT * FROM post_comments
 WHERE post_id = $1

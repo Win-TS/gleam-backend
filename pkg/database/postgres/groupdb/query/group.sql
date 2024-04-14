@@ -287,3 +287,7 @@ WHERE gm.member_id = $1;
 -- name: CheckMemberInGroup :one
 SELECT * FROM group_members
 WHERE group_id = $1 AND member_id = $2;
+
+-- name: GetRequestFromGroup :many
+SELECT * FROM group_requests
+WHERE group_id = $1 AND member_id = $2;

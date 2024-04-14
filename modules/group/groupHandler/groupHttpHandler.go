@@ -1168,16 +1168,17 @@ func (h *groupHttpHandler) GetReactionsCountByPostId(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 
-	reactionsCount, err := h.groupUsecase.GetReactionsCountByPostId(ctx, postId)
+	reactionsCount, totalCount, err := h.groupUsecase.GetReactionsCountByPostId(ctx, postId)
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
 
 	// return response.SuccessResponse(c, http.StatusOK, reactionsCount)
 	return c.JSON(http.StatusOK, map[string]interface{}{
-		"success": true,
-		"post_id": postId,
-		"data":    reactionsCount,
+		"success":        true,
+		"post_id":        postId,
+		"total_reaction": totalCount,
+		"data":           reactionsCount,
 	})
 }
 

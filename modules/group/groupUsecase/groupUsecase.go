@@ -50,7 +50,7 @@ type (
 		GetPostsForOngoingFeedByMemberId(pctx context.Context, args groupdb.GetPostsForOngoingFeedByMemberIDParams, grpcUrl string) ([]group.PostsForFeedRes, error)
 		CreateReaction(pctx context.Context, args groupdb.CreateReactionParams) (groupdb.PostReaction, error)
 		GetReactionsByPostId(pctx context.Context, args groupdb.GetReactionsByPostIDParams, grpcUrl string) ([]group.ReactionPostRes, error)
-		GetReactionsCountByPostId(pctx context.Context, postId int) (map[string]int, error)
+		GetReactionsCountByPostId(pctx context.Context, postId int) (map[string]int, int, error)
 		EditReaction(pctx context.Context, args groupdb.EditReactionParams) (groupdb.PostReaction, error)
 		DeleteReaction(pctx context.Context, args groupdb.DeleteReactionParams) error
 		CreateComment(pctx context.Context, args groupdb.CreateCommentParams) (groupdb.PostComment, error)
@@ -699,18 +699,19 @@ func (u *groupUsecase) GetReactionsByPostId(pctx context.Context, args groupdb.G
 	return ReactionRes, nil
 }
 
-func (u *groupUsecase) GetReactionsCountByPostId(pctx context.Context, postId int) (map[string]int, error) {
+func (u *groupUsecase) GetReactionsCountByPostId(pctx context.Context, postId int) (map[string]int, int, error) {
 	reactionTypes, err := u.store.GetReactionsWithTypeByPostID(pctx, int32(postId))
 	if err != nil {
-		return nil, err
+		return nil, -1, err
 	}
-
+	totalReactions := 0
 	reactionCount := make(map[string]int)
 	for _, reaction := range reactionTypes {
 		reactionCount[reaction]++
+		totalReactions++
 	}
 
-	return reactionCount, nil
+	return reactionCount, totalReactions, nil
 }
 
 func (u *groupUsecase) EditReaction(pctx context.Context, args groupdb.EditReactionParams) (groupdb.PostReaction, error) {

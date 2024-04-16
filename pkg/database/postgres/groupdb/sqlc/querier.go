@@ -7,6 +7,7 @@ package groupdb
 import (
 	"context"
 	"database/sql"
+	"time"
 )
 
 type Querier interface {
@@ -17,7 +18,7 @@ type Querier interface {
 	CreateNewTag(ctx context.Context, arg CreateNewTagParams) (Tag, error)
 	CreatePost(ctx context.Context, arg CreatePostParams) (Post, error)
 	CreateReaction(ctx context.Context, arg CreateReactionParams) (PostReaction, error)
-	CreateStreak(ctx context.Context, arg CreateStreakParams) (Streak, error)
+	CreateStreak(ctx context.Context, streakSetID int32) (Streak, error)
 	CreateStreakSet(ctx context.Context, arg CreateStreakSetParams) (StreakSet, error)
 	DeleteComment(ctx context.Context, commentID int32) error
 	DeleteGroup(ctx context.Context, groupID int32) error
@@ -30,8 +31,31 @@ type Querier interface {
 	DeletePosts(ctx context.Context, memberID int32) error
 	DeleteReaction(ctx context.Context, arg DeleteReactionParams) error
 	DeleteRequestToJoinGroup(ctx context.Context, arg DeleteRequestToJoinGroupParams) error
+	DeleteStreakSet(ctx context.Context, arg DeleteStreakSetParams) error
 	DeleteTag(ctx context.Context, tagID int32) error
 	EditComment(ctx context.Context, arg EditCommentParams) error
+	// -- name: ResetWeeklyStreak :exec
+	// UPDATE streaks
+	// SET weekly_streak_count = 0,
+	// completed = false
+	// WHERE streak_set_id IN (
+	//     SELECT s.streak_set_id
+	//     FROM streaks s
+	//     JOIN streak_set ss ON s.streak_set_id = ss.streak_set_id
+	//     WHERE ss.member_id = $1
+	//     AND ss.group_id = $2
+	// ) RETURNING *;
+	// -- name: ResetTotalStreak :exec
+	// UPDATE streaks
+	// SET total_streak_count = 0
+	// WHERE streak_set_id IN (
+	//     SELECT s.streak_set_id
+	//     FROM streaks s
+	//     JOIN streak_set ss ON s.streak_set_id = ss.streak_set_id
+	//     WHERE ss.member_id = $1
+	//     AND ss.group_id = $2
+	// ) RETURNING *;
+	EditCompleteStatus(ctx context.Context, arg EditCompleteStatusParams) error
 	EditGroupDescription(ctx context.Context, arg EditGroupDescriptionParams) error
 	EditGroupName(ctx context.Context, arg EditGroupNameParams) error
 	EditGroupPhoto(ctx context.Context, arg EditGroupPhotoParams) error
@@ -40,10 +64,10 @@ type Querier interface {
 	EditMemberRole(ctx context.Context, arg EditMemberRoleParams) error
 	EditPost(ctx context.Context, arg EditPostParams) error
 	EditReaction(ctx context.Context, arg EditReactionParams) error
+	EditStreakSetEndDate(ctx context.Context, arg EditStreakSetEndDateParams) error
 	EditTagCategory(ctx context.Context, arg EditTagCategoryParams) error
 	EditTagIcon(ctx context.Context, arg EditTagIconParams) error
 	EditTagName(ctx context.Context, arg EditTagNameParams) error
-	EndStreakSet(ctx context.Context, streakSetID int32) error
 	GetAcceptorGroupRequests(ctx context.Context, memberID int32) ([]GetAcceptorGroupRequestsRow, error)
 	GetAcceptorGroupRequestsCount(ctx context.Context, memberID int32) (GetAcceptorGroupRequestsCountRow, error)
 	GetAvailableCategory(ctx context.Context) ([]TagCategory, error)
@@ -57,7 +81,7 @@ type Querier interface {
 	GetGroupRequests(ctx context.Context, arg GetGroupRequestsParams) ([]GroupRequest, error)
 	GetGroupsByCategoryID(ctx context.Context, categoryID sql.NullInt32) ([]GetGroupsByCategoryIDRow, error)
 	GetGroupsByTagID(ctx context.Context, tagID int32) ([]Group, error)
-	GetLatestStreakSetByGroupIDAndUserID(ctx context.Context, arg GetLatestStreakSetByGroupIDAndUserIDParams) (StreakSet, error)
+	GetIncompletedStreakByUserID(ctx context.Context, memberID int32) ([]GetIncompletedStreakByUserIDRow, error)
 	GetMemberInfo(ctx context.Context, arg GetMemberInfoParams) (GetMemberInfoRow, error)
 	GetMemberPendingGroupRequests(ctx context.Context, arg GetMemberPendingGroupRequestsParams) ([]GroupRequest, error)
 	GetMembersByGroupID(ctx context.Context, arg GetMembersByGroupIDParams) ([]GroupMember, error)
@@ -73,21 +97,26 @@ type Querier interface {
 	GetReactionsCountByPostID(ctx context.Context, postID int32) (int64, error)
 	GetReactionsWithTypeByPostID(ctx context.Context, postID int32) ([]string, error)
 	GetRequestFromGroup(ctx context.Context, arg GetRequestFromGroupParams) ([]GroupRequest, error)
-	GetStreakByPostID(ctx context.Context, postID int32) (Streak, error)
-	GetStreakSetByUserID(ctx context.Context, userID int32) ([]StreakSet, error)
-	GetStreaksByGroupIDAndUserID(ctx context.Context, arg GetStreaksByGroupIDAndUserIDParams) ([]GetStreaksByGroupIDAndUserIDRow, error)
-	GetStreaksByStreakSetID(ctx context.Context, streakSetID int32) ([]Streak, error)
+	GetStreakByMemberIDandGroupID(ctx context.Context, arg GetStreakByMemberIDandGroupIDParams) (GetStreakByMemberIDandGroupIDRow, error)
+	GetStreakByMemberId(ctx context.Context, memberID int32) ([]GetStreakByMemberIdRow, error)
+	GetStreakByStreakSetId(ctx context.Context, streakSetID int32) (Streak, error)
+	GetStreakSetByEndDate(ctx context.Context, endDate time.Time) ([]StreakSet, error)
+	GetStreakSetByGroupId(ctx context.Context, groupID int32) ([]StreakSet, error)
+	GetStreakSetByGroupIdandUserId(ctx context.Context, arg GetStreakSetByGroupIdandUserIdParams) ([]StreakSet, error)
+	GetStreakSetByStreakSetId(ctx context.Context, streakSetID int32) (StreakSet, error)
 	GetTagByCategory(ctx context.Context, categoryID sql.NullInt32) ([]Tag, error)
 	GetTagByGroupId(ctx context.Context, groupID int32) (GetTagByGroupIdRow, error)
 	GetTagByTagID(ctx context.Context, tagID int32) (Tag, error)
-	GetUnendedStreakSetByUserID(ctx context.Context, userID int32) ([]StreakSet, error)
 	GetUserGroups(ctx context.Context, memberID int32) ([]GetUserGroupsRow, error)
+	IncreaseStreak(ctx context.Context, arg IncreaseStreakParams) (Streak, error)
 	InitializeCategory(ctx context.Context) error
 	ListGroups(ctx context.Context, arg ListGroupsParams) ([]ListGroupsRow, error)
 	NumberMemberInGroup(ctx context.Context, groupID int32) (int64, error)
+	ResetStreak(ctx context.Context, arg ResetStreakParams) error
+	ResetTotalStreak(ctx context.Context) error
+	ResetWeeklyStreak(ctx context.Context) error
 	SearchGroupByGroupName(ctx context.Context, arg SearchGroupByGroupNameParams) ([]SearchGroupByGroupNameRow, error)
 	SendRequestToJoinGroup(ctx context.Context, arg SendRequestToJoinGroupParams) (GroupRequest, error)
-	UpdateStreakSetCount(ctx context.Context, arg UpdateStreakSetCountParams) error
 }
 
 var _ Querier = (*Queries)(nil)

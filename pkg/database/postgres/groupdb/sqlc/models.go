@@ -63,20 +63,21 @@ type PostReaction struct {
 }
 
 type Streak struct {
-	StreakID    int32         `json:"streak_id"`
-	StreakSetID int32         `json:"streak_set_id"`
-	PostID      int32         `json:"post_id"`
-	StreakCount sql.NullInt32 `json:"streak_count"`
-	CreatedAt   time.Time     `json:"created_at"`
+	StreakID          int32        `json:"streak_id"`
+	StreakSetID       int32        `json:"streak_set_id"`
+	TotalStreakCount  int32        `json:"total_streak_count"`
+	WeeklyStreakCount int32        `json:"weekly_streak_count"`
+	Completed         bool         `json:"completed"`
+	RecentDateAdded   sql.NullTime `json:"recent_date_added"`
+	CreatedAt         time.Time    `json:"created_at"`
 }
 
 type StreakSet struct {
-	StreakSetID int32         `json:"streak_set_id"`
-	GroupID     int32         `json:"group_id"`
-	UserID      int32         `json:"user_id"`
-	StreakCount sql.NullInt32 `json:"streak_count"`
-	Ended       bool          `json:"ended"`
-	CreatedAt   time.Time     `json:"created_at"`
+	StreakSetID int32     `json:"streak_set_id"`
+	GroupID     int32     `json:"group_id"`
+	MemberID    int32     `json:"member_id"`
+	EndDate     time.Time `json:"end_date"`
+	StartDate   time.Time `json:"start_date"`
 }
 
 type Tag struct {

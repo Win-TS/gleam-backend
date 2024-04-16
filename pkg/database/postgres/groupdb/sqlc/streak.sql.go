@@ -13,28 +13,22 @@ import (
 
 const createStreak = `-- name: CreateStreak :one
 INSERT INTO streaks (
-    streak_set_id,
-    post_id,
-    streak_count
+    streak_set_id
 ) VALUES (
-    $1, $2, $3
-) RETURNING streak_id, streak_set_id, post_id, streak_count, created_at
+    $1
+) RETURNING streak_id, streak_set_id, total_streak_count, weekly_streak_count, completed, recent_date_added, created_at
 `
 
-type CreateStreakParams struct {
-	StreakSetID int32         `json:"streak_set_id"`
-	PostID      int32         `json:"post_id"`
-	StreakCount sql.NullInt32 `json:"streak_count"`
-}
-
-func (q *Queries) CreateStreak(ctx context.Context, arg CreateStreakParams) (Streak, error) {
-	row := q.db.QueryRowContext(ctx, createStreak, arg.StreakSetID, arg.PostID, arg.StreakCount)
+func (q *Queries) CreateStreak(ctx context.Context, streakSetID int32) (Streak, error) {
+	row := q.db.QueryRowContext(ctx, createStreak, streakSetID)
 	var i Streak
 	err := row.Scan(
 		&i.StreakID,
 		&i.StreakSetID,
-		&i.PostID,
-		&i.StreakCount,
+		&i.TotalStreakCount,
+		&i.WeeklyStreakCount,
+		&i.Completed,
+		&i.RecentDateAdded,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -43,94 +37,294 @@ func (q *Queries) CreateStreak(ctx context.Context, arg CreateStreakParams) (Str
 const createStreakSet = `-- name: CreateStreakSet :one
 INSERT INTO streak_set (
     group_id,
-    user_id,
-    streak_count
+    member_id,
+    end_date
 ) VALUES (
     $1, $2, $3
-) RETURNING streak_set_id, group_id, user_id, streak_count, ended, created_at
+) RETURNING streak_set_id, group_id, member_id, end_date, start_date
 `
 
 type CreateStreakSetParams struct {
-	GroupID     int32         `json:"group_id"`
-	UserID      int32         `json:"user_id"`
-	StreakCount sql.NullInt32 `json:"streak_count"`
+	GroupID  int32     `json:"group_id"`
+	MemberID int32     `json:"member_id"`
+	EndDate  time.Time `json:"end_date"`
 }
 
 func (q *Queries) CreateStreakSet(ctx context.Context, arg CreateStreakSetParams) (StreakSet, error) {
-	row := q.db.QueryRowContext(ctx, createStreakSet, arg.GroupID, arg.UserID, arg.StreakCount)
+	row := q.db.QueryRowContext(ctx, createStreakSet, arg.GroupID, arg.MemberID, arg.EndDate)
 	var i StreakSet
 	err := row.Scan(
 		&i.StreakSetID,
 		&i.GroupID,
-		&i.UserID,
-		&i.StreakCount,
-		&i.Ended,
-		&i.CreatedAt,
+		&i.MemberID,
+		&i.EndDate,
+		&i.StartDate,
 	)
 	return i, err
 }
 
-const endStreakSet = `-- name: EndStreakSet :exec
-UPDATE streak_set SET ended = true
-WHERE streak_set_id = $1
+const deleteStreakSet = `-- name: DeleteStreakSet :exec
+DELETE FROM streak_set WHERE group_id = $1 AND member_id = $2
 `
 
-func (q *Queries) EndStreakSet(ctx context.Context, streakSetID int32) error {
-	_, err := q.db.ExecContext(ctx, endStreakSet, streakSetID)
+type DeleteStreakSetParams struct {
+	GroupID  int32 `json:"group_id"`
+	MemberID int32 `json:"member_id"`
+}
+
+func (q *Queries) DeleteStreakSet(ctx context.Context, arg DeleteStreakSetParams) error {
+	_, err := q.db.ExecContext(ctx, deleteStreakSet, arg.GroupID, arg.MemberID)
 	return err
 }
 
-const getLatestStreakSetByGroupIDAndUserID = `-- name: GetLatestStreakSetByGroupIDAndUserID :one
-SELECT streak_set_id, group_id, user_id, streak_count, ended, created_at FROM streak_set
-WHERE group_id = $1 AND user_id = $2
-ORDER BY created_at DESC 
-LIMIT 1
+const editCompleteStatus = `-- name: EditCompleteStatus :exec
+
+
+UPDATE streaks
+SET completed = $3
+WHERE streak_set_id IN (
+    SELECT s.streak_set_id
+    FROM streaks s
+    JOIN streak_set ss ON s.streak_set_id = ss.streak_set_id
+    WHERE ss.member_id = $1
+    AND ss.group_id = $2
+)
 `
 
-type GetLatestStreakSetByGroupIDAndUserIDParams struct {
-	GroupID int32 `json:"group_id"`
-	UserID  int32 `json:"user_id"`
+type EditCompleteStatusParams struct {
+	MemberID  int32 `json:"member_id"`
+	GroupID   int32 `json:"group_id"`
+	Completed bool  `json:"completed"`
 }
 
-func (q *Queries) GetLatestStreakSetByGroupIDAndUserID(ctx context.Context, arg GetLatestStreakSetByGroupIDAndUserIDParams) (StreakSet, error) {
-	row := q.db.QueryRowContext(ctx, getLatestStreakSetByGroupIDAndUserID, arg.GroupID, arg.UserID)
-	var i StreakSet
+// -- name: ResetWeeklyStreak :exec
+// UPDATE streaks
+// SET weekly_streak_count = 0,
+// completed = false
+// WHERE streak_set_id IN (
+//
+//	SELECT s.streak_set_id
+//	FROM streaks s
+//	JOIN streak_set ss ON s.streak_set_id = ss.streak_set_id
+//	WHERE ss.member_id = $1
+//	AND ss.group_id = $2
+//
+// ) RETURNING *;
+// -- name: ResetTotalStreak :exec
+// UPDATE streaks
+// SET total_streak_count = 0
+// WHERE streak_set_id IN (
+//
+//	SELECT s.streak_set_id
+//	FROM streaks s
+//	JOIN streak_set ss ON s.streak_set_id = ss.streak_set_id
+//	WHERE ss.member_id = $1
+//	AND ss.group_id = $2
+//
+// ) RETURNING *;
+func (q *Queries) EditCompleteStatus(ctx context.Context, arg EditCompleteStatusParams) error {
+	_, err := q.db.ExecContext(ctx, editCompleteStatus, arg.MemberID, arg.GroupID, arg.Completed)
+	return err
+}
+
+const editStreakSetEndDate = `-- name: EditStreakSetEndDate :exec
+UPDATE streak_set
+SET end_date = $3
+WHERE group_id = $1 AND member_id = $2
+RETURNING streak_set_id, group_id, member_id, end_date, start_date
+`
+
+type EditStreakSetEndDateParams struct {
+	GroupID  int32     `json:"group_id"`
+	MemberID int32     `json:"member_id"`
+	EndDate  time.Time `json:"end_date"`
+}
+
+func (q *Queries) EditStreakSetEndDate(ctx context.Context, arg EditStreakSetEndDateParams) error {
+	_, err := q.db.ExecContext(ctx, editStreakSetEndDate, arg.GroupID, arg.MemberID, arg.EndDate)
+	return err
+}
+
+const getIncompletedStreakByUserID = `-- name: GetIncompletedStreakByUserID :many
+SELECT s.streak_id, s.streak_set_id, s.total_streak_count, s.weekly_streak_count, s.completed, s.recent_date_added, s.created_at, ss.group_id, ss.member_id, ss.end_date
+FROM streaks s
+JOIN streak_set ss ON s.streak_set_id = ss.streak_set_id
+WHERE ss.member_id = $1
+AND s.completed = false
+`
+
+type GetIncompletedStreakByUserIDRow struct {
+	StreakID          int32        `json:"streak_id"`
+	StreakSetID       int32        `json:"streak_set_id"`
+	TotalStreakCount  int32        `json:"total_streak_count"`
+	WeeklyStreakCount int32        `json:"weekly_streak_count"`
+	Completed         bool         `json:"completed"`
+	RecentDateAdded   sql.NullTime `json:"recent_date_added"`
+	CreatedAt         time.Time    `json:"created_at"`
+	GroupID           int32        `json:"group_id"`
+	MemberID          int32        `json:"member_id"`
+	EndDate           time.Time    `json:"end_date"`
+}
+
+func (q *Queries) GetIncompletedStreakByUserID(ctx context.Context, memberID int32) ([]GetIncompletedStreakByUserIDRow, error) {
+	rows, err := q.db.QueryContext(ctx, getIncompletedStreakByUserID, memberID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetIncompletedStreakByUserIDRow{}
+	for rows.Next() {
+		var i GetIncompletedStreakByUserIDRow
+		if err := rows.Scan(
+			&i.StreakID,
+			&i.StreakSetID,
+			&i.TotalStreakCount,
+			&i.WeeklyStreakCount,
+			&i.Completed,
+			&i.RecentDateAdded,
+			&i.CreatedAt,
+			&i.GroupID,
+			&i.MemberID,
+			&i.EndDate,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getStreakByMemberIDandGroupID = `-- name: GetStreakByMemberIDandGroupID :one
+SELECT s.streak_id, s.streak_set_id, s.total_streak_count, s.weekly_streak_count, s.completed, s.recent_date_added, s.created_at, ss.group_id, ss.member_id, ss.end_date
+FROM streaks s
+JOIN streak_set ss ON s.streak_set_id = ss.streak_set_id
+WHERE ss.member_id = $1
+AND ss.group_id = $2
+`
+
+type GetStreakByMemberIDandGroupIDParams struct {
+	MemberID int32 `json:"member_id"`
+	GroupID  int32 `json:"group_id"`
+}
+
+type GetStreakByMemberIDandGroupIDRow struct {
+	StreakID          int32        `json:"streak_id"`
+	StreakSetID       int32        `json:"streak_set_id"`
+	TotalStreakCount  int32        `json:"total_streak_count"`
+	WeeklyStreakCount int32        `json:"weekly_streak_count"`
+	Completed         bool         `json:"completed"`
+	RecentDateAdded   sql.NullTime `json:"recent_date_added"`
+	CreatedAt         time.Time    `json:"created_at"`
+	GroupID           int32        `json:"group_id"`
+	MemberID          int32        `json:"member_id"`
+	EndDate           time.Time    `json:"end_date"`
+}
+
+func (q *Queries) GetStreakByMemberIDandGroupID(ctx context.Context, arg GetStreakByMemberIDandGroupIDParams) (GetStreakByMemberIDandGroupIDRow, error) {
+	row := q.db.QueryRowContext(ctx, getStreakByMemberIDandGroupID, arg.MemberID, arg.GroupID)
+	var i GetStreakByMemberIDandGroupIDRow
 	err := row.Scan(
+		&i.StreakID,
 		&i.StreakSetID,
-		&i.GroupID,
-		&i.UserID,
-		&i.StreakCount,
-		&i.Ended,
+		&i.TotalStreakCount,
+		&i.WeeklyStreakCount,
+		&i.Completed,
+		&i.RecentDateAdded,
 		&i.CreatedAt,
+		&i.GroupID,
+		&i.MemberID,
+		&i.EndDate,
 	)
 	return i, err
 }
 
-const getStreakByPostID = `-- name: GetStreakByPostID :one
-SELECT streak_id, streak_set_id, post_id, streak_count, created_at FROM streaks
-WHERE post_id = $1
+const getStreakByMemberId = `-- name: GetStreakByMemberId :many
+SELECT s.streak_id, s.streak_set_id, s.total_streak_count, s.weekly_streak_count, s.completed, s.recent_date_added, s.created_at, ss.group_id, ss.member_id, ss.end_date
+FROM streaks s 
+JOIN streak_set ss ON s.streak_set_id = ss.streak_set_id
+WHERE ss.member_id = $1
 `
 
-func (q *Queries) GetStreakByPostID(ctx context.Context, postID int32) (Streak, error) {
-	row := q.db.QueryRowContext(ctx, getStreakByPostID, postID)
+type GetStreakByMemberIdRow struct {
+	StreakID          int32        `json:"streak_id"`
+	StreakSetID       int32        `json:"streak_set_id"`
+	TotalStreakCount  int32        `json:"total_streak_count"`
+	WeeklyStreakCount int32        `json:"weekly_streak_count"`
+	Completed         bool         `json:"completed"`
+	RecentDateAdded   sql.NullTime `json:"recent_date_added"`
+	CreatedAt         time.Time    `json:"created_at"`
+	GroupID           int32        `json:"group_id"`
+	MemberID          int32        `json:"member_id"`
+	EndDate           time.Time    `json:"end_date"`
+}
+
+func (q *Queries) GetStreakByMemberId(ctx context.Context, memberID int32) ([]GetStreakByMemberIdRow, error) {
+	rows, err := q.db.QueryContext(ctx, getStreakByMemberId, memberID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetStreakByMemberIdRow{}
+	for rows.Next() {
+		var i GetStreakByMemberIdRow
+		if err := rows.Scan(
+			&i.StreakID,
+			&i.StreakSetID,
+			&i.TotalStreakCount,
+			&i.WeeklyStreakCount,
+			&i.Completed,
+			&i.RecentDateAdded,
+			&i.CreatedAt,
+			&i.GroupID,
+			&i.MemberID,
+			&i.EndDate,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getStreakByStreakSetId = `-- name: GetStreakByStreakSetId :one
+SELECT streak_id, streak_set_id, total_streak_count, weekly_streak_count, completed, recent_date_added, created_at FROM streaks
+WHERE streak_set_id = $1
+`
+
+func (q *Queries) GetStreakByStreakSetId(ctx context.Context, streakSetID int32) (Streak, error) {
+	row := q.db.QueryRowContext(ctx, getStreakByStreakSetId, streakSetID)
 	var i Streak
 	err := row.Scan(
 		&i.StreakID,
 		&i.StreakSetID,
-		&i.PostID,
-		&i.StreakCount,
+		&i.TotalStreakCount,
+		&i.WeeklyStreakCount,
+		&i.Completed,
+		&i.RecentDateAdded,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
-const getStreakSetByUserID = `-- name: GetStreakSetByUserID :many
-SELECT streak_set_id, group_id, user_id, streak_count, ended, created_at FROM streak_set
-WHERE user_id = $1
+const getStreakSetByEndDate = `-- name: GetStreakSetByEndDate :many
+SELECT streak_set_id, group_id, member_id, end_date, start_date FROM streak_set
+WHERE end_date = $1
 `
 
-func (q *Queries) GetStreakSetByUserID(ctx context.Context, userID int32) ([]StreakSet, error) {
-	rows, err := q.db.QueryContext(ctx, getStreakSetByUserID, userID)
+func (q *Queries) GetStreakSetByEndDate(ctx context.Context, endDate time.Time) ([]StreakSet, error) {
+	rows, err := q.db.QueryContext(ctx, getStreakSetByEndDate, endDate)
 	if err != nil {
 		return nil, err
 	}
@@ -141,10 +335,9 @@ func (q *Queries) GetStreakSetByUserID(ctx context.Context, userID int32) ([]Str
 		if err := rows.Scan(
 			&i.StreakSetID,
 			&i.GroupID,
-			&i.UserID,
-			&i.StreakCount,
-			&i.Ended,
-			&i.CreatedAt,
+			&i.MemberID,
+			&i.EndDate,
+			&i.StartDate,
 		); err != nil {
 			return nil, err
 		}
@@ -159,108 +352,13 @@ func (q *Queries) GetStreakSetByUserID(ctx context.Context, userID int32) ([]Str
 	return items, nil
 }
 
-const getStreaksByGroupIDAndUserID = `-- name: GetStreaksByGroupIDAndUserID :many
-SELECT streak_set.streak_set_id, group_id, user_id, streak_set.streak_count, ended, streak_set.created_at, streak_id, streaks.streak_set_id, post_id, streaks.streak_count, streaks.created_at FROM streak_set
-JOIN streaks ON streak_set.streak_set_id = streaks.streak_set_id
-WHERE group_id = $1 AND user_id = $2
-ORDER BY streak_set.created_at DESC
+const getStreakSetByGroupId = `-- name: GetStreakSetByGroupId :many
+SELECT streak_set_id, group_id, member_id, end_date, start_date FROM streak_set
+WHERE group_id = $1
 `
 
-type GetStreaksByGroupIDAndUserIDParams struct {
-	GroupID int32 `json:"group_id"`
-	UserID  int32 `json:"user_id"`
-}
-
-type GetStreaksByGroupIDAndUserIDRow struct {
-	StreakSetID   int32         `json:"streak_set_id"`
-	GroupID       int32         `json:"group_id"`
-	UserID        int32         `json:"user_id"`
-	StreakCount   sql.NullInt32 `json:"streak_count"`
-	Ended         bool          `json:"ended"`
-	CreatedAt     time.Time     `json:"created_at"`
-	StreakID      int32         `json:"streak_id"`
-	StreakSetID_2 int32         `json:"streak_set_id_2"`
-	PostID        int32         `json:"post_id"`
-	StreakCount_2 sql.NullInt32 `json:"streak_count_2"`
-	CreatedAt_2   time.Time     `json:"created_at_2"`
-}
-
-func (q *Queries) GetStreaksByGroupIDAndUserID(ctx context.Context, arg GetStreaksByGroupIDAndUserIDParams) ([]GetStreaksByGroupIDAndUserIDRow, error) {
-	rows, err := q.db.QueryContext(ctx, getStreaksByGroupIDAndUserID, arg.GroupID, arg.UserID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []GetStreaksByGroupIDAndUserIDRow{}
-	for rows.Next() {
-		var i GetStreaksByGroupIDAndUserIDRow
-		if err := rows.Scan(
-			&i.StreakSetID,
-			&i.GroupID,
-			&i.UserID,
-			&i.StreakCount,
-			&i.Ended,
-			&i.CreatedAt,
-			&i.StreakID,
-			&i.StreakSetID_2,
-			&i.PostID,
-			&i.StreakCount_2,
-			&i.CreatedAt_2,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getStreaksByStreakSetID = `-- name: GetStreaksByStreakSetID :many
-SELECT streak_id, streak_set_id, post_id, streak_count, created_at FROM streaks
-WHERE streak_set_id = $1
-`
-
-func (q *Queries) GetStreaksByStreakSetID(ctx context.Context, streakSetID int32) ([]Streak, error) {
-	rows, err := q.db.QueryContext(ctx, getStreaksByStreakSetID, streakSetID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []Streak{}
-	for rows.Next() {
-		var i Streak
-		if err := rows.Scan(
-			&i.StreakID,
-			&i.StreakSetID,
-			&i.PostID,
-			&i.StreakCount,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getUnendedStreakSetByUserID = `-- name: GetUnendedStreakSetByUserID :many
-SELECT streak_set_id, group_id, user_id, streak_count, ended, created_at FROM streak_set
-WHERE user_id = $1 AND ended = false
-`
-
-func (q *Queries) GetUnendedStreakSetByUserID(ctx context.Context, userID int32) ([]StreakSet, error) {
-	rows, err := q.db.QueryContext(ctx, getUnendedStreakSetByUserID, userID)
+func (q *Queries) GetStreakSetByGroupId(ctx context.Context, groupID int32) ([]StreakSet, error) {
+	rows, err := q.db.QueryContext(ctx, getStreakSetByGroupId, groupID)
 	if err != nil {
 		return nil, err
 	}
@@ -271,10 +369,9 @@ func (q *Queries) GetUnendedStreakSetByUserID(ctx context.Context, userID int32)
 		if err := rows.Scan(
 			&i.StreakSetID,
 			&i.GroupID,
-			&i.UserID,
-			&i.StreakCount,
-			&i.Ended,
-			&i.CreatedAt,
+			&i.MemberID,
+			&i.EndDate,
+			&i.StartDate,
 		); err != nil {
 			return nil, err
 		}
@@ -289,17 +386,153 @@ func (q *Queries) GetUnendedStreakSetByUserID(ctx context.Context, userID int32)
 	return items, nil
 }
 
-const updateStreakSetCount = `-- name: UpdateStreakSetCount :exec
-UPDATE streak_set SET streak_count = $2
+const getStreakSetByGroupIdandUserId = `-- name: GetStreakSetByGroupIdandUserId :many
+SELECT streak_set_id, group_id, member_id, end_date, start_date FROM streak_set
+WHERE group_id = $1 AND member_id = $2
+`
+
+type GetStreakSetByGroupIdandUserIdParams struct {
+	GroupID  int32 `json:"group_id"`
+	MemberID int32 `json:"member_id"`
+}
+
+func (q *Queries) GetStreakSetByGroupIdandUserId(ctx context.Context, arg GetStreakSetByGroupIdandUserIdParams) ([]StreakSet, error) {
+	rows, err := q.db.QueryContext(ctx, getStreakSetByGroupIdandUserId, arg.GroupID, arg.MemberID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []StreakSet{}
+	for rows.Next() {
+		var i StreakSet
+		if err := rows.Scan(
+			&i.StreakSetID,
+			&i.GroupID,
+			&i.MemberID,
+			&i.EndDate,
+			&i.StartDate,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getStreakSetByStreakSetId = `-- name: GetStreakSetByStreakSetId :one
+SELECT streak_set_id, group_id, member_id, end_date, start_date FROM streak_set
 WHERE streak_set_id = $1
 `
 
-type UpdateStreakSetCountParams struct {
-	StreakSetID int32         `json:"streak_set_id"`
-	StreakCount sql.NullInt32 `json:"streak_count"`
+func (q *Queries) GetStreakSetByStreakSetId(ctx context.Context, streakSetID int32) (StreakSet, error) {
+	row := q.db.QueryRowContext(ctx, getStreakSetByStreakSetId, streakSetID)
+	var i StreakSet
+	err := row.Scan(
+		&i.StreakSetID,
+		&i.GroupID,
+		&i.MemberID,
+		&i.EndDate,
+		&i.StartDate,
+	)
+	return i, err
 }
 
-func (q *Queries) UpdateStreakSetCount(ctx context.Context, arg UpdateStreakSetCountParams) error {
-	_, err := q.db.ExecContext(ctx, updateStreakSetCount, arg.StreakSetID, arg.StreakCount)
+const increaseStreak = `-- name: IncreaseStreak :one
+UPDATE streaks
+SET total_streak_count = total_streak_count + 1, 
+    weekly_streak_count = weekly_streak_count + 1,
+    recent_date_added = CURRENT_TIMESTAMP
+WHERE streak_set_id IN (
+    SELECT s.streak_set_id
+    FROM streaks s
+    JOIN streak_set ss ON s.streak_set_id = ss.streak_set_id
+    WHERE ss.member_id = $1
+    AND ss.group_id = $2
+) RETURNING streak_id, streak_set_id, total_streak_count, weekly_streak_count, completed, recent_date_added, created_at
+`
+
+type IncreaseStreakParams struct {
+	MemberID int32 `json:"member_id"`
+	GroupID  int32 `json:"group_id"`
+}
+
+func (q *Queries) IncreaseStreak(ctx context.Context, arg IncreaseStreakParams) (Streak, error) {
+	row := q.db.QueryRowContext(ctx, increaseStreak, arg.MemberID, arg.GroupID)
+	var i Streak
+	err := row.Scan(
+		&i.StreakID,
+		&i.StreakSetID,
+		&i.TotalStreakCount,
+		&i.WeeklyStreakCount,
+		&i.Completed,
+		&i.RecentDateAdded,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const resetStreak = `-- name: ResetStreak :exec
+UPDATE streaks
+SET total_streak_count = 0, 
+    weekly_streak_count = 0,
+    completed = false
+WHERE streak_set_id IN (
+    SELECT s.streak_set_id
+    FROM streaks s
+    JOIN streak_set ss ON s.streak_set_id = ss.streak_set_id
+    WHERE ss.member_id = $1
+    AND ss.group_id = $2
+) RETURNING streak_id, streak_set_id, total_streak_count, weekly_streak_count, completed, recent_date_added, created_at
+`
+
+type ResetStreakParams struct {
+	MemberID int32 `json:"member_id"`
+	GroupID  int32 `json:"group_id"`
+}
+
+func (q *Queries) ResetStreak(ctx context.Context, arg ResetStreakParams) error {
+	_, err := q.db.ExecContext(ctx, resetStreak, arg.MemberID, arg.GroupID)
+	return err
+}
+
+const resetTotalStreak = `-- name: ResetTotalStreak :exec
+UPDATE streaks
+SET total_streak_count = 0,
+    weekly_streak_count = 0
+WHERE streak_set_id IN (
+    SELECT s.streak_set_id
+    FROM streaks s
+    JOIN streak_set ss ON s.streak_set_id = ss.streak_set_id
+    WHERE s.completed = false 
+    AND ss.end_date::date = CURRENT_DATE
+)
+`
+
+func (q *Queries) ResetTotalStreak(ctx context.Context) error {
+	_, err := q.db.ExecContext(ctx, resetTotalStreak)
+	return err
+}
+
+const resetWeeklyStreak = `-- name: ResetWeeklyStreak :exec
+UPDATE streaks
+SET weekly_streak_count = 0,
+completed = false
+WHERE streak_set_id IN (
+    SELECT s.streak_set_id
+    FROM streaks s
+    JOIN streak_set ss ON s.streak_set_id = ss.streak_set_id
+    WHERE s.completed = true
+    AND ss.end_date::date = CURRENT_DATE
+) RETURNING streak_id, streak_set_id, total_streak_count, weekly_streak_count, completed, recent_date_added, created_at
+`
+
+func (q *Queries) ResetWeeklyStreak(ctx context.Context) error {
+	_, err := q.db.ExecContext(ctx, resetWeeklyStreak)
 	return err
 }

@@ -72,6 +72,9 @@ type (
 		GetAcceptorGroupRequests(c echo.Context) error
 		GetAcceptorGroupRequestsCount(c echo.Context) error
 		GetUserGroups(c echo.Context) error
+		GetStreakByMemberId(c echo.Context) error
+		GetStreakByMemberIDandGroupID(c echo.Context) error
+		GetIncompletedStreakByUserID(c echo.Context) error
 	}
 
 	groupHttpHandler struct {
@@ -1747,4 +1750,55 @@ func (h *groupHttpHandler) GetUserGroups(c echo.Context) error {
 	}
 
 	return response.SuccessResponse(c, http.StatusOK, groups)
+}
+
+func (h *groupHttpHandler) GetStreakByMemberId(c echo.Context) error {
+	ctx := context.Background()
+	memberId, err := strconv.Atoi(c.QueryParam("member_id"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	streak, err := h.groupUsecase.GetStreakByMemberId(ctx, int32(memberId))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	return response.SuccessResponse(c, http.StatusOK, streak)
+}
+
+func (h *groupHttpHandler) GetStreakByMemberIDandGroupID(c echo.Context) error {
+	ctx := context.Background()
+	memberId, err := strconv.Atoi(c.QueryParam("member_id"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+	groupId, err := strconv.Atoi(c.QueryParam("group_id"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	streak, err := h.groupUsecase.GetStreakByMemberIDandGroupID(ctx, groupdb.GetStreakByMemberIDandGroupIDParams{
+		MemberID: int32(memberId),
+		GroupID:  int32(groupId),
+	})
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	return response.SuccessResponse(c, http.StatusOK, streak)
+}
+
+func (h *groupHttpHandler) GetIncompletedStreakByUserID(c echo.Context) error {
+	ctx := context.Background()
+	memberId, err := strconv.Atoi(c.QueryParam("member_id"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+	streak, err := h.groupUsecase.GetIncompletedStreakByUserID(ctx, int32(memberId))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	return response.SuccessResponse(c, http.StatusOK, streak)
 }

@@ -83,6 +83,9 @@ type (
 		GetAcceptorGroupRequests(ctx context.Context, userId int32) ([]groupdb.GetAcceptorGroupRequestsRow, error)
 		GetAcceptorGroupRequestsCount(ctx context.Context, userId int32) (groupdb.GetAcceptorGroupRequestsCountRow, error)
 		GetUserGroups(ctx context.Context, userId int32) (group.GetUserGroupRes, error)
+		GetStreakByMemberId(ctx context.Context, MemberId int32) ([]groupdb.GetStreakByMemberIdRow, error)
+		GetStreakByMemberIDandGroupID(ctx context.Context, args groupdb.GetStreakByMemberIDandGroupIDParams) (groupdb.GetStreakByMemberIDandGroupIDRow, error)
+		GetIncompletedStreakByUserID(ctx context.Context, memberId int32) ([]groupdb.GetIncompletedStreakByUserIDRow, error)
 	}
 
 	groupUsecase struct {
@@ -224,6 +227,7 @@ func (u *groupUsecase) AcceptGroupRequest(pctx context.Context, args groupdb.Acc
 	if err != nil {
 		return groupdb.GroupMember{}, err
 	}
+	u.CreateStreak(pctx, int32(args.GroupID), int32(args.MemberID))
 	return newMember, nil
 }
 
@@ -524,6 +528,14 @@ func (u *groupUsecase) CreatePost(pctx context.Context, args groupdb.CreatePostP
 	if err != nil {
 		return groupdb.Post{}, err
 	}
+	_, err = u.IncreaseStreak(pctx, groupdb.IncreaseStreakParams{
+		MemberID: args.MemberID,
+		GroupID:  args.GroupID,
+	})
+	if err != nil {
+		return groupdb.Post{}, err
+	}
+
 	return newPost, nil
 }
 
@@ -1077,6 +1089,10 @@ func (u *groupUsecase) createPost(ctx context.Context, groupID int32) (int32, er
 		return 0, err
 	}
 
+	// _, err := u.store.IncreaseStreak(ctx, groupdb.IncreaseStreakParams{
+
+	// })
+
 	return post.PostID, nil
 }
 
@@ -1342,4 +1358,113 @@ func (u *groupUsecase) GetUserGroups(ctx context.Context, userId int32) (group.G
 		SocialGroups:   social,
 		PersonalGroups: personal,
 	}, nil
+}
+
+func (u *groupUsecase) GetStreakSetByGroupIdAndMemberId(ctx context.Context, args groupdb.GetStreakSetByGroupIdandUserIdParams) ([]groupdb.StreakSet, error) {
+	streaks, err := u.store.GetStreakSetByGroupIdandUserId(ctx, args)
+	if err != nil {
+		return nil, err
+	}
+	return streaks, nil
+}
+
+// func (u *groupUsecase) EditStreakSetEndDate(ctx context.Context, args groupdb.EditStreakSetEndDateParams) ([]groupdb.StreakSet, error) {
+// 	err := u.store.EditStreakSetEndDate(ctx, args)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	return u.store.GetStreakSetByGroupId(ctx, args.GroupID)
+// }
+
+func (u *groupUsecase) DeleteStreakSet(ctx context.Context, args groupdb.DeleteStreakSetParams) error {
+	err := u.store.DeleteStreakSet(ctx, args)
+	if err != nil {
+		return err
+	}
+	return err
+}
+
+func (u *groupUsecase) CreateStreak(ctx context.Context, GroupId int32, MemberId int32) (groupdb.StreakSet, error) {
+	today := time.Now().Truncate(24 * time.Hour)
+
+	nextWeek := today.AddDate(0, 0, 7)
+	endOfNextWeek := nextWeek.Add(23*time.Hour + 59*time.Minute + 59*time.Second)
+
+	args := groupdb.CreateStreakSetParams{
+		GroupID:  GroupId,
+		MemberID: MemberId,
+		EndDate:  endOfNextWeek,
+	}
+	streakSet, err := u.store.CreateStreakSet(ctx, args)
+	if err != nil {
+		return groupdb.StreakSet{}, err
+	}
+
+	_, err = u.store.CreateStreak(ctx, streakSet.StreakSetID)
+	if err != nil {
+		return groupdb.StreakSet{}, err
+	}
+
+	return streakSet, nil
+}
+
+func (u *groupUsecase) GetStreakByMemberId(ctx context.Context, MemberId int32) ([]groupdb.GetStreakByMemberIdRow, error) {
+	streak, err := u.store.GetStreakByMemberId(ctx, MemberId)
+	if err != nil {
+		return nil, err
+	}
+	return streak, nil
+}
+
+func (u *groupUsecase) GetStreakByMemberIDandGroupID(ctx context.Context, args groupdb.GetStreakByMemberIDandGroupIDParams) (groupdb.GetStreakByMemberIDandGroupIDRow, error) {
+	streak, err := u.store.GetStreakByMemberIDandGroupID(ctx, args)
+	if err != nil {
+		return groupdb.GetStreakByMemberIDandGroupIDRow{}, err
+	}
+	return streak, nil
+}
+
+func (u *groupUsecase) GetIncompletedStreakByUserID(ctx context.Context, memberId int32) ([]groupdb.GetIncompletedStreakByUserIDRow, error) {
+	streak, err := u.store.GetIncompletedStreakByUserID(ctx, memberId)
+	if err != nil {
+		return nil, err
+	}
+	return streak, nil
+}
+
+func (u *groupUsecase) IncreaseStreak(ctx context.Context, args groupdb.IncreaseStreakParams) (groupdb.Streak, error) {
+
+	data, err := u.store.GetStreakByMemberIDandGroupID(ctx, groupdb.GetStreakByMemberIDandGroupIDParams{
+		MemberID: args.MemberID,
+		GroupID:  args.GroupID,
+	})
+	if err != nil {
+		return groupdb.Streak{}, err
+	}
+
+	if data.RecentDateAdded.Valid {
+		if time.Since(data.RecentDateAdded.Time) < 24*time.Hour {
+			return groupdb.Streak{}, errors.New("recentDateAdded is within 1 day, streak cannot be increased")
+		}
+	}
+
+	streak, err := u.store.IncreaseStreak(ctx, args)
+	if err != nil {
+		return groupdb.Streak{}, err
+	}
+
+	FreqGroup, err := u.store.GetGroupByID(ctx, args.GroupID)
+	if err != nil {
+		return groupdb.Streak{}, err
+	}
+
+	if int32(FreqGroup.Frequency.Int32) <= streak.WeeklyStreakCount {
+		u.store.EditCompleteStatus(ctx, groupdb.EditCompleteStatusParams{
+			MemberID:  args.MemberID,
+			GroupID:   args.GroupID,
+			Completed: true,
+		})
+	}
+
+	return streak, nil
 }

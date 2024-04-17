@@ -4,9 +4,9 @@ import (
 	"log"
 
 	"github.com/Win-TS/gleam-backend.git/modules/group/groupHandler"
+	groupPb "github.com/Win-TS/gleam-backend.git/modules/group/groupPb"
 	"github.com/Win-TS/gleam-backend.git/modules/group/groupUsecase"
 	groupdb "github.com/Win-TS/gleam-backend.git/pkg/database/postgres/groupdb/sqlc"
-	groupPb "github.com/Win-TS/gleam-backend.git/modules/group/groupPb"
 	"github.com/Win-TS/gleam-backend.git/pkg/grpcconn"
 )
 
@@ -33,6 +33,7 @@ func (s *server) groupService() {
 	reaction := s.app.Group("/reaction_v1")
 	comment := s.app.Group("/comment_v1")
 	tag := s.app.Group("/tag_v1")
+	streak := s.app.Group("/streak_v1")
 
 	// Health Check
 	group.GET("", s.healthCheckService)
@@ -101,4 +102,9 @@ func (s *server) groupService() {
 	tag.PATCH("/edittagcategory", httpHandler.EditTagCategory)
 	tag.PATCH("/edittagicon", httpHandler.EditTagIcon)
 	tag.DELETE("/tag", httpHandler.DeleteTag)
+
+	// Streak Endpoints
+	streak.GET("/streak", httpHandler.GetStreakByMemberId)
+	streak.GET("/streaks", httpHandler.GetStreakByMemberIDandGroupID)
+	streak.GET("/incompletestreak", httpHandler.GetIncompletedStreakByUserID)
 }

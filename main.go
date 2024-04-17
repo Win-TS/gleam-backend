@@ -8,6 +8,7 @@ import (
 
 	firebase "firebase.google.com/go"
 	"github.com/Win-TS/gleam-backend.git/config"
+	"github.com/Win-TS/gleam-backend.git/pkg/cronjob"
 	groupdb "github.com/Win-TS/gleam-backend.git/pkg/database/postgres/groupdb/sqlc"
 	userdb "github.com/Win-TS/gleam-backend.git/pkg/database/postgres/userdb/sqlc"
 	"github.com/Win-TS/gleam-backend.git/server"
@@ -57,6 +58,17 @@ func main() {
 		case "group":
 			database = groupdb.NewStore(dbConn)
 		}
+	}
+
+	// Initialize cronjob
+	dbConn, err := sql.Open("postgres", cfg.Db.Url)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer dbConn.Close()
+	cron := cronjob.NewCronjobService(groupdb.NewStore(dbConn))
+	if err := cron.Start(); err != nil {
+		log.Fatalf("Error starting cronjob: %v", err)
 	}
 
 	server.Start(ctx, &cfg, database, client)

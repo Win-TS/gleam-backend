@@ -63,19 +63,19 @@ CREATE TABLE "tags" (
 CREATE TABLE "streak_set" (
   "streak_set_id" SERIAL PRIMARY KEY,
   "group_id" INTEGER NOT NULL,
-  "user_id" INTEGER NOT NULL,
-  "streak_count" INTEGER,
-  "ended" BOOLEAN NOT NULL DEFAULT false,
-  "created_at" TIMESTAMP NOT NULL DEFAULT (CURRENT_TIMESTAMP)
+  "member_id" integer NOT NULL,
+  "end_date" TIMESTAMP NOT NULL,
+  "start_date" TIMESTAMP NOT NULL DEFAULT (CURRENT_TIMESTAMP)
 );
 
 CREATE TABLE "streaks" (
   "streak_id" SERIAL PRIMARY KEY,
   "streak_set_id" INTEGER NOT NULL,
-  "post_id" INTEGER UNIQUE NOT NULL,
-  "streak_count" INTEGER,
-  "created_at" TIMESTAMP NOT NULL DEFAULT (CURRENT_TIMESTAMP),
-  FOREIGN KEY ("post_id") REFERENCES "posts" ("post_id") ON DELETE CASCADE
+  "total_streak_count" INTEGER NOT NULL DEFAULT 0,
+  "weekly_streak_count" INTEGER NOT NULL DEFAULT 0,
+  "completed" boolean NOT NULL DEFAULT false,
+  "recent_date_added" TIMESTAMP,
+  "created_at" TIMESTAMP NOT NULL DEFAULT (CURRENT_TIMESTAMP)
 );
 
 CREATE TABLE "tag_category" (
@@ -95,6 +95,8 @@ ALTER TABLE "post_comments" ADD FOREIGN KEY ("post_id") REFERENCES "posts" ("pos
 
 ALTER TABLE "groups" ADD FOREIGN KEY ("tag_id") REFERENCES "tags" ("tag_id");
 
-ALTER TABLE "streaks" ADD FOREIGN KEY ("streak_set_id") REFERENCES "streak_set" ("streak_set_id");
+ALTER TABLE "streaks" ADD FOREIGN KEY ("streak_set_id") REFERENCES "streak_set" ("streak_set_id") ON DELETE CASCADE;
+
+ALTER TABLE "streak_set" ADD FOREIGN KEY ("group_id") REFERENCES "groups" ("group_id") ON DELETE CASCADE;
 
 ALTER TABLE "tags" ADD FOREIGN KEY ("category_id") REFERENCES "tag_category" ("category_id");

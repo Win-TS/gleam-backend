@@ -107,4 +107,5 @@ func (s *server) groupService() {
 	streak.GET("/streak", httpHandler.GetStreakByMemberId)
 	streak.GET("/streaks", httpHandler.GetStreakByMemberIDandGroupID)
 	streak.GET("/incompletestreak", httpHandler.GetIncompletedStreakByUserID)
+	streak.GET("/maxstreak", httpHandler.GetMaxStreakByMemberId)
 }

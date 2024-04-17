@@ -86,6 +86,7 @@ type (
 		GetStreakByMemberId(ctx context.Context, MemberId int32) ([]groupdb.GetStreakByMemberIdRow, error)
 		GetStreakByMemberIDandGroupID(ctx context.Context, args groupdb.GetStreakByMemberIDandGroupIDParams) (groupdb.GetStreakByMemberIDandGroupIDRow, error)
 		GetIncompletedStreakByUserID(ctx context.Context, memberId int32) ([]groupdb.GetIncompletedStreakByUserIDRow, error)
+		GetMaxStreakByMemberId(ctx context.Context, MemberId int32) (int32, error)
 	}
 
 	groupUsecase struct {
@@ -652,17 +653,29 @@ func (u *groupUsecase) GetPostsForOngoingFeedByMemberId(pctx context.Context, ar
 
 	result := make([]group.PostsForFeedRes, len(posts))
 	for i, post := range posts {
+		streak, err := u.GetStreakByMemberIDandGroupID(pctx,
+			groupdb.GetStreakByMemberIDandGroupIDParams{
+				MemberID: post.MemberID,
+				GroupID:  post.GroupID,
+			},
+		)
+		if err != nil {
+			return nil, err
+		}
+
 		result[i] = group.PostsForFeedRes{
-			PostID:         post.PostID,
-			MemberID:       post.MemberID,
-			GroupID:        post.GroupID,
-			PhotoUrl:       post.PhotoUrl,
-			Description:    post.Description,
-			CreatedAt:      post.CreatedAt,
-			GroupName:      post.GroupName,
-			GroupPhotoUrl:  post.GroupPhotoUrl,
-			PosterUsername: profileUsernames[post.MemberID],
-			PosterPhotoUrl: profilePhotoUrls[post.MemberID],
+			PostID:            post.PostID,
+			MemberID:          post.MemberID,
+			GroupID:           post.GroupID,
+			PhotoUrl:          post.PhotoUrl,
+			Description:       post.Description,
+			CreatedAt:         post.CreatedAt,
+			GroupName:         post.GroupName,
+			GroupPhotoUrl:     post.GroupPhotoUrl,
+			PosterUsername:    profileUsernames[post.MemberID],
+			PosterPhotoUrl:    profilePhotoUrls[post.MemberID],
+			TotalStreakCount:  streak.TotalStreakCount,
+			WeeklyStreakCount: streak.WeeklyStreakCount,
 		}
 	}
 
@@ -1264,17 +1277,28 @@ func (u *groupUsecase) GetPostsForFollowingFeedByMemberId(pctx context.Context, 
 
 	result := make([]group.PostsForFeedRes, len(posts))
 	for i, post := range posts {
+		streak, err := u.GetStreakByMemberIDandGroupID(pctx,
+			groupdb.GetStreakByMemberIDandGroupIDParams{
+				MemberID: post.MemberID,
+				GroupID:  post.GroupID,
+			},
+		)
+		if err != nil {
+			return nil, err
+		}
 		result[i] = group.PostsForFeedRes{
-			PostID:         post.PostID,
-			MemberID:       post.MemberID,
-			GroupID:        post.GroupID,
-			PhotoUrl:       post.PhotoUrl,
-			Description:    post.Description,
-			CreatedAt:      post.CreatedAt,
-			GroupName:      post.GroupName,
-			GroupPhotoUrl:  post.GroupPhotoUrl,
-			PosterUsername: friendUsernames[post.MemberID],
-			PosterPhotoUrl: friendPhotoUrls[post.MemberID],
+			PostID:            post.PostID,
+			MemberID:          post.MemberID,
+			GroupID:           post.GroupID,
+			PhotoUrl:          post.PhotoUrl,
+			Description:       post.Description,
+			CreatedAt:         post.CreatedAt,
+			GroupName:         post.GroupName,
+			GroupPhotoUrl:     post.GroupPhotoUrl,
+			PosterUsername:    friendUsernames[post.MemberID],
+			PosterPhotoUrl:    friendPhotoUrls[post.MemberID],
+			TotalStreakCount:  streak.TotalStreakCount,
+			WeeklyStreakCount: streak.WeeklyStreakCount,
 		}
 	}
 
@@ -1466,5 +1490,13 @@ func (u *groupUsecase) IncreaseStreak(ctx context.Context, args groupdb.Increase
 		})
 	}
 
+	return streak, nil
+}
+
+func (u *groupUsecase) GetMaxStreakByMemberId(ctx context.Context, MemberId int32) (int32, error) {
+	streak, err := u.store.GetMaxStreakUser(ctx, MemberId)
+	if err != nil {
+		return -1, err
+	}
 	return streak, nil
 }

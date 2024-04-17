@@ -82,6 +82,7 @@ type Querier interface {
 	GetGroupsByCategoryID(ctx context.Context, categoryID sql.NullInt32) ([]GetGroupsByCategoryIDRow, error)
 	GetGroupsByTagID(ctx context.Context, tagID int32) ([]Group, error)
 	GetIncompletedStreakByUserID(ctx context.Context, memberID int32) ([]GetIncompletedStreakByUserIDRow, error)
+	GetMaxStreakUser(ctx context.Context, memberID int32) (int32, error)
 	GetMemberInfo(ctx context.Context, arg GetMemberInfoParams) (GetMemberInfoRow, error)
 	GetMemberPendingGroupRequests(ctx context.Context, arg GetMemberPendingGroupRequestsParams) ([]GroupRequest, error)
 	GetMembersByGroupID(ctx context.Context, arg GetMembersByGroupIDParams) ([]GroupMember, error)

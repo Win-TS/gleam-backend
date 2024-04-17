@@ -75,6 +75,7 @@ type (
 		GetStreakByMemberId(c echo.Context) error
 		GetStreakByMemberIDandGroupID(c echo.Context) error
 		GetIncompletedStreakByUserID(c echo.Context) error
+		GetMaxStreakByMemberId(c echo.Context) error
 	}
 
 	groupHttpHandler struct {
@@ -1796,6 +1797,20 @@ func (h *groupHttpHandler) GetIncompletedStreakByUserID(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 	streak, err := h.groupUsecase.GetIncompletedStreakByUserID(ctx, int32(memberId))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	return response.SuccessResponse(c, http.StatusOK, streak)
+}
+
+func (h *groupHttpHandler) GetMaxStreakByMemberId(c echo.Context) error {
+	ctx := context.Background()
+	memberId, err := strconv.Atoi(c.QueryParam("member_id"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+	streak, err := h.groupUsecase.GetMaxStreakByMemberId(ctx, int32(memberId))
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}

@@ -94,6 +94,7 @@ type Querier interface {
 	GetPostsForFollowingFeedByMemberId(ctx context.Context, arg GetPostsForFollowingFeedByMemberIdParams) ([]GetPostsForFollowingFeedByMemberIdRow, error)
 	GetPostsForOngoingFeedByMemberID(ctx context.Context, arg GetPostsForOngoingFeedByMemberIDParams) ([]GetPostsForOngoingFeedByMemberIDRow, error)
 	GetReactionById(ctx context.Context, reactionID int32) (PostReaction, error)
+	GetReactionByPostIDAndUserID(ctx context.Context, arg GetReactionByPostIDAndUserIDParams) (PostReaction, error)
 	GetReactionsByPostID(ctx context.Context, arg GetReactionsByPostIDParams) ([]PostReaction, error)
 	GetReactionsCountByPostID(ctx context.Context, postID int32) (int64, error)
 	GetReactionsWithTypeByPostID(ctx context.Context, postID int32) ([]string, error)

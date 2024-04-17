@@ -76,6 +76,10 @@ WHERE post_id = $1;
 SELECT reaction FROM post_reactions
 WHERE post_id = $1;
 
+-- name: GetReactionByPostIDAndUserID :one
+SELECT * FROM post_reactions
+WHERE post_id = $1 AND member_id = $2;
+
 -- name: GetCommentsByPostID :many
 SELECT * FROM post_comments
 WHERE post_id = $1

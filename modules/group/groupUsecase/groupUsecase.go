@@ -41,7 +41,7 @@ type (
 		DeleteGroup(pctx context.Context, groupId int, editorId int32) error
 		DeleteGroupMember(pctx context.Context, args groupdb.DeleteMemberParams, editorId int32) error
 		CreatePost(pctx context.Context, args groupdb.CreatePostParams) (groupdb.Post, error)
-		GetPostByPostId(pctx context.Context, postId int, grpcUrl string) (groupdb.Post, *userPb.GetUserProfileRes, error)
+		GetPostByPostId(pctx context.Context, postId, userId int, grpcUrl string) (groupdb.Post, *userPb.GetUserProfileRes, *groupdb.PostReaction, error)
 		GetPostsByGroupId(pctx context.Context, args groupdb.GetPostsByGroupIDParams, grpcUrl string) ([]group.PostByGroupRes, error)
 		GetPostsByUserId(pctx context.Context, args groupdb.GetPostsByMemberIDParams) ([]groupdb.Post, error)
 		GetPostsByGroupAndMemberId(pctx context.Context, args groupdb.GetPostsByGroupAndMemberIDParams) ([]groupdb.Post, error)
@@ -87,6 +87,7 @@ type (
 		GetStreakByMemberIDandGroupID(ctx context.Context, args groupdb.GetStreakByMemberIDandGroupIDParams) (groupdb.GetStreakByMemberIDandGroupIDRow, error)
 		GetIncompletedStreakByUserID(ctx context.Context, memberId int32) ([]groupdb.GetIncompletedStreakByUserIDRow, error)
 		GetMaxStreakByMemberId(ctx context.Context, MemberId int32) (int32, error)
+		IncreaseStreak(ctx context.Context, args groupdb.GetStreakByMemberIDandGroupIDParams) (groupdb.Streak, error)
 	}
 
 	groupUsecase struct {
@@ -529,7 +530,7 @@ func (u *groupUsecase) CreatePost(pctx context.Context, args groupdb.CreatePostP
 	if err != nil {
 		return groupdb.Post{}, err
 	}
-	_, err = u.IncreaseStreak(pctx, groupdb.IncreaseStreakParams{
+	_, err = u.IncreaseStreak(pctx, groupdb.GetStreakByMemberIDandGroupIDParams{
 		MemberID: args.MemberID,
 		GroupID:  args.GroupID,
 	})
@@ -540,19 +541,29 @@ func (u *groupUsecase) CreatePost(pctx context.Context, args groupdb.CreatePostP
 	return newPost, nil
 }
 
-func (u *groupUsecase) GetPostByPostId(pctx context.Context, postId int, grpcUrl string) (groupdb.Post, *userPb.GetUserProfileRes, error) {
+func (u *groupUsecase) GetPostByPostId(pctx context.Context, postId, userId int, grpcUrl string) (groupdb.Post, *userPb.GetUserProfileRes, *groupdb.PostReaction, error) {
 	postInfo, err := u.store.GetPostByPostID(pctx, int32(postId))
 	if err != nil {
-		return groupdb.Post{}, nil, err
+		return groupdb.Post{}, nil, nil, err
 	}
 	profile, err := u.GetUserProfile(pctx, grpcUrl, &userPb.GetUserProfileReq{
 		UserId: postInfo.MemberID,
 	})
 	if err != nil {
-		return groupdb.Post{}, nil, err
+		return groupdb.Post{}, nil, nil, err
+	}
+	userReaction, err := u.store.GetReactionByPostIDAndUserID(pctx, groupdb.GetReactionByPostIDAndUserIDParams{
+		PostID:   postInfo.PostID,
+		MemberID: int32(userId),
+	})
+	if err != nil && err != sql.ErrNoRows {
+		return groupdb.Post{}, nil, nil, err
+	}
+	if err == sql.ErrNoRows {
+		return postInfo, profile, nil, nil
 	}
 
-	return postInfo, profile, nil
+	return postInfo, profile, &userReaction, nil
 }
 
 func (u *groupUsecase) GetPostsByGroupId(pctx context.Context, args groupdb.GetPostsByGroupIDParams, grpcUrl string) ([]group.PostByGroupRes, error) {
@@ -659,8 +670,21 @@ func (u *groupUsecase) GetPostsForOngoingFeedByMemberId(pctx context.Context, ar
 				GroupID:  post.GroupID,
 			},
 		)
-		if err != nil {
+		if err != nil && err != sql.ErrNoRows {
 			return nil, err
+		}
+		var reaction string
+		userReaction, err := u.store.GetReactionByPostIDAndUserID(pctx, groupdb.GetReactionByPostIDAndUserIDParams{
+			PostID:   post.PostID,
+			MemberID: args.MemberID,
+		})
+		if err != nil && err != sql.ErrNoRows {
+			return nil, err
+		}
+		if err == sql.ErrNoRows {
+			reaction = ""
+		} else {
+			reaction = userReaction.Reaction
 		}
 
 		result[i] = group.PostsForFeedRes{
@@ -676,6 +700,7 @@ func (u *groupUsecase) GetPostsForOngoingFeedByMemberId(pctx context.Context, ar
 			PosterPhotoUrl:    profilePhotoUrls[post.MemberID],
 			TotalStreakCount:  streak.TotalStreakCount,
 			WeeklyStreakCount: streak.WeeklyStreakCount,
+			UserReaction:      reaction,
 		}
 	}
 
@@ -1283,8 +1308,21 @@ func (u *groupUsecase) GetPostsForFollowingFeedByMemberId(pctx context.Context, 
 				GroupID:  post.GroupID,
 			},
 		)
-		if err != nil {
+		if err != nil && err != sql.ErrNoRows {
 			return nil, err
+		}
+		var reaction string
+		userReaction, err := u.store.GetReactionByPostIDAndUserID(pctx, groupdb.GetReactionByPostIDAndUserIDParams{
+			PostID:   post.PostID,
+			MemberID: int32(userId),
+		})
+		if err != nil && err != sql.ErrNoRows {
+			return nil, err
+		}
+		if err == sql.ErrNoRows {
+			reaction = ""
+		} else {
+			reaction = userReaction.Reaction
 		}
 		result[i] = group.PostsForFeedRes{
 			PostID:            post.PostID,
@@ -1299,6 +1337,7 @@ func (u *groupUsecase) GetPostsForFollowingFeedByMemberId(pctx context.Context, 
 			PosterPhotoUrl:    friendPhotoUrls[post.MemberID],
 			TotalStreakCount:  streak.TotalStreakCount,
 			WeeklyStreakCount: streak.WeeklyStreakCount,
+			UserReaction:      reaction,
 		}
 	}
 
@@ -1456,12 +1495,8 @@ func (u *groupUsecase) GetIncompletedStreakByUserID(ctx context.Context, memberI
 	return streak, nil
 }
 
-func (u *groupUsecase) IncreaseStreak(ctx context.Context, args groupdb.IncreaseStreakParams) (groupdb.Streak, error) {
-
-	data, err := u.store.GetStreakByMemberIDandGroupID(ctx, groupdb.GetStreakByMemberIDandGroupIDParams{
-		MemberID: args.MemberID,
-		GroupID:  args.GroupID,
-	})
+func (u *groupUsecase) IncreaseStreak(ctx context.Context, args groupdb.GetStreakByMemberIDandGroupIDParams) (groupdb.Streak, error) {
+	data, err := u.store.GetStreakByMemberIDandGroupID(ctx, args)
 	if err != nil {
 		return groupdb.Streak{}, err
 	}
@@ -1472,7 +1507,10 @@ func (u *groupUsecase) IncreaseStreak(ctx context.Context, args groupdb.Increase
 		}
 	}
 
-	streak, err := u.store.IncreaseStreak(ctx, args)
+	streak, err := u.store.IncreaseStreak(ctx, groupdb.IncreaseStreakParams{
+		MemberID: args.MemberID,
+		GroupID:  args.GroupID,
+	})
 	if err != nil {
 		return groupdb.Streak{}, err
 	}

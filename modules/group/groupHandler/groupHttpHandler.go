@@ -906,17 +906,22 @@ func (h *groupHttpHandler) GetPostByPostId(c echo.Context) error {
 	if err != nil {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
+	userId, err := strconv.Atoi(c.QueryParam("user_id"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
 
-	postInfo, Member, err := h.groupUsecase.GetPostByPostId(ctx, postId, h.cfg.Grpc.UserUrl)
+	postInfo, member, reaction, err := h.groupUsecase.GetPostByPostId(ctx, postId, userId, h.cfg.Grpc.UserUrl)
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
-		"success": true,
-		"message": "Success: get post by id success",
-		"data":    postInfo,
-		"member":  Member,
+		"success":  true,
+		"message":  "Success: get post by id success",
+		"data":     postInfo,
+		"member":   member,
+		"reaction": reaction,
 	})
 }
 

@@ -541,6 +541,29 @@ func (q *Queries) GetPostsForOngoingFeedByMemberID(ctx context.Context, arg GetP
 	return items, nil
 }
 
+const getReactionByPostIDAndUserID = `-- name: GetReactionByPostIDAndUserID :one
+SELECT reaction_id, post_id, member_id, reaction, created_at FROM post_reactions
+WHERE post_id = $1 AND member_id = $2
+`
+
+type GetReactionByPostIDAndUserIDParams struct {
+	PostID   int32 `json:"post_id"`
+	MemberID int32 `json:"member_id"`
+}
+
+func (q *Queries) GetReactionByPostIDAndUserID(ctx context.Context, arg GetReactionByPostIDAndUserIDParams) (PostReaction, error) {
+	row := q.db.QueryRowContext(ctx, getReactionByPostIDAndUserID, arg.PostID, arg.MemberID)
+	var i PostReaction
+	err := row.Scan(
+		&i.ReactionID,
+		&i.PostID,
+		&i.MemberID,
+		&i.Reaction,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const getReactionsByPostID = `-- name: GetReactionsByPostID :many
 SELECT reaction_id, post_id, member_id, reaction, created_at FROM post_reactions
 WHERE post_id = $1

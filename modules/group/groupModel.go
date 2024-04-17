@@ -117,6 +117,7 @@ type (
 		PosterPhotoUrl    string         `json:"poster_photo_url"`
 		TotalStreakCount  int32          `json:"total_streak_count"`
 		WeeklyStreakCount int32          `json:"weekly_streak_count"`
+		UserReaction      string         `json:"user_reaction"`
 	}
 
 	GroupInfoWithMemberRes struct {

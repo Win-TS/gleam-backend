@@ -147,3 +147,13 @@ WHERE streak_set_id IN (
     WHERE s.completed = true
     AND ss.end_date::date = CURRENT_DATE
 ) RETURNING *;
+
+-- name: GetMaxStreakUser :one
+SELECT max_streak_count
+FROM streaks
+WHERE streak_set_id IN (
+    SELECT s.streak_set_id
+    FROM streaks s
+    JOIN streak_set ss ON s.streak_set_id = ss.streak_set_id
+    WHERE ss.member_id = $1
+);

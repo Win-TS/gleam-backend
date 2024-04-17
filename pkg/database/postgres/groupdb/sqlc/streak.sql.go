@@ -16,7 +16,7 @@ INSERT INTO streaks (
     streak_set_id
 ) VALUES (
     $1
-) RETURNING streak_id, streak_set_id, total_streak_count, weekly_streak_count, completed, recent_date_added, created_at
+) RETURNING streak_id, streak_set_id, max_streak_count, total_streak_count, weekly_streak_count, completed, recent_date_added, created_at
 `
 
 func (q *Queries) CreateStreak(ctx context.Context, streakSetID int32) (Streak, error) {
@@ -25,6 +25,7 @@ func (q *Queries) CreateStreak(ctx context.Context, streakSetID int32) (Streak, 
 	err := row.Scan(
 		&i.StreakID,
 		&i.StreakSetID,
+		&i.MaxStreakCount,
 		&i.TotalStreakCount,
 		&i.WeeklyStreakCount,
 		&i.Completed,
@@ -146,7 +147,7 @@ func (q *Queries) EditStreakSetEndDate(ctx context.Context, arg EditStreakSetEnd
 }
 
 const getIncompletedStreakByUserID = `-- name: GetIncompletedStreakByUserID :many
-SELECT s.streak_id, s.streak_set_id, s.total_streak_count, s.weekly_streak_count, s.completed, s.recent_date_added, s.created_at, ss.group_id, ss.member_id, ss.end_date
+SELECT s.streak_id, s.streak_set_id, s.max_streak_count, s.total_streak_count, s.weekly_streak_count, s.completed, s.recent_date_added, s.created_at, ss.group_id, ss.member_id, ss.end_date
 FROM streaks s
 JOIN streak_set ss ON s.streak_set_id = ss.streak_set_id
 WHERE ss.member_id = $1
@@ -156,6 +157,7 @@ AND s.completed = false
 type GetIncompletedStreakByUserIDRow struct {
 	StreakID          int32        `json:"streak_id"`
 	StreakSetID       int32        `json:"streak_set_id"`
+	MaxStreakCount    int32        `json:"max_streak_count"`
 	TotalStreakCount  int32        `json:"total_streak_count"`
 	WeeklyStreakCount int32        `json:"weekly_streak_count"`
 	Completed         bool         `json:"completed"`
@@ -178,6 +180,7 @@ func (q *Queries) GetIncompletedStreakByUserID(ctx context.Context, memberID int
 		if err := rows.Scan(
 			&i.StreakID,
 			&i.StreakSetID,
+			&i.MaxStreakCount,
 			&i.TotalStreakCount,
 			&i.WeeklyStreakCount,
 			&i.Completed,
@@ -200,8 +203,26 @@ func (q *Queries) GetIncompletedStreakByUserID(ctx context.Context, memberID int
 	return items, nil
 }
 
+const getMaxStreakUser = `-- name: GetMaxStreakUser :one
+SELECT max_streak_count
+FROM streaks
+WHERE streak_set_id IN (
+    SELECT s.streak_set_id
+    FROM streaks s
+    JOIN streak_set ss ON s.streak_set_id = ss.streak_set_id
+    WHERE ss.member_id = $1
+)
+`
+
+func (q *Queries) GetMaxStreakUser(ctx context.Context, memberID int32) (int32, error) {
+	row := q.db.QueryRowContext(ctx, getMaxStreakUser, memberID)
+	var max_streak_count int32
+	err := row.Scan(&max_streak_count)
+	return max_streak_count, err
+}
+
 const getStreakByMemberIDandGroupID = `-- name: GetStreakByMemberIDandGroupID :one
-SELECT s.streak_id, s.streak_set_id, s.total_streak_count, s.weekly_streak_count, s.completed, s.recent_date_added, s.created_at, ss.group_id, ss.member_id, ss.end_date
+SELECT s.streak_id, s.streak_set_id, s.max_streak_count, s.total_streak_count, s.weekly_streak_count, s.completed, s.recent_date_added, s.created_at, ss.group_id, ss.member_id, ss.end_date
 FROM streaks s
 JOIN streak_set ss ON s.streak_set_id = ss.streak_set_id
 WHERE ss.member_id = $1
@@ -216,6 +237,7 @@ type GetStreakByMemberIDandGroupIDParams struct {
 type GetStreakByMemberIDandGroupIDRow struct {
 	StreakID          int32        `json:"streak_id"`
 	StreakSetID       int32        `json:"streak_set_id"`
+	MaxStreakCount    int32        `json:"max_streak_count"`
 	TotalStreakCount  int32        `json:"total_streak_count"`
 	WeeklyStreakCount int32        `json:"weekly_streak_count"`
 	Completed         bool         `json:"completed"`
@@ -232,6 +254,7 @@ func (q *Queries) GetStreakByMemberIDandGroupID(ctx context.Context, arg GetStre
 	err := row.Scan(
 		&i.StreakID,
 		&i.StreakSetID,
+		&i.MaxStreakCount,
 		&i.TotalStreakCount,
 		&i.WeeklyStreakCount,
 		&i.Completed,
@@ -245,7 +268,7 @@ func (q *Queries) GetStreakByMemberIDandGroupID(ctx context.Context, arg GetStre
 }
 
 const getStreakByMemberId = `-- name: GetStreakByMemberId :many
-SELECT s.streak_id, s.streak_set_id, s.total_streak_count, s.weekly_streak_count, s.completed, s.recent_date_added, s.created_at, ss.group_id, ss.member_id, ss.end_date
+SELECT s.streak_id, s.streak_set_id, s.max_streak_count, s.total_streak_count, s.weekly_streak_count, s.completed, s.recent_date_added, s.created_at, ss.group_id, ss.member_id, ss.end_date
 FROM streaks s 
 JOIN streak_set ss ON s.streak_set_id = ss.streak_set_id
 WHERE ss.member_id = $1
@@ -254,6 +277,7 @@ WHERE ss.member_id = $1
 type GetStreakByMemberIdRow struct {
 	StreakID          int32        `json:"streak_id"`
 	StreakSetID       int32        `json:"streak_set_id"`
+	MaxStreakCount    int32        `json:"max_streak_count"`
 	TotalStreakCount  int32        `json:"total_streak_count"`
 	WeeklyStreakCount int32        `json:"weekly_streak_count"`
 	Completed         bool         `json:"completed"`
@@ -276,6 +300,7 @@ func (q *Queries) GetStreakByMemberId(ctx context.Context, memberID int32) ([]Ge
 		if err := rows.Scan(
 			&i.StreakID,
 			&i.StreakSetID,
+			&i.MaxStreakCount,
 			&i.TotalStreakCount,
 			&i.WeeklyStreakCount,
 			&i.Completed,
@@ -299,7 +324,7 @@ func (q *Queries) GetStreakByMemberId(ctx context.Context, memberID int32) ([]Ge
 }
 
 const getStreakByStreakSetId = `-- name: GetStreakByStreakSetId :one
-SELECT streak_id, streak_set_id, total_streak_count, weekly_streak_count, completed, recent_date_added, created_at FROM streaks
+SELECT streak_id, streak_set_id, max_streak_count, total_streak_count, weekly_streak_count, completed, recent_date_added, created_at FROM streaks
 WHERE streak_set_id = $1
 `
 
@@ -309,6 +334,7 @@ func (q *Queries) GetStreakByStreakSetId(ctx context.Context, streakSetID int32)
 	err := row.Scan(
 		&i.StreakID,
 		&i.StreakSetID,
+		&i.MaxStreakCount,
 		&i.TotalStreakCount,
 		&i.WeeklyStreakCount,
 		&i.Completed,
@@ -447,6 +473,7 @@ const increaseStreak = `-- name: IncreaseStreak :one
 UPDATE streaks
 SET total_streak_count = total_streak_count + 1, 
     weekly_streak_count = weekly_streak_count + 1,
+    max_streak_count = max_streak_count +1,
     recent_date_added = CURRENT_TIMESTAMP
 WHERE streak_set_id IN (
     SELECT s.streak_set_id
@@ -454,7 +481,7 @@ WHERE streak_set_id IN (
     JOIN streak_set ss ON s.streak_set_id = ss.streak_set_id
     WHERE ss.member_id = $1
     AND ss.group_id = $2
-) RETURNING streak_id, streak_set_id, total_streak_count, weekly_streak_count, completed, recent_date_added, created_at
+) RETURNING streak_id, streak_set_id, max_streak_count, total_streak_count, weekly_streak_count, completed, recent_date_added, created_at
 `
 
 type IncreaseStreakParams struct {
@@ -468,6 +495,7 @@ func (q *Queries) IncreaseStreak(ctx context.Context, arg IncreaseStreakParams) 
 	err := row.Scan(
 		&i.StreakID,
 		&i.StreakSetID,
+		&i.MaxStreakCount,
 		&i.TotalStreakCount,
 		&i.WeeklyStreakCount,
 		&i.Completed,
@@ -488,7 +516,7 @@ WHERE streak_set_id IN (
     JOIN streak_set ss ON s.streak_set_id = ss.streak_set_id
     WHERE ss.member_id = $1
     AND ss.group_id = $2
-) RETURNING streak_id, streak_set_id, total_streak_count, weekly_streak_count, completed, recent_date_added, created_at
+) RETURNING streak_id, streak_set_id, max_streak_count, total_streak_count, weekly_streak_count, completed, recent_date_added, created_at
 `
 
 type ResetStreakParams struct {
@@ -529,7 +557,7 @@ WHERE streak_set_id IN (
     JOIN streak_set ss ON s.streak_set_id = ss.streak_set_id
     WHERE s.completed = true
     AND ss.end_date::date = CURRENT_DATE
-) RETURNING streak_id, streak_set_id, total_streak_count, weekly_streak_count, completed, recent_date_added, created_at
+) RETURNING streak_id, streak_set_id, max_streak_count, total_streak_count, weekly_streak_count, completed, recent_date_added, created_at
 `
 
 func (q *Queries) ResetWeeklyStreak(ctx context.Context) error {

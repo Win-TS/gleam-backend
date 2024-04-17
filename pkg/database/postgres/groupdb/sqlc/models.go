@@ -65,6 +65,7 @@ type PostReaction struct {
 type Streak struct {
 	StreakID          int32        `json:"streak_id"`
 	StreakSetID       int32        `json:"streak_set_id"`
+	MaxStreakCount    int32        `json:"max_streak_count"`
 	TotalStreakCount  int32        `json:"total_streak_count"`
 	WeeklyStreakCount int32        `json:"weekly_streak_count"`
 	Completed         bool         `json:"completed"`

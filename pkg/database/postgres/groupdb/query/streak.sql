@@ -67,6 +67,7 @@ INSERT INTO streaks (
 UPDATE streaks
 SET total_streak_count = total_streak_count + 1, 
     weekly_streak_count = weekly_streak_count + 1,
+    max_streak_count = max_streak_count +1,
     recent_date_added = CURRENT_TIMESTAMP
 WHERE streak_set_id IN (
     SELECT s.streak_set_id

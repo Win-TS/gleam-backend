@@ -71,6 +71,7 @@ CREATE TABLE "streak_set" (
 CREATE TABLE "streaks" (
   "streak_id" SERIAL PRIMARY KEY,
   "streak_set_id" INTEGER NOT NULL,
+  "max_streak_count" INTEGER NOT NULL DEFAULT 0,
   "total_streak_count" INTEGER NOT NULL DEFAULT 0,
   "weekly_streak_count" INTEGER NOT NULL DEFAULT 0,
   "completed" boolean NOT NULL DEFAULT false,

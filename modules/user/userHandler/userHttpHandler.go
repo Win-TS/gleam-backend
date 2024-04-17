@@ -38,6 +38,7 @@ type (
 		FriendsPendingList(c echo.Context) error
 		AddFriend(c echo.Context) error
 		FriendAccept(c echo.Context) error
+		FriendDecline(c echo.Context) error
 		UserMockData(c echo.Context) error
 		EditUserPhoto(c echo.Context) error
 		SearchUsersByUsername(c echo.Context) error
@@ -472,6 +473,22 @@ func (h *userHttpHandler) FriendAccept(c echo.Context) error {
 	}
 
 	err := h.userUsecase.FriendAccept(ctx, *args)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	return response.SuccessResponse(c, http.StatusOK, "Friend status updated successfully")
+}
+func (h *userHttpHandler) FriendDecline(c echo.Context) error {
+	ctx := context.Background()
+	wrapper := request.ContextWrapper(c)
+
+	args := new(user.EditFriendStatusDeclinedReq)
+	if err := wrapper.Bind(args); err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	err := h.userUsecase.FriendDecline(ctx, *args)
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}

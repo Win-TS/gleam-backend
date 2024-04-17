@@ -47,6 +47,7 @@ type UserUsecaseService interface {
 	FriendsPendingList(pctx context.Context, args userdb.GetFriendsPendingListParams) ([]userdb.User, error)
 	AddFriend(pctx context.Context, args user.CreateFriendReq) (userdb.Friend, error)
 	FriendAccept(pctx context.Context, args user.EditFriendStatusAcceptedReq) error
+	FriendDecline(pctx context.Context, args user.EditFriendStatusDeclinedReq) error
 	UserMockData(ctx context.Context, count int16) error
 	EditUserPhoto(pctx context.Context, args userdb.EditUserProfilePictureParams) (user.UserProfile, error)
 	SearchUsersByUsername(ctx context.Context, args userdb.SearchUsersByUsernameParams) ([]userdb.SearchUsersByUsernameRow, error)
@@ -403,6 +404,20 @@ func (u *userUsecase) FriendAccept(pctx context.Context, args user.EditFriendSta
 		UserId2: userID2,
 	}
 	err := u.store.EditFriendStatusAccepted(pctx, arg)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (u *userUsecase) FriendDecline(pctx context.Context, args user.EditFriendStatusDeclinedReq) error {
+	userID1 := utils.ConvertIntToSqlNullInt32(args.User_id1)
+	userID2 := utils.ConvertIntToSqlNullInt32(args.User_id2)
+	arg := userdb.EditFriendStatusDeclinedParams{
+		UserId1: userID1,
+		UserId2: userID2,
+	}
+	err := u.store.EditFriendStatusDeclined(pctx, arg)
 	if err != nil {
 		return err
 	}

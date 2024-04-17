@@ -54,7 +54,7 @@ func (q *Queries) EditFriendStatusAccepted(ctx context.Context, arg EditFriendSt
 }
 
 const editFriendStatusDeclined = `-- name: EditFriendStatusDeclined :exec
-UPDATE friends SET status = 'Declined'
+DELETE FROM friends
 WHERE user_id1 = $1 AND user_id2 = $2
 `
 

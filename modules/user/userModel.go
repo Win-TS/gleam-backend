@@ -53,6 +53,11 @@ type (
 		User_id2 int `json:"user_id2"`
 	}
 
+	EditFriendStatusDeclinedReq struct {
+		User_id1 int `json:"user_id1"`
+		User_id2 int `json:"user_id2"`
+	}
+
 	EditUserNameReq struct {
 		UserID    int32  `json:"user_id"`
 		FirstName string `json:"firstname,omitempty"`

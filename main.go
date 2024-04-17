@@ -57,18 +57,11 @@ func main() {
 			database = userdb.NewStore(dbConn)
 		case "group":
 			database = groupdb.NewStore(dbConn)
+			cron := cronjob.NewCronjobService(groupdb.NewStore(dbConn))
+			if err := cron.Start(); err != nil {
+				log.Fatalf("Error starting cronjob: %v", err)
+			}
 		}
-	}
-
-	// Initialize cronjob
-	dbConn, err := sql.Open("postgres", cfg.Db.Url)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer dbConn.Close()
-	cron := cronjob.NewCronjobService(groupdb.NewStore(dbConn))
-	if err := cron.Start(); err != nil {
-		log.Fatalf("Error starting cronjob: %v", err)
 	}
 
 	server.Start(ctx, &cfg, database, client)

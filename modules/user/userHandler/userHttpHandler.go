@@ -43,6 +43,7 @@ type (
 		EditUserPhoto(c echo.Context) error
 		SearchUsersByUsername(c echo.Context) error
 		EditPrivateAccount(c echo.Context) error
+		GetFriendRequestCount(c echo.Context) error
 	}
 
 	userHttpHandler struct {
@@ -565,4 +566,20 @@ func (h *userHttpHandler) EditPrivateAccount(c echo.Context) error {
 	}
 
 	return response.SuccessResponse(c, http.StatusOK, user)
+}
+
+func (h *userHttpHandler) GetFriendRequestCount(c echo.Context) error {
+	ctx := context.Background()
+	userIDStr := c.QueryParam("user_id")
+	userID, err := strconv.Atoi(userIDStr)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, "Invalid user ID")
+	}
+
+	count, err := h.userUsecase.GetFriendRequestCount(ctx, userID)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	return response.SuccessResponse(c, http.StatusOK, count)
 }

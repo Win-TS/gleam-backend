@@ -76,3 +76,7 @@ WHERE user_id1 = $1 AND user_id2 = $2;
 -- name: EditFriendStatusDeclined :exec
 DELETE FROM friends
 WHERE user_id1 = $1 AND user_id2 = $2;
+
+-- name: GetFriendRequestCount :one
+SELECT COUNT(*) FROM friends
+WHERE user_id2 = $1 AND status = 'Pending';

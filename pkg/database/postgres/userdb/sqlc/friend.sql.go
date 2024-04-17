@@ -92,6 +92,18 @@ func (q *Queries) GetFriend(ctx context.Context, arg GetFriendParams) (Friend, e
 	return i, err
 }
 
+const getFriendRequestCount = `-- name: GetFriendRequestCount :one
+SELECT COUNT(*) FROM friends
+WHERE user_id2 = $1 AND status = 'Pending'
+`
+
+func (q *Queries) GetFriendRequestCount(ctx context.Context, userId2 sql.NullInt32) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getFriendRequestCount, userId2)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const getFriendsCountByID = `-- name: GetFriendsCountByID :one
 SELECT COUNT(*) FROM friends
 WHERE (user_id1 = $1 OR user_id2 = $1) AND status = 'Accepted'

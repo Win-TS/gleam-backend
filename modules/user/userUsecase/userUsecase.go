@@ -53,6 +53,7 @@ type UserUsecaseService interface {
 	SearchUsersByUsername(ctx context.Context, args userdb.SearchUsersByUsernameParams) ([]userdb.SearchUsersByUsernameRow, error)
 	EditPrivateAccount(ctx context.Context, args userdb.EditPrivateAccountParams) (userdb.User, error)
 	FriendListByIdNoPaginate(ctx context.Context, userId int) ([]userdb.ListFriendsByUserIdNoPaginateRow, error)
+	GetFriendRequestCount(ctx context.Context, userId int) (int, error)
 }
 
 type userUsecase struct {
@@ -581,4 +582,12 @@ func (u *userUsecase) EditPrivateAccount(ctx context.Context, args userdb.EditPr
 
 func (u *userUsecase) FriendListByIdNoPaginate(ctx context.Context, userId int) ([]userdb.ListFriendsByUserIdNoPaginateRow, error) {
 	return u.store.ListFriendsByUserIdNoPaginate(ctx, utils.ConvertIntToSqlNullInt32(userId))
+}
+
+func (u *userUsecase) GetFriendRequestCount(ctx context.Context, userId int) (int, error) {
+	count, err := u.store.GetFriendRequestCount(ctx, utils.ConvertIntToSqlNullInt32(userId))
+	if err != nil {
+		return -1, err
+	}
+	return int(count), nil
 }

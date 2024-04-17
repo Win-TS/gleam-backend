@@ -24,6 +24,7 @@ type Querier interface {
 	EditUserProfilePicture(ctx context.Context, arg EditUserProfilePictureParams) error
 	GetBatchUserProfiles(ctx context.Context, dollar_1 []int32) ([]GetBatchUserProfilesRow, error)
 	GetFriend(ctx context.Context, arg GetFriendParams) (Friend, error)
+	GetFriendRequestCount(ctx context.Context, userId2 sql.NullInt32) (int64, error)
 	GetFriendsCountByID(ctx context.Context, userId1 sql.NullInt32) (int64, error)
 	GetFriendsPendingList(ctx context.Context, arg GetFriendsPendingListParams) ([]User, error)
 	GetFriendsRequestedList(ctx context.Context, arg GetFriendsRequestedListParams) ([]User, error)

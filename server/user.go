@@ -64,4 +64,5 @@ func (s *server) userService() {
 	friend.POST("/add", httpHandler.AddFriend)
 	friend.PATCH("/accept", httpHandler.FriendAccept)
 	friend.DELETE("/decline", httpHandler.FriendDecline)
+	friend.GET("/requestcount", httpHandler.GetFriendRequestCount)
 }

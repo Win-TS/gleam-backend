@@ -78,6 +78,7 @@ type Querier interface {
 	GetGroupByID(ctx context.Context, groupID int32) (GetGroupByIDRow, error)
 	GetGroupLatestId(ctx context.Context) (int32, error)
 	GetGroupRequest(ctx context.Context, arg GetGroupRequestParams) (GroupRequest, error)
+	GetGroupRequestCount(ctx context.Context, groupID int32) (int64, error)
 	GetGroupRequests(ctx context.Context, arg GetGroupRequestsParams) ([]GroupRequest, error)
 	GetGroupsByCategoryID(ctx context.Context, categoryID sql.NullInt32) ([]GetGroupsByCategoryIDRow, error)
 	GetGroupsByTagID(ctx context.Context, tagID int32) ([]Group, error)

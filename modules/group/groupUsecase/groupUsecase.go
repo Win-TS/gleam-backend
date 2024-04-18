@@ -29,6 +29,7 @@ type (
 		AcceptGroupRequest(pctx context.Context, args groupdb.AcceptGroupRequestParams) (groupdb.GroupMember, error)
 		DeclineGroupRequest(pctx context.Context, args groupdb.DeleteRequestToJoinGroupParams, declinerId int) error
 		GetGroupJoinRequests(pctx context.Context, args groupdb.GetGroupRequestsParams, grpcUrl string) ([]group.GroupRequestRes, error)
+		GetGroupJoinRequestCount(pctx context.Context, groupId int) (int, error)
 		GetUserJoinRequests(pctx context.Context, args groupdb.GetMemberPendingGroupRequestsParams) ([]groupdb.GroupRequest, error)
 		GetGroupById(pctx context.Context, groupId, userId int) (group.GetGroupByIdRes, error)
 		GetGroupMembersByGroupId(pctx context.Context, args groupdb.GetMembersByGroupIDParams, grpcUrl string) ([]group.GroupMemberRes, error)
@@ -279,6 +280,14 @@ func (u *groupUsecase) GetGroupJoinRequests(pctx context.Context, args groupdb.G
 	}
 
 	return groupRequestRes, nil
+}
+
+func (u *groupUsecase) GetGroupJoinRequestCount(pctx context.Context, groupId int) (int, error) {
+	count, err := u.store.GetGroupRequestCount(pctx, int32(groupId))
+	if err != nil {
+		return -1, err
+	}
+	return int(count), nil
 }
 
 func (u *groupUsecase) GetUserJoinRequests(pctx context.Context, args groupdb.GetMemberPendingGroupRequestsParams) ([]groupdb.GroupRequest, error) {

@@ -25,6 +25,7 @@ type (
 		AcceptGroupRequest(c echo.Context) error
 		DeclineGroupRequest(c echo.Context) error
 		GetGroupJoinRequests(c echo.Context) error
+		GetGroupJoinRequestCount(c echo.Context) error
 		GetUserJoinRequests(c echo.Context) error
 		GetGroupById(c echo.Context) error
 		GetGroupMembersByGroupId(c echo.Context) error
@@ -329,6 +330,21 @@ func (h *groupHttpHandler) GetGroupJoinRequests(c echo.Context) error {
 	}
 
 	return response.SuccessResponse(c, http.StatusOK, joinRequests)
+}
+
+func (h *groupHttpHandler) GetGroupJoinRequestCount(c echo.Context) error {
+	ctx := context.Background()
+	groupId, err := strconv.Atoi(c.QueryParam("group_id"))
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	count, err := h.groupUsecase.GetGroupJoinRequestCount(ctx, groupId)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	return response.SuccessResponse(c, http.StatusOK, count)
 }
 
 func (h *groupHttpHandler) GetUserJoinRequests(c echo.Context) error {

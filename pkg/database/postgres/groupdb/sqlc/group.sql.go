@@ -615,6 +615,18 @@ func (q *Queries) GetGroupRequest(ctx context.Context, arg GetGroupRequestParams
 	return i, err
 }
 
+const getGroupRequestCount = `-- name: GetGroupRequestCount :one
+SELECT COUNT(*) FROM group_requests
+WHERE group_id = $1
+`
+
+func (q *Queries) GetGroupRequestCount(ctx context.Context, groupID int32) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getGroupRequestCount, groupID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const getGroupRequests = `-- name: GetGroupRequests :many
 SELECT group_id, member_id, description, created_at FROM group_requests
 WHERE group_id = $1

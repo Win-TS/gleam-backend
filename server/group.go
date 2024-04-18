@@ -47,6 +47,7 @@ func (s *server) groupService() {
 	group.POST("/acceptrequest", httpHandler.AcceptGroupRequest)
 	group.DELETE("/declinerequest", httpHandler.DeclineGroupRequest)
 	group.GET("/grouprequests", httpHandler.GetGroupJoinRequests)
+	group.GET("/grouprequestscount", httpHandler.GetGroupJoinRequestCount)
 	group.GET("/userrequests", httpHandler.GetUserJoinRequests)
 	group.GET("/group", httpHandler.GetGroupById)
 	group.GET("/groupmembers", httpHandler.GetGroupMembersByGroupId)

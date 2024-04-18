@@ -64,6 +64,10 @@ WHERE group_id = $1
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3;
 
+-- name: GetGroupRequestCount :one
+SELECT COUNT(*) FROM group_requests
+WHERE group_id = $1;
+
 -- name: GetMemberPendingGroupRequests :many
 SELECT * FROM group_requests
 WHERE member_id = $1

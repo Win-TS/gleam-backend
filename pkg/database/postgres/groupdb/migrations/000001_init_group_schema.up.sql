@@ -5,7 +5,7 @@ CREATE TABLE "groups" (
   "description" varchar,
   "photo_url" varchar,
   "tag_id" integer NOT NULL,
-  "frequency" integer,
+  "frequency" integer NOT NULL,
   "max_members" integer NOT NULL DEFAULT 25,
   "group_type" varchar NOT NULL DEFAULT 'social',
   "visibility" boolean NOT NULL DEFAULT true,

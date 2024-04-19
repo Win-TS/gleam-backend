@@ -44,6 +44,8 @@ type (
 		SearchUsersByUsername(c echo.Context) error
 		EditPrivateAccount(c echo.Context) error
 		GetFriendRequestCount(c echo.Context) error
+		MockupUser(c echo.Context) error
+		MockupFriend(c echo.Context) error
 	}
 
 	userHttpHandler struct {
@@ -582,4 +584,22 @@ func (h *userHttpHandler) GetFriendRequestCount(c echo.Context) error {
 	}
 
 	return response.SuccessResponse(c, http.StatusOK, count)
+}
+
+func (h *userHttpHandler) MockupUser(c echo.Context) error {
+	ctx := context.Background()
+	if err := h.userUsecase.MockupUser(ctx); err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	return response.SuccessResponse(c, http.StatusOK, "User created")
+}
+
+func (h *userHttpHandler) MockupFriend(c echo.Context) error {
+	ctx := context.Background()
+	if err := h.userUsecase.MockupFriend(ctx); err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	return response.SuccessResponse(c, http.StatusOK, "Friend created")
 }

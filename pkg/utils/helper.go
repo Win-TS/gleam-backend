@@ -51,11 +51,20 @@ func ConvertIntToSqlNullInt32(s int) sql.NullInt32 {
 	}
 	return sqlNullInt32
 }
-
+func ConvertInt32ToSqlNullInt32(s int32) sql.NullInt32 {
+	var sqlNullInt32 sql.NullInt32
+	if s != 0 {
+		sqlNullInt32.Int32 = s
+		sqlNullInt32.Valid = true
+	} else {
+		sqlNullInt32.Valid = false
+	}
+	return sqlNullInt32
+}
 func GetFileExtension(fileName string) string {
-    parts := strings.Split(fileName, ".")
-    if len(parts) > 1 {
-        return ("." + parts[len(parts)-1])
-    }
-    return ""
+	parts := strings.Split(fileName, ".")
+	if len(parts) > 1 {
+		return ("." + parts[len(parts)-1])
+	}
+	return ""
 }

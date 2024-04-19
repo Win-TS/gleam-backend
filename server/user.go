@@ -51,6 +51,7 @@ func (s *server) userService() {
 	user.DELETE("/deleteuser", httpHandler.DeleteUser)
 	user.PATCH("/editphoto", httpHandler.EditUserPhoto)
 	user.PATCH("/editprivateaccount", httpHandler.EditPrivateAccount)
+	user.POST("/mockupuser", httpHandler.MockupUser)
 
 	user.GET("/search", httpHandler.SearchUsersByUsername)
 
@@ -65,4 +66,5 @@ func (s *server) userService() {
 	friend.PATCH("/accept", httpHandler.FriendAccept)
 	friend.DELETE("/decline", httpHandler.FriendDecline)
 	friend.GET("/requestcount", httpHandler.GetFriendRequestCount)
+	friend.POST("/mockupfriend", httpHandler.MockupFriend)
 }

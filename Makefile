@@ -76,4 +76,16 @@ gengroupproto:
 	    --go-grpc_out=. --go-grpc_opt=paths=source_relative \
 	    ./modules/group/groupPb/groupPb.proto
 
+backupuserdb:
+	docker exec -t user-db pg_dumpall -c -U root > backup/user-backup.sql 
+
+restoreuserdb:
+	cat backup/user-backup.sql | docker exec -i user-db psql -U root -d postgres   
+
+backupgroupdb:
+	docker exec -t group-db pg_dumpall -c -U root > backup/group-backup.sql 
+
+restoregroupdb:
+	cat backup/group-backup.sql | docker exec -i group-db psql -U root -d postgres   
+
 .PHONY: composeupdb composedowndb migrateuserdown migrateuserup createuserdb dropuserdb createusermigration runauth runuser composeupdb composedowndb migrateuserupdocker migrateuserdowndocker migrategroupupdocker migrategroupdowndocker genuserproto gengroupproto

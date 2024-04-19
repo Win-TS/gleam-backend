@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"math/rand"
+	"strconv"
 	"time"
 
 	"firebase.google.com/go/storage"
@@ -89,6 +90,12 @@ type (
 		GetIncompletedStreakByUserID(ctx context.Context, memberId int32) ([]groupdb.GetIncompletedStreakByUserIDRow, error)
 		GetMaxStreakByMemberId(ctx context.Context, MemberId int32) (int32, error)
 		IncreaseStreak(ctx context.Context, args groupdb.GetStreakByMemberIDandGroupIDParams) (groupdb.Streak, error)
+		MockupTag(ctx context.Context) error
+		MockupGroup(ctx context.Context) error
+		MockupMember(ctx context.Context) error
+		MockupPost(ctx context.Context) error
+		MockupComment(ctx context.Context) error
+		MockupReactions(ctx context.Context) error
 	}
 
 	groupUsecase struct {
@@ -981,7 +988,7 @@ func (u *groupUsecase) GroupMockData(pctx context.Context, count int) error {
 			GroupCreatorID: creatorID,
 			PhotoUrl:       utils.ConvertStringToSqlNullString("https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/groupphoto%2F15.webp?alt=media"),
 			TagID:          int32(tagID),
-			Frequency:      sql.NullInt32{Int32: randomFrequency(), Valid: true},
+			Frequency:      randomFrequency(),
 			MaxMembers:     25,
 			GroupType:      "social",
 			Description:    utils.ConvertStringToSqlNullString(fake.Lorem().Sentence(5)),
@@ -1529,7 +1536,7 @@ func (u *groupUsecase) IncreaseStreak(ctx context.Context, args groupdb.GetStrea
 		return groupdb.Streak{}, err
 	}
 
-	if int32(FreqGroup.Frequency.Int32) <= streak.WeeklyStreakCount {
+	if int32(FreqGroup.Frequency) <= streak.WeeklyStreakCount {
 		u.store.EditCompleteStatus(ctx, groupdb.EditCompleteStatusParams{
 			MemberID:  args.MemberID,
 			GroupID:   args.GroupID,
@@ -1546,4 +1553,396 @@ func (u *groupUsecase) GetMaxStreakByMemberId(ctx context.Context, MemberId int3
 		return -1, err
 	}
 	return streak, nil
+}
+
+func (u *groupUsecase) MockupTag(ctx context.Context) error {
+	// Insert tag categories
+	err := u.store.InitializeCategory(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Map of tag categories
+	tagCategories := map[string][]string{
+		"Sports and Fitness": {
+			"Football", "Rock Climbing", "Basketball", "Volleyball", "Golf",
+			"Boxing", "Badminton", "Bowling", "Ice skating", "Racquet",
+			"Tennis", "Table tennis", "Snooker", "Pool", "Swimming",
+			"Running", "Yoga and Pilates", "Karate", "Taekwondo", "Hiking",
+			"Cycling", "Hockey", "Figure Skating", "Skiing",
+		},
+		"Learning and Development": {
+			"Online courses", "Exam prep", "Investing", "Programming",
+			"Language", "Public speaking", "SAT", "IELTS", "Midterm exam",
+			"Final exam",
+		},
+		"Health and Wellness": {
+			"Dietary", "Bulking", "Vegan and J", "Meditation",
+		},
+		"Entertainment and Media": {
+			"Movies", "Series", "Music", "Theater", "Podcasts",
+		},
+		"Hobbies and Leisure": {
+			"Cooking", "Baking", "Gardening", "Planting", "Knitting",
+			"Pottery", "Caligraphy", "Travelling", "Board games",
+		},
+	}
+
+	// Iterate over tag categories
+	for category, tags := range tagCategories {
+		// Get category ID from database
+		categoryID, err := u.store.GetCategoryIDByName(ctx, category)
+		if err != nil {
+			return err
+		}
+
+		// Insert tags for each category
+		for _, tagName := range tags {
+			// Insert tag into the database
+			_, err := u.store.CreateNewTag(ctx, groupdb.CreateNewTagParams{
+				TagName:    tagName,
+				IconUrl:    utils.ConvertStringToSqlNullString(""),
+				CategoryID: utils.ConvertIntToSqlNullInt32(int(categoryID)),
+			})
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	// Rest of the function to create mock post, comment, reaction, etc.
+
+	return nil
+}
+
+func (u *groupUsecase) MockupGroup(ctx context.Context) error {
+
+	groupDetails := map[string]map[string]interface{}{
+		"group1": {
+			"group_name":       "ISE football club",
+			"group_creator_id": int32(1),
+			"photo_url":        "https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/groupphoto%2FMockGroupPhoto%2Ffootball.jpeg?alt=media&token=2ab15bda-2a4f-47e2-88c7-00c7a8597290",
+			"frequency":        int32(1),
+			"max_members":      int32(50),
+			"group_type":       "social",
+			"description":      "Weekly football at BBB football club, ma join gunn",
+			"visibility":       true,
+			"tag_id":           int32(19),
+		},
+		"group2": {
+			"group_name":       "Intania Badminton",
+			"group_creator_id": int32(2),
+			"photo_url":        "https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/groupphoto%2FMockGroupPhoto%2Fbadminton.png?alt=media&token=2a532ca2-e441-4dd1-a1f5-b9692e2915e6",
+			"frequency":        int32(1),
+			"max_members":      int32(30),
+			"group_type":       "Private",
+			"description":      "Let's join our badminton squad from Engineering Faculty! We encourage 2 times a week!",
+			"visibility":       true,
+			"tag_id":           int32(25),
+		},
+		"group3": {
+			"group_name":       "Coursera ganag",
+			"group_creator_id": int32(5),
+			"photo_url":        "https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/groupphoto%2FMockGroupPhoto%2Fonlinecourse.jpeg?alt=media&token=52d021cc-d775-4985-beea-226c5a7afd4f",
+			"frequency":        int32(5),
+			"max_members":      int32(30),
+			"group_type":       "social",
+			"description":      "Enhance your soft skills with us!",
+			"visibility":       true,
+			"tag_id":           int32(43),
+		},
+		"group4": {
+			"group_name":       "Code nerdyy",
+			"group_creator_id": int32(10),
+			"photo_url":        "https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/groupphoto%2FMockGroupPhoto%2Fprogramming.png?alt=media&token=210e448e-6764-4a7b-8934-71380dc6c26f",
+			"frequency":        int32(5),
+			"max_members":      int32(30),
+			"group_type":       "social",
+			"description":      "Commit the code 5 times a week and you will receive nerdy trophy from us",
+			"visibility":       true,
+			"tag_id":           int32(46),
+		},
+		"group5": {
+			"group_name":       "Midterm try hard gang",
+			"group_creator_id": int32(5),
+			"photo_url":        "https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/groupphoto%2FMockGroupPhoto%2Fmidtermexam.jpeg?alt=media&token=4e7dbe16-8ff8-4db4-aed0-50349b46b969",
+			"frequency":        int32(6),
+			"max_members":      int32(30),
+			"group_type":       "social",
+			"description":      "Study hard, no fail, no cry, no F, happy life",
+			"visibility":       true,
+			"tag_id":           int32(51),
+		},
+		"group6": {
+			"group_name":       "ISE bodybuilder",
+			"group_creator_id": int32(8),
+			"photo_url":        "https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/groupphoto%2FMockGroupPhoto%2Fgym.png?alt=media&token=1c78b800-1c3e-407e-b038-f82873c614c1",
+			"frequency":        int32(5),
+			"max_members":      int32(30),
+			"group_type":       "social",
+			"description":      "Get up from your bed and start working out <3",
+			"visibility":       true,
+			"tag_id":           int32(53),
+		},
+		"group7": {
+			"group_name":       "Serious movie discussion",
+			"group_creator_id": int32(9),
+			"photo_url":        "https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/groupphoto%2FMockGroupPhoto%2Fmovies.png?alt=media&token=02e85840-0d42-4065-a456-01bed8bd1015",
+			"frequency":        int32(2),
+			"max_members":      int32(30),
+			"group_type":       "social",
+			"description":      "Watch movie twice a week and share them here!",
+			"visibility":       true,
+			"tag_id":           int32(2),
+		},
+		"group8": {
+			"group_name":       "K-drama stands",
+			"group_creator_id": int32(4),
+			"photo_url":        "https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/groupphoto%2FMockGroupPhoto%2Fseries.jpeg?alt=media&token=6758213e-394f-4df3-8d2c-f222080ffd8b",
+			"frequency":        int32(1),
+			"max_members":      int32(30),
+			"group_type":       "social",
+			"description":      "Put down all the work and enjoy K-drama once a week!",
+			"visibility":       true,
+			"tag_id":           int32(5),
+		},
+		"group9": {
+			"group_name":       "Intania Music Club",
+			"group_creator_id": int32(6),
+			"photo_url":        "https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/groupphoto%2FMockGroupPhoto%2Fmusic.jpeg?alt=media&token=4a034376-5361-4cab-a09b-c59d3027083c",
+			"frequency":        int32(5),
+			"max_members":      int32(100),
+			"group_type":       "social",
+			"description":      "Post your music here or you will be cursed by spotify devil",
+			"visibility":       true,
+			"tag_id":           int32(7),
+		},
+		"group10": {
+			"group_name":       "Travelling & Hanging out",
+			"group_creator_id": int32(11),
+			"photo_url":        "https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/groupphoto%2FMockGroupPhoto%2Ftravelling.png?alt=media&token=03b1961f-a6a9-4143-ae20-5038d79ca813",
+			"frequency":        int32(1),
+			"max_members":      int32(100),
+			"group_type":       "social",
+			"description":      "Share your beautiful journey here!",
+			"visibility":       true,
+			"tag_id":           int32(17),
+		},
+	}
+
+	// Create mock groups
+	for i := 1; i <= 10; i++ {
+		groupDetail, ok := groupDetails[fmt.Sprintf("group%d", i)]
+		if !ok {
+			return errors.New(fmt.Sprintf("group%d not found", i))
+		}
+
+		frequencyStr, _ := groupDetail["frequency"].(string)
+		frequency, _ := strconv.Atoi(frequencyStr)
+
+		// Create the group
+		createdGroup, err := u.store.CreateGroup(ctx, groupdb.CreateGroupParams{
+			GroupName:      groupDetail["group_name"].(string),
+			GroupCreatorID: groupDetail["group_creator_id"].(int32),
+			PhotoUrl:       utils.ConvertStringToSqlNullString(groupDetail["photo_url"].(string)),
+			Frequency:      int32(frequency),
+			MaxMembers:     groupDetail["max_members"].(int32),
+			GroupType:      groupDetail["group_type"].(string),
+			Description:    utils.ConvertStringToSqlNullString(groupDetail["description"].(string)),
+			Visibility:     groupDetail["visibility"].(bool),
+			TagID:          groupDetail["tag_id"].(int32),
+		})
+		if err != nil {
+			return err
+		}
+
+		// Use the created group's ID to insert into the group_members table
+		_, err = u.store.AddGroupMember(ctx, groupdb.AddGroupMemberParams{
+			GroupID:  createdGroup.GroupID,
+			MemberID: groupDetail["group_creator_id"].(int32), // You need to define the creatorID variable
+			Role:     "creator",
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (u *groupUsecase) MockupMember(ctx context.Context) error {
+	for groupID := 1; groupID <= 10; groupID++ {
+		group, err := u.store.GetGroupByID(ctx, int32(groupID))
+		if err != nil {
+			return err
+		}
+
+		requests, err := u.store.GetGroupRequests(ctx, groupdb.GetGroupRequestsParams{
+			GroupID: int32(groupID),
+			Limit:   1000,
+			Offset:  0,
+		})
+		if err != nil {
+			return err
+		}
+
+		for _, request := range requests {
+			_, err := u.AcceptGroupRequest(ctx, groupdb.AcceptGroupRequestParams{
+				GroupID:    groupID,
+				MemberID:   int(request.MemberID),
+				AcceptorId: int(group.GroupCreatorID),
+			})
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// create mock post
+func (u *groupUsecase) MockupPost(ctx context.Context) error {
+	postDetails := []struct {
+		MemberID    int32
+		GroupID     int32
+		PhotoURL    sql.NullString
+		Description sql.NullString
+	}{
+		// Mock post details
+		{MemberID: 8, GroupID: 1, PhotoURL: utils.ConvertStringToSqlNullString("https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/postphoto%2Fmockpost%2Ffootball.jpg?alt=media&token=47e76d94-1a3c-4c64-ac93-be9c20bdc15f"), Description: utils.ConvertStringToSqlNullString("1st day practise")},
+		{MemberID: 3, GroupID: 2, PhotoURL: utils.ConvertStringToSqlNullString("https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/postphoto%2Fmockpost%2Fbadminton.jpg?alt=media&token=65167afe-1e56-4e1b-8fe7-9cfae50ae484"), Description: utils.ConvertStringToSqlNullString("Enjoy makk")},
+		{MemberID: 1, GroupID: 3, PhotoURL: utils.ConvertStringToSqlNullString("https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/postphoto%2Fmockpost%2Fonlinecourse.jpeg?alt=media&token=717da4a4-9049-41d2-8ffc-448d81f31c86"), Description: utils.ConvertStringToSqlNullString("Wanna sleep T_T")},
+		{MemberID: 1, GroupID: 4, PhotoURL: utils.ConvertStringToSqlNullString("https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/postphoto%2Fmockpost%2Fprogramming.JPG?alt=media&token=dbd8f503-2fea-43ec-9599-c1df1ac10515"), Description: utils.ConvertStringToSqlNullString("Grinding")},
+		{MemberID: 6, GroupID: 5, PhotoURL: utils.ConvertStringToSqlNullString("https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/postphoto%2Fmockpost%2Fmidterm.jpeg?alt=media&token=2a767e05-667c-4898-9175-e8729fe20c9b"), Description: utils.ConvertStringToSqlNullString("Cheat sheet done!")},
+		{MemberID: 10, GroupID: 6, PhotoURL: utils.ConvertStringToSqlNullString("https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/postphoto%2Fmockpost%2Ffitness.JPG?alt=media&token=73336d8e-a753-44dc-89ff-d751d7aacf69"), Description: utils.ConvertStringToSqlNullString("Six packs is coming")},
+		{MemberID: 3, GroupID: 7, PhotoURL: utils.ConvertStringToSqlNullString("https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/postphoto%2Fmockpost%2Fmovies.jpeg?alt=media&token=44906b86-8c27-4ab1-b46f-96dcfe9cfab3"), Description: utils.ConvertStringToSqlNullString("I cried so hard T_T")},
+		{MemberID: 5, GroupID: 8, PhotoURL: utils.ConvertStringToSqlNullString("https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/postphoto%2Fmockpost%2Fseries.jpeg?alt=media&token=84f76ffd-fdc7-4af1-9ede-c12dc425b9cb"), Description: utils.ConvertStringToSqlNullString("Today I skipped K-drama na")},
+		{MemberID: 8, GroupID: 9, PhotoURL: utils.ConvertStringToSqlNullString("https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/postphoto%2Fmockpost%2FMusic.jpg?alt=media&token=2184d287-59d2-4cef-8c31-33b92e44a8b5"), Description: utils.ConvertStringToSqlNullString("SRV is my tune")},
+		{MemberID: 13, GroupID: 10, PhotoURL: utils.ConvertStringToSqlNullString("https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/postphoto%2Fmockpost%2Ftravel.jpeg?alt=media&token=6e02713a-d086-4eca-bf69-257a3ebab442"), Description: utils.ConvertStringToSqlNullString("The weather is so fresh here!")},
+	}
+
+	for _, post := range postDetails {
+		_, err := u.CreatePost(ctx, groupdb.CreatePostParams{
+			MemberID:    post.MemberID,
+			GroupID:     post.GroupID,
+			PhotoUrl:    post.PhotoURL,
+			Description: post.Description,
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+//create mock comment
+
+func (u *groupUsecase) MockupComment(ctx context.Context) error {
+	// Define mock comment details
+	commentDetails := []struct {
+		PostID   int32
+		MemberID int32
+		Comment  string
+	}{
+		// Mock comment details
+
+		{PostID: 1, MemberID: 1, Comment: "Goodjob"},
+		{PostID: 2, MemberID: 3, Comment: "Impressive work!"},
+		{PostID: 2, MemberID: 10, Comment: "Fantastic!"},
+		{PostID: 10, MemberID: 4, Comment: "Outstanding!"},
+		{PostID: 4, MemberID: 5, Comment: "Brilliant!"},
+		{PostID: 2, MemberID: 2, Comment: "Excellent!"},
+		{PostID: 5, MemberID: 4, Comment: "Amazing!"},
+		{PostID: 7, MemberID: 6, Comment: "Awesome!"},
+		{PostID: 3, MemberID: 2, Comment: "Goodjob"},
+		{PostID: 4, MemberID: 1, Comment: "Impressive work!"},
+		{PostID: 2, MemberID: 2, Comment: "Fantastic!"},
+		{PostID: 2, MemberID: 3, Comment: "Outstanding!"},
+		{PostID: 2, MemberID: 7, Comment: "Brilliant!"},
+		{PostID: 1, MemberID: 3, Comment: "Excellent!"},
+		{PostID: 2, MemberID: 2, Comment: "Amazing!"},
+		{PostID: 5, MemberID: 14, Comment: "Awesome!"},
+		{PostID: 1, MemberID: 1, Comment: "Goodjob"},
+		{PostID: 2, MemberID: 2, Comment: "Impressive work!"},
+		{PostID: 2, MemberID: 10, Comment: "Fantastic!"},
+		{PostID: 10, MemberID: 4, Comment: "Outstanding!"},
+		{PostID: 4, MemberID: 1, Comment: "Brilliant!"},
+		{PostID: 2, MemberID: 2, Comment: "Excellent!"},
+		{PostID: 5, MemberID: 5, Comment: "Amazing!"},
+		{PostID: 7, MemberID: 3, Comment: "Awesome!"},
+		{PostID: 3, MemberID: 2, Comment: "Goodjob"},
+		{PostID: 4, MemberID: 1, Comment: "Impressive work!"},
+		{PostID: 2, MemberID: 4, Comment: "Fantastic!"},
+		{PostID: 2, MemberID: 3, Comment: "Outstanding!"},
+		{PostID: 2, MemberID: 7, Comment: "Brilliant!"},
+		{PostID: 1, MemberID: 9, Comment: "Excellent!"},
+		{PostID: 2, MemberID: 2, Comment: "Amazing!"},
+		{PostID: 5, MemberID: 8, Comment: "Awesome!"},
+		{PostID: 1, MemberID: 1, Comment: "Goodjob"},
+		{PostID: 2, MemberID: 2, Comment: "Impressive work!"},
+		{PostID: 2, MemberID: 10, Comment: "Fantastic!"},
+		{PostID: 10, MemberID: 4, Comment: "Outstanding!"},
+		{PostID: 4, MemberID: 1, Comment: "Brilliant!"},
+		{PostID: 3, MemberID: 2, Comment: "Excellent!"},
+		{PostID: 5, MemberID: 5, Comment: "Amazing!"},
+		{PostID: 7, MemberID: 3, Comment: "Awesome!"},
+		{PostID: 2, MemberID: 2, Comment: "Goodjob"},
+		{PostID: 4, MemberID: 1, Comment: "Impressive work!"},
+		{PostID: 9, MemberID: 4, Comment: "Fantastic!"},
+		{PostID: 2, MemberID: 3, Comment: "Outstanding!"},
+		{PostID: 7, MemberID: 7, Comment: "Brilliant!"},
+		{PostID: 1, MemberID: 9, Comment: "Excellent!"},
+		{PostID: 2, MemberID: 2, Comment: "Amazing!"},
+		{PostID: 5, MemberID: 8, Comment: "Awesome!"},
+
+		// Add more mock comment details as needed
+	}
+
+	for _, comment := range commentDetails {
+		_, err := u.store.CreateComment(ctx, groupdb.CreateCommentParams{
+			PostID:   comment.PostID,
+			MemberID: comment.MemberID,
+			Comment:  comment.Comment,
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// create mock reaction
+func (u *groupUsecase) MockupReactions(ctx context.Context) error {
+	// Define reactions
+	reactions := []string{"like", "love", "haha", "wow", "sad", "angry"}
+	postIDs := []int32{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
+
+	for groupID := int32(1); groupID <= 10; groupID++ {
+		memberIDs, err := u.store.GetMembersByGroupID(ctx, groupdb.GetMembersByGroupIDParams{
+			GroupID: groupID,
+			Limit:   10000,
+			Offset:  0,
+		})
+		if err != nil {
+			return err
+		}
+
+		for _, postID := range postIDs {
+			for _, memberID := range memberIDs {
+				reaction := reactions[rand.Intn(len(reactions))]
+				_, err := u.store.CreateReaction(ctx, groupdb.CreateReactionParams{
+					PostID:   postID,
+					MemberID: memberID.MemberID,
+					Reaction: reaction,
+				})
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	return nil
 }

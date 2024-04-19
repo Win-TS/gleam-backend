@@ -72,6 +72,7 @@ type Querier interface {
 	GetAcceptorGroupRequestsCount(ctx context.Context, memberID int32) (GetAcceptorGroupRequestsCountRow, error)
 	GetAvailableCategory(ctx context.Context) ([]TagCategory, error)
 	GetAvailableTags(ctx context.Context) ([]Tag, error)
+	GetCategoryIDByName(ctx context.Context, categoryName string) (int32, error)
 	GetCommentByCommentId(ctx context.Context, commentID int32) (PostComment, error)
 	GetCommentsByPostID(ctx context.Context, arg GetCommentsByPostIDParams) ([]PostComment, error)
 	GetCommentsCountByPostID(ctx context.Context, postID int32) (int64, error)

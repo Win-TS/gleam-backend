@@ -54,6 +54,8 @@ type UserUsecaseService interface {
 	EditPrivateAccount(ctx context.Context, args userdb.EditPrivateAccountParams) (userdb.User, error)
 	FriendListByIdNoPaginate(ctx context.Context, userId int) ([]userdb.ListFriendsByUserIdNoPaginateRow, error)
 	GetFriendRequestCount(ctx context.Context, userId int) (int, error)
+	MockupUser(ctx context.Context) error
+	MockupFriend(ctx context.Context) error
 }
 
 type userUsecase struct {
@@ -590,4 +592,232 @@ func (u *userUsecase) GetFriendRequestCount(ctx context.Context, userId int) (in
 		return -1, err
 	}
 	return int(count), nil
+}
+
+func (u *userUsecase) MockupUser(ctx context.Context) error {
+
+	userDetails := []map[string]interface{}{
+		{
+			"username":    "Bankie888",
+			"firstname":   "Sethanan",
+			"lastname":    "BankBank",
+			"phone_no":    "+123456123",
+			"email":       "Bank@gmail.com",
+			"nationality": "TH",
+			"birthday":    time.Date(2003, time.January, 2, 0, 0, 0, 0, time.UTC),
+			"gender":      "male",
+			"photourl":    "https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/userprofile%2Fmockuserphoto%2Fbankie.jpeg?alt=media&token=857d7f0b-2858-4666-9388-177337a81502",
+		},
+		{
+			"username":    "Betty552",
+			"firstname":   "Elizabeth",
+			"lastname":    "Bethbeth",
+			"phone_no":    "+9876541231",
+			"email":       "Bethh@gmail.com",
+			"nationality": "UK",
+			"birthday":    time.Date(2001, time.May, 15, 0, 0, 0, 0, time.UTC),
+			"gender":      "female",
+			"photourl":    "https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/userprofile%2Fmockuserphoto%2Fbet%26lyly.jpeg?alt=media&token=cc8e2634-159c-4a38-8912-aa8d128c41ab",
+		},
+		{
+			"username":    "dunepw",
+			"firstname":   "Pitiphon",
+			"lastname":    "Chaicharoen",
+			"phone_no":    "+98765123121",
+			"email":       "Dune@gmail.com",
+			"nationality": "TH",
+			"birthday":    time.Date(2005, time.May, 15, 0, 0, 0, 0, time.UTC),
+			"gender":      "male",
+			"photourl":    "https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/userprofile%2Fmockuserphoto%2Fdunepw.jpeg?alt=media&token=cc34ea0f-7a3d-4c93-ade4-031c5e54beb6",
+		},
+		{
+			"username":    "jajajedi",
+			"firstname":   "Theerothai",
+			"lastname":    "Sithlord",
+			"phone_no":    "+987123121",
+			"email":       "Jedi@gmail.com",
+			"nationality": "JP",
+			"birthday":    time.Date(2001, time.October, 15, 0, 0, 0, 0, time.UTC),
+			"gender":      "male",
+			"photourl":    "https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/userprofile%2Fmockuserphoto%2Fjajajedi.jpeg?alt=media&token=80889185-4327-4a0b-b0e7-7d064c5e911e",
+		},
+		{
+			"username":    "kaoskywalker",
+			"firstname":   "Thanthai",
+			"lastname":    "Kruthong",
+			"phone_no":    "+12312321",
+			"email":       "999999999@gmail.com",
+			"nationality": "US",
+			"birthday":    time.Date(2007, time.February, 15, 0, 0, 0, 0, time.UTC),
+			"gender":      "male",
+			"photourl":    "https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/userprofile%2Fmockuserphoto%2Fkaoskywalkerz.jpeg?alt=media&token=938f051a-71ea-460c-887b-550e22d74842",
+		},
+		{
+			"username":    "Kri7x",
+			"firstname":   "Krit",
+			"lastname":    "KritKirtKirt",
+			"phone_no":    "+1231231241",
+			"email":       "krit@gmail.com",
+			"nationality": "TH",
+			"birthday":    time.Date(2002, time.March, 15, 0, 0, 0, 0, time.UTC),
+			"gender":      "male",
+			"photourl":    "https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/userprofile%2Fmockuserphoto%2Fkri7x.jpeg?alt=media&token=346e539d-76f0-42ce-ae5f-5f68b7980e72",
+		},
+		{
+			"username":    "GuYzaza888",
+			"firstname":   "Krittin",
+			"lastname":    "Guyguy",
+			"phone_no":    "+423423421",
+			"email":       "Guy@gmail.com",
+			"nationality": "JP",
+			"birthday":    time.Date(2003, time.May, 15, 0, 0, 0, 0, time.UTC),
+			"gender":      "male",
+			"photourl":    "https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/userprofile%2Fmockuserphoto%2Fkrittineke.jpeg?alt=media&token=a8ab5e13-49fd-4dd1-af5a-e6ed028870f2",
+		},
+		{
+			"username":    "mearzwong999",
+			"firstname":   "Wongsapat",
+			"lastname":    "Wong",
+			"phone_no":    "+9821231",
+			"email":       "mearzwong@gmail.com",
+			"nationality": "TH",
+			"birthday":    time.Date(2001, time.May, 15, 0, 0, 0, 0, time.UTC),
+			"gender":      "male",
+			"photourl":    "https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/userprofile%2Fmockuserphoto%2Fmearzwong.jpeg?alt=media&token=5d832972-66a5-4765-8f73-8287e7c09309",
+		},
+		{
+			"username":    "Minniecyp888",
+			"firstname":   "Chayapa",
+			"lastname":    "Minniemouse",
+			"phone_no":    "+23421341",
+			"email":       "mnmn@gmail.com",
+			"nationality": "FN",
+			"birthday":    time.Date(2005, time.May, 15, 0, 0, 0, 0, time.UTC),
+			"gender":      "female",
+			"photourl":    "https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/userprofile%2Fmockuserphoto%2Fminnie.jpeg?alt=media&token=7a405ab1-a9c4-4007-b90b-d3c4954ab201",
+		},
+		{
+			"username":    "oatptchy",
+			"firstname":   "Nadech",
+			"lastname":    "Koogimiya",
+			"phone_no":    "+2342351",
+			"email":       "oat555@gmail.com",
+			"nationality": "TH",
+			"birthday":    time.Date(2004, time.October, 15, 0, 0, 0, 0, time.UTC),
+			"gender":      "male",
+			"photourl":    "https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/userprofile%2Fmockuserphoto%2Foatptchy.jpeg?alt=media&token=4caccd1e-e964-44b7-8834-aedbdfe5130b",
+		},
+		{
+			"username":    "pungdevil66",
+			"firstname":   "Tassanai",
+			"lastname":    "Peesarj",
+			"phone_no":    "+987654234234221",
+			"email":       "kanompang@gmail.com",
+			"nationality": "TH",
+			"birthday":    time.Date(2001, time.May, 15, 0, 0, 0, 0, time.UTC),
+			"gender":      "male",
+			"photourl":    "https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/userprofile%2Fmockuserphoto%2Fpungmonster.jpeg?alt=media&token=7e1ca9e8-8b14-421c-92cd-d33faa13363c",
+		},
+		{
+			"username":    "rushaoosh",
+			"firstname":   "Napat",
+			"lastname":    "Laokai",
+			"phone_no":    "+23423123151",
+			"email":       "menjoo@gmail.com",
+			"nationality": "TH",
+			"birthday":    time.Date(2003, time.May, 15, 0, 0, 0, 0, time.UTC),
+			"gender":      "male",
+			"photourl":    "https://example.com/janesmith.jpg",
+		},
+		{
+			"username":    "teenoisukiThailand",
+			"firstname":   "Tee",
+			"lastname":    "Teenoi",
+			"phone_no":    "+9002304321",
+			"email":       "tee@gmail.com",
+			"nationality": "TH",
+			"birthday":    time.Date(2005, time.May, 11, 0, 0, 0, 0, time.UTC),
+			"gender":      "male",
+			"photourl":    "https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/userprofile%2Fmockuserphoto%2Fteenoisuki.jpeg?alt=media&token=e55abfff-74f9-484c-9a1c-b281bc4d2b89",
+		},
+		{
+			"username":    "wints",
+			"firstname":   "Win",
+			"lastname":    "Joetoo",
+			"phone_no":    "+9894321",
+			"email":       "yaitoe@gmail.com",
+			"nationality": "TH",
+			"birthday":    time.Date(2004, time.May, 11, 0, 0, 0, 0, time.UTC),
+			"gender":      "male",
+			"photourl":    "https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/userprofile%2Fmockuserphoto%2Fwin_ts.jpeg?alt=media&token=035ef9f4-9b8d-4cd9-b05f-cff1f895445b",
+		},
+	}
+
+	for _, userDetails := range userDetails {
+		_, err := u.store.CreateUser(ctx, userdb.CreateUserParams{
+			Username:    userDetails["username"].(string),
+			Firstname:   userDetails["firstname"].(string),
+			Lastname:    userDetails["lastname"].(string),
+			PhoneNo:     userDetails["phone_no"].(string),
+			Email:       userDetails["email"].(string),
+			Nationality: userDetails["nationality"].(string),
+			Birthday:    userDetails["birthday"].(time.Time),
+			Gender:      userDetails["gender"].(string),
+			Photourl:    sql.NullString{String: userDetails["photourl"].(string), Valid: true},
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (u *userUsecase) MockupFriend(ctx context.Context) error {
+	userIDs := []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}
+
+	numFriendships := 20
+
+	rand.Seed(time.Now().UnixNano())
+
+	for i := 0; i < numFriendships; i++ {
+		userID1 := userIDs[rand.Intn(len(userIDs))]
+		userID2 := userIDs[rand.Intn(len(userIDs))]
+
+		for userID1 == userID2 {
+			userID2 = userIDs[rand.Intn(len(userIDs))]
+		}
+
+		// Check if the friendship already exists
+		_, err := u.store.GetFriend(ctx, userdb.GetFriendParams{
+			UserId1: utils.ConvertIntToSqlNullInt32(userID1),
+			UserId2: utils.ConvertIntToSqlNullInt32(userID2),
+		})
+		if err == nil {
+			continue
+		}
+
+		// Create the friendship
+		_, err = u.store.CreateFriend(ctx, userdb.CreateFriendParams{
+			UserId1: utils.ConvertIntToSqlNullInt32(userID1),
+			UserId2: utils.ConvertIntToSqlNullInt32(userID2),
+		})
+		if err != nil {
+			return err
+		}
+
+		if rand.Intn(2) == 0 {
+			err = u.store.EditFriendStatusAccepted(ctx, userdb.EditFriendStatusAcceptedParams{
+				UserId1: utils.ConvertIntToSqlNullInt32(userID1),
+				UserId2: utils.ConvertIntToSqlNullInt32(userID2),
+			})
+			if err != nil {
+				return err
+			}
+		}
+
+		time.Sleep(time.Millisecond * 100)
+	}
+
+	return nil
 }

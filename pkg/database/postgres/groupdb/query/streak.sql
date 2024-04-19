@@ -151,9 +151,13 @@ WHERE streak_set_id IN (
 -- name: GetMaxStreakUser :one
 SELECT max_streak_count
 FROM streaks
-WHERE streak_set_id IN (
-    SELECT s.streak_set_id
-    FROM streaks s
-    JOIN streak_set ss ON s.streak_set_id = ss.streak_set_id
-    WHERE ss.member_id = $1
+WHERE max_streak_count = (
+    SELECT MAX(max_streak_count)
+    FROM streaks
+    WHERE streak_set_id IN (
+        SELECT s.streak_set_id
+        FROM streaks s
+        JOIN streak_set ss ON s.streak_set_id = ss.streak_set_id
+        WHERE ss.member_id = $1
+    )
 );

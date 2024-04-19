@@ -63,6 +63,8 @@ func (s *server) groupService() {
 	group.GET("/acceptorrequests", httpHandler.GetAcceptorGroupRequests)
 	group.GET("/acceptorrequestscount", httpHandler.GetAcceptorGroupRequestsCount)
 	group.GET("/usergroups", httpHandler.GetUserGroups)
+	group.POST("/mockupgroup", httpHandler.MockupGroup)
+	group.POST("/mockupmember", httpHandler.MockupMember)
 
 	// Post Mock data
 	post.POST("/mock", httpHandler.PostMockData)
@@ -77,6 +79,7 @@ func (s *server) groupService() {
 	post.DELETE("/post", httpHandler.DeletePost)
 	post.GET("/ongoingfeed", httpHandler.GetPostsForOngoingFeedByMemberId)
 	post.GET("/followingfeed", httpHandler.GetPostsForFollowingFeedByMemberId)
+	post.POST("/mockuppost", httpHandler.MockupPost)
 
 	// Reaction Endpoints
 	reaction.POST("/reaction", httpHandler.CreateReaction)
@@ -84,6 +87,7 @@ func (s *server) groupService() {
 	reaction.GET("/postreactioncount", httpHandler.GetReactionsCountByPostId)
 	reaction.PATCH("/reaction", httpHandler.EditReaction)
 	reaction.DELETE("/reaction", httpHandler.DeleteReaction)
+	reaction.POST("/mockupreaction", httpHandler.MockupReactions)
 
 	// Comment Endpoints
 	comment.POST("/comment", httpHandler.CreateComment)
@@ -91,6 +95,7 @@ func (s *server) groupService() {
 	comment.GET("/postcommentcount", httpHandler.GetCommentCountByPostId)
 	comment.PATCH("/comment", httpHandler.EditComment)
 	comment.DELETE("/comment", httpHandler.DeleteComment)
+	comment.POST("/mockupcomment", httpHandler.MockupComment)
 
 	// Tag Endpoints
 	tag.POST("/tag", httpHandler.CreateTag)
@@ -103,6 +108,7 @@ func (s *server) groupService() {
 	tag.PATCH("/edittagcategory", httpHandler.EditTagCategory)
 	tag.PATCH("/edittagicon", httpHandler.EditTagIcon)
 	tag.DELETE("/tag", httpHandler.DeleteTag)
+	tag.POST("/mockuptag", httpHandler.MockupTag)
 
 	// Streak Endpoints
 	streak.GET("/streak", httpHandler.GetStreakByMemberId)

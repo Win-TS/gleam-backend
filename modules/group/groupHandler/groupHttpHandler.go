@@ -77,6 +77,12 @@ type (
 		GetStreakByMemberIDandGroupID(c echo.Context) error
 		GetIncompletedStreakByUserID(c echo.Context) error
 		GetMaxStreakByMemberId(c echo.Context) error
+		MockupTag(c echo.Context) error
+		MockupGroup(c echo.Context) error
+		MockupMember(c echo.Context) error
+		MockupPost(c echo.Context) error
+		MockupComment(c echo.Context) error
+		MockupReactions(c echo.Context) error
 	}
 
 	groupHttpHandler struct {
@@ -136,7 +142,7 @@ func (h *groupHttpHandler) CreateNewGroup(c echo.Context) error {
 		PhotoUrl:       utils.ConvertStringToSqlNullString(url),
 		TagID:          int32(req.TagID),
 		Description:    utils.ConvertStringToSqlNullString(req.Description),
-		Frequency:      utils.ConvertIntToSqlNullInt32(req.Frequency),
+		Frequency:      int32(req.Frequency),
 		MaxMembers:     int32(req.MaxMembers),
 		GroupType:      req.GroupType,
 		Visibility:     req.Visibility,
@@ -1837,4 +1843,56 @@ func (h *groupHttpHandler) GetMaxStreakByMemberId(c echo.Context) error {
 	}
 
 	return response.SuccessResponse(c, http.StatusOK, streak)
+}
+
+func (h *groupHttpHandler) MockupTag(c echo.Context) error {
+	ctx := context.Background()
+	err := h.groupUsecase.MockupTag(ctx)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+	return response.SuccessResponse(c, http.StatusOK, "tag created")
+}
+
+func (h *groupHttpHandler) MockupGroup(c echo.Context) error {
+	ctx := context.Background()
+	err := h.groupUsecase.MockupGroup(ctx)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+	return response.SuccessResponse(c, http.StatusOK, "group created")
+}
+
+func (h *groupHttpHandler) MockupMember(c echo.Context) error {
+	ctx := context.Background()
+	err := h.groupUsecase.MockupMember(ctx)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+	return response.SuccessResponse(c, http.StatusOK, "member created")
+}
+func (h *groupHttpHandler) MockupPost(c echo.Context) error {
+	ctx := context.Background()
+	err := h.groupUsecase.MockupPost(ctx)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+	return response.SuccessResponse(c, http.StatusOK, "Post created")
+}
+
+func (h *groupHttpHandler) MockupComment(c echo.Context) error {
+	ctx := context.Background()
+	if err := h.groupUsecase.MockupComment(ctx); err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	return response.SuccessResponse(c, http.StatusOK, "Friend created")
+}
+func (h *groupHttpHandler) MockupReactions(c echo.Context) error {
+	ctx := context.Background()
+	if err := h.groupUsecase.MockupReactions(ctx); err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	return response.SuccessResponse(c, http.StatusOK, "Friend created")
 }

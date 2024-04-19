@@ -77,7 +77,7 @@ type CreateGroupParams struct {
 	GroupName      string         `json:"group_name"`
 	GroupCreatorID int32          `json:"group_creator_id"`
 	PhotoUrl       sql.NullString `json:"photo_url"`
-	Frequency      sql.NullInt32  `json:"frequency"`
+	Frequency      int32          `json:"frequency"`
 	MaxMembers     int32          `json:"max_members"`
 	GroupType      string         `json:"group_type"`
 	Description    sql.NullString `json:"description"`
@@ -525,6 +525,19 @@ func (q *Queries) GetAvailableTags(ctx context.Context) ([]Tag, error) {
 	return items, nil
 }
 
+const getCategoryIDByName = `-- name: GetCategoryIDByName :one
+SELECT category_id
+FROM tag_category
+WHERE category_name = $1
+`
+
+func (q *Queries) GetCategoryIDByName(ctx context.Context, categoryName string) (int32, error) {
+	row := q.db.QueryRowContext(ctx, getCategoryIDByName, categoryName)
+	var category_id int32
+	err := row.Scan(&category_id)
+	return category_id, err
+}
+
 const getGroupByID = `-- name: GetGroupByID :one
 SELECT groups.group_id,
     groups.group_name,
@@ -550,7 +563,7 @@ type GetGroupByIDRow struct {
 	GroupName      string         `json:"group_name"`
 	PhotoUrl       sql.NullString `json:"photo_url"`
 	GroupCreatorID int32          `json:"group_creator_id"`
-	Frequency      sql.NullInt32  `json:"frequency"`
+	Frequency      int32          `json:"frequency"`
 	MaxMembers     int32          `json:"max_members"`
 	GroupType      string         `json:"group_type"`
 	Visibility     bool           `json:"visibility"`
@@ -683,7 +696,7 @@ type GetGroupsByCategoryIDRow struct {
 	Description    sql.NullString `json:"description"`
 	PhotoUrl       sql.NullString `json:"photo_url"`
 	TagID          int32          `json:"tag_id"`
-	Frequency      sql.NullInt32  `json:"frequency"`
+	Frequency      int32          `json:"frequency"`
 	MaxMembers     int32          `json:"max_members"`
 	GroupType      string         `json:"group_type"`
 	Visibility     bool           `json:"visibility"`
@@ -1116,7 +1129,7 @@ type ListGroupsRow struct {
 	GroupName      string         `json:"group_name"`
 	PhotoUrl       sql.NullString `json:"photo_url"`
 	GroupCreatorID int32          `json:"group_creator_id"`
-	Frequency      sql.NullInt32  `json:"frequency"`
+	Frequency      int32          `json:"frequency"`
 	MaxMembers     int32          `json:"max_members"`
 	GroupType      string         `json:"group_type"`
 	Visibility     bool           `json:"visibility"`
@@ -1207,7 +1220,7 @@ type SearchGroupByGroupNameRow struct {
 	GroupName      string         `json:"group_name"`
 	PhotoUrl       sql.NullString `json:"photo_url"`
 	GroupCreatorID int32          `json:"group_creator_id"`
-	Frequency      sql.NullInt32  `json:"frequency"`
+	Frequency      int32          `json:"frequency"`
 	MaxMembers     int32          `json:"max_members"`
 	GroupType      string         `json:"group_type"`
 	Visibility     bool           `json:"visibility"`

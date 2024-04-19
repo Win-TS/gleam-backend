@@ -250,6 +250,7 @@ SET tag_id = $2
 WHERE group_id = $1
 RETURNING *;
 
+
 -- name: DeleteGroupMembers :exec
 DELETE FROM group_members WHERE member_id = $1;
 
@@ -295,3 +296,8 @@ WHERE group_id = $1 AND member_id = $2;
 -- name: GetRequestFromGroup :many
 SELECT * FROM group_requests
 WHERE group_id = $1 AND member_id = $2;
+
+-- name: GetCategoryIDByName :one
+SELECT category_id
+FROM tag_category
+WHERE category_name = $1;

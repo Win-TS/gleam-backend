@@ -16,7 +16,7 @@ type Group struct {
 	Description    sql.NullString `json:"description"`
 	PhotoUrl       sql.NullString `json:"photo_url"`
 	TagID          int32          `json:"tag_id"`
-	Frequency      sql.NullInt32  `json:"frequency"`
+	Frequency      int32          `json:"frequency"`
 	MaxMembers     int32          `json:"max_members"`
 	GroupType      string         `json:"group_type"`
 	Visibility     bool           `json:"visibility"`

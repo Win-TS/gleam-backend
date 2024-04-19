@@ -9,6 +9,15 @@ message DeleteUserDataReq {
     int32 userId = 1;
 }
 
+message UserHighestStreakReq {
+    int32 userId = 1;
+}
+
+message UserHighestStreakRes {
+    int32 highestStreak = 1;
+}
+
 service GroupGrpcService {
     rpc DeleteUserData(DeleteUserDataReq) returns (google.protobuf.Empty);
+    rpc UserHighestStreak(UserHighestStreakReq) returns (UserHighestStreakRes);
 }

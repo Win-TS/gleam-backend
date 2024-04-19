@@ -27,3 +27,15 @@ func (h *groupGrpcHandler) DeleteUserData(ctx context.Context, req *groupPb.Dele
 
 	return &emptypb.Empty{}, nil
 }
+
+func (h *groupGrpcHandler) UserHighestStreak(ctx context.Context, req *groupPb.UserHighestStreakReq) (*groupPb.UserHighestStreakRes, error) {
+	userID := req.GetUserId()
+
+	streak, err := h.groupUsecase.GetMaxStreakByMemberId(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	return &groupPb.UserHighestStreakRes{
+		HighestStreak: int32(streak),
+	}, nil
+}

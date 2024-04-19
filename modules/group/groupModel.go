@@ -23,7 +23,7 @@ type (
 	NewPostReq struct {
 		MemberID    int    `json:"member_id" form:"member_id" validate:"required"`
 		GroupID     int    `json:"group_id" form:"group_id" validate:"required"`
-		Description string `json:"description" form:"description" validate:"required"`
+		Description string `json:"description" form:"description"`
 	}
 
 	EditPostReq struct {

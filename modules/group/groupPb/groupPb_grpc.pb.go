@@ -24,6 +24,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type GroupGrpcServiceClient interface {
 	DeleteUserData(ctx context.Context, in *DeleteUserDataReq, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	UserHighestStreak(ctx context.Context, in *UserHighestStreakReq, opts ...grpc.CallOption) (*UserHighestStreakRes, error)
 }
 
 type groupGrpcServiceClient struct {
@@ -43,11 +44,21 @@ func (c *groupGrpcServiceClient) DeleteUserData(ctx context.Context, in *DeleteU
 	return out, nil
 }
 
+func (c *groupGrpcServiceClient) UserHighestStreak(ctx context.Context, in *UserHighestStreakReq, opts ...grpc.CallOption) (*UserHighestStreakRes, error) {
+	out := new(UserHighestStreakRes)
+	err := c.cc.Invoke(ctx, "/GroupGrpcService/UserHighestStreak", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // GroupGrpcServiceServer is the server API for GroupGrpcService service.
 // All implementations must embed UnimplementedGroupGrpcServiceServer
 // for forward compatibility
 type GroupGrpcServiceServer interface {
 	DeleteUserData(context.Context, *DeleteUserDataReq) (*emptypb.Empty, error)
+	UserHighestStreak(context.Context, *UserHighestStreakReq) (*UserHighestStreakRes, error)
 	mustEmbedUnimplementedGroupGrpcServiceServer()
 }
 
@@ -57,6 +68,9 @@ type UnimplementedGroupGrpcServiceServer struct {
 
 func (UnimplementedGroupGrpcServiceServer) DeleteUserData(context.Context, *DeleteUserDataReq) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteUserData not implemented")
+}
+func (UnimplementedGroupGrpcServiceServer) UserHighestStreak(context.Context, *UserHighestStreakReq) (*UserHighestStreakRes, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UserHighestStreak not implemented")
 }
 func (UnimplementedGroupGrpcServiceServer) mustEmbedUnimplementedGroupGrpcServiceServer() {}
 
@@ -89,6 +103,24 @@ func _GroupGrpcService_DeleteUserData_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _GroupGrpcService_UserHighestStreak_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UserHighestStreakReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GroupGrpcServiceServer).UserHighestStreak(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/GroupGrpcService/UserHighestStreak",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GroupGrpcServiceServer).UserHighestStreak(ctx, req.(*UserHighestStreakReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // GroupGrpcService_ServiceDesc is the grpc.ServiceDesc for GroupGrpcService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -99,6 +131,10 @@ var GroupGrpcService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteUserData",
 			Handler:    _GroupGrpcService_DeleteUserData_Handler,
+		},
+		{
+			MethodName: "UserHighestStreak",
+			Handler:    _GroupGrpcService_UserHighestStreak_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

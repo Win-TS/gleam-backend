@@ -12,6 +12,7 @@ type (
 		Lastname     string `json:"lastname"`
 		FriendsCount int    `json:"friends_count"`
 		PhotoUrl     string `json:"photo_url"`
+		MaxStreak    int    `json:"max_streak"`
 	}
 
 	NewUserReq struct {

@@ -66,7 +66,7 @@ func (h *userHttpHandler) GetUserProfile(c echo.Context) error {
 		return err
 	}
 
-	res, err := h.userUsecase.GetUserProfile(ctx, userId)
+	res, err := h.userUsecase.GetUserProfile(ctx, userId, h.cfg.Grpc.GroupUrl)
 	if err != nil {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
@@ -170,7 +170,7 @@ func (h *userHttpHandler) EditUserPhoto(c echo.Context) error {
 	res, err := h.userUsecase.EditUserPhoto(ctx, userdb.EditUserProfilePictureParams{
 		ID:       int32(userId),
 		Photourl: utils.ConvertStringToSqlNullString(PhotoStr),
-	})
+	}, h.cfg.Grpc.GroupUrl)
 	if err != nil {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
@@ -242,7 +242,7 @@ func (h *userHttpHandler) EditUsername(c echo.Context) error {
 		Username: c.QueryParam("new_username"),
 	}
 
-	res, err := h.userUsecase.EditUsername(ctx, args)
+	res, err := h.userUsecase.EditUsername(ctx, args, h.cfg.Grpc.GroupUrl)
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
@@ -263,7 +263,7 @@ func (h *userHttpHandler) EditPhoneNumber(c echo.Context) error {
 		PhoneNo: c.QueryParam("new_phone_no"),
 	}
 
-	res, err := h.userUsecase.EditPhoneNumber(ctx, args)
+	res, err := h.userUsecase.EditPhoneNumber(ctx, args, h.cfg.Grpc.GroupUrl)
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
@@ -284,7 +284,7 @@ func (h *userHttpHandler) EditName(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusBadRequest, "Invalid request body")
 	}
 
-	updatedUser, err := h.userUsecase.EditName(ctx, int32(userID), requestBody["firstname"], requestBody["lastname"])
+	updatedUser, err := h.userUsecase.EditName(ctx, int32(userID), requestBody["firstname"], requestBody["lastname"], h.cfg.Grpc.GroupUrl)
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}

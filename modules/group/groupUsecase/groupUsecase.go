@@ -334,7 +334,7 @@ func (u *groupUsecase) GetGroupById(pctx context.Context, groupId, userId int) (
 			return group.GetGroupByIdRes{}, reqErr
 		}
 
-		if requestInfo != nil {
+		if len(requestInfo) != 0 {
 			return group.GetGroupByIdRes{
 				GroupInfo: groupData,
 				UserId:    int32(userId),
@@ -1549,9 +1549,14 @@ func (u *groupUsecase) IncreaseStreak(ctx context.Context, args groupdb.GetStrea
 
 func (u *groupUsecase) GetMaxStreakByMemberId(ctx context.Context, MemberId int32) (int32, error) {
 	streak, err := u.store.GetMaxStreakUser(ctx, MemberId)
-	if err != nil {
+	if err != nil && err != sql.ErrNoRows {
 		return -1, err
 	}
+
+	if err == sql.ErrNoRows {
+		return 0, nil
+	}
+	
 	return streak, nil
 }
 

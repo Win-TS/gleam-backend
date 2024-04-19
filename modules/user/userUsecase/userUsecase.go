@@ -26,7 +26,7 @@ import (
 )
 
 type UserUsecaseService interface {
-	GetUserProfile(pctx context.Context, id int) (user.UserProfile, error)
+	GetUserProfile(pctx context.Context, id int, grpcUrl string) (user.UserProfile, error)
 	GetBatchUserProfiles(pctx context.Context, ids []int32) ([]userdb.GetBatchUserProfilesRow, error)
 	GetUserProfileByEmail(pctx context.Context, email string) (user.UserProfile, error)
 	GetUserProfileByUsername(pctx context.Context, username string) (user.UserProfile, error)
@@ -36,9 +36,9 @@ type UserUsecaseService interface {
 	GetUserInfo(pctx context.Context, id int) (userdb.User, error)
 	GetUserInfoByEmail(pctx context.Context, email string) (userdb.User, error)
 	GetUserInfoByUsername(pctx context.Context, username string) (userdb.User, error)
-	EditUsername(pctx context.Context, args userdb.ChangeUsernameParams) (user.UserProfile, error)
-	EditPhoneNumber(pctx context.Context, args userdb.ChangePhoneNoParams) (userdb.User, error)
-	EditName(ctx context.Context, userID int32, firstName, lastName string) (user.UserProfile, error)
+	EditUsername(pctx context.Context, args userdb.ChangeUsernameParams, grpcUrl string) (user.UserProfile, error)
+	EditPhoneNumber(pctx context.Context, args userdb.ChangePhoneNoParams, grpcUrl string) (user.UserProfile, error)
+	EditName(ctx context.Context, userID int32, firstName, lastName, grpcUrl string) (user.UserProfile, error)
 	DeleteUser(pctx context.Context, id int, authGrpcUrl, groupGrpcUrl string) error
 	FriendInfo(ctx context.Context, args userdb.GetFriendParams) ([]userdb.Friend, error)
 	FriendListById(pctx context.Context, args userdb.ListFriendsByUserIdParams) ([]userdb.ListFriendsByUserIdRow, error)
@@ -49,7 +49,7 @@ type UserUsecaseService interface {
 	FriendAccept(pctx context.Context, args user.EditFriendStatusAcceptedReq) error
 	FriendDecline(pctx context.Context, args user.EditFriendStatusDeclinedReq) error
 	UserMockData(ctx context.Context, count int16) error
-	EditUserPhoto(pctx context.Context, args userdb.EditUserProfilePictureParams) (user.UserProfile, error)
+	EditUserPhoto(pctx context.Context, args userdb.EditUserProfilePictureParams, grpcUrl string) (user.UserProfile, error)
 	SearchUsersByUsername(ctx context.Context, args userdb.SearchUsersByUsernameParams) ([]userdb.SearchUsersByUsernameRow, error)
 	EditPrivateAccount(ctx context.Context, args userdb.EditPrivateAccountParams) (userdb.User, error)
 	FriendListByIdNoPaginate(ctx context.Context, userId int) ([]userdb.ListFriendsByUserIdNoPaginateRow, error)
@@ -94,10 +94,21 @@ func (u *userUsecase) GetUserInfoByUsername(pctx context.Context, username strin
 	return userData, nil
 }
 
-func (u *userUsecase) GetUserProfile(pctx context.Context, id int) (user.UserProfile, error) {
+func (u *userUsecase) GetUserProfile(pctx context.Context, id int, grpcUrl string) (user.UserProfile, error) {
 	userData, err := u.store.GetUser(pctx, int32(id))
 	if err != nil {
 		return user.UserProfile{}, err
+	}
+
+	conn, err := grpcconn.NewGrpcClient(grpcUrl)
+	if err != nil {
+		log.Printf("error - gRPC connection failed: %s", err.Error())
+	}
+
+	highestStreak, err := conn.Group().UserHighestStreak(pctx, &groupPb.UserHighestStreakReq{UserId: int32(id)})
+	if err != nil {
+		log.Printf("error - UserHighestStreak failed: %s", err.Error())
+		return user.UserProfile{}, errors.New("error: UserHighestStreak failed")
 	}
 
 	userID := sql.NullInt32{Int32: int32(id), Valid: true}
@@ -113,6 +124,7 @@ func (u *userUsecase) GetUserProfile(pctx context.Context, id int) (user.UserPro
 		Lastname:     userData.Lastname,
 		FriendsCount: int(userFriendCount),
 		PhotoUrl:     userData.Photourl.String,
+		MaxStreak:    int(highestStreak.HighestStreak),
 	}, nil
 }
 
@@ -253,11 +265,11 @@ func (u *userUsecase) RegisterNewUser(pctx context.Context, payload *user.NewUse
 	}, nil
 }
 
-func (u *userUsecase) EditUserPhoto(pctx context.Context, args userdb.EditUserProfilePictureParams) (user.UserProfile, error) {
+func (u *userUsecase) EditUserPhoto(pctx context.Context, args userdb.EditUserProfilePictureParams, grpcUrl string) (user.UserProfile, error) {
 	if err := u.store.EditUserProfilePicture(pctx, args); err != nil {
 		return user.UserProfile{}, err
 	}
-	return u.GetUserProfile(pctx, int(args.ID))
+	return u.GetUserProfile(pctx, int(args.ID), grpcUrl)
 }
 
 func (u *userUsecase) SaveToFirebaseStorage(pctx context.Context, bucketName, objectPath, filename string, file io.Reader) (string, error) {
@@ -277,18 +289,18 @@ func (u *userUsecase) SaveToFirebaseStorage(pctx context.Context, bucketName, ob
 	return url, nil
 }
 
-func (u *userUsecase) EditUsername(pctx context.Context, args userdb.ChangeUsernameParams) (user.UserProfile, error) {
+func (u *userUsecase) EditUsername(pctx context.Context, args userdb.ChangeUsernameParams, grpcUrl string) (user.UserProfile, error) {
 	if err := u.store.ChangeUsername(pctx, args); err != nil {
 		return user.UserProfile{}, err
 	}
-	return u.GetUserProfile(pctx, int(args.ID))
+	return u.GetUserProfile(pctx, int(args.ID), grpcUrl)
 }
 
-func (u *userUsecase) EditPhoneNumber(pctx context.Context, args userdb.ChangePhoneNoParams) (userdb.User, error) {
+func (u *userUsecase) EditPhoneNumber(pctx context.Context, args userdb.ChangePhoneNoParams, grpcUrl string) (user.UserProfile, error) {
 	if err := u.store.ChangePhoneNo(pctx, args); err != nil {
-		return userdb.User{}, err
+		return user.UserProfile{}, err
 	}
-	return u.GetUserInfo(pctx, int(args.ID))
+	return u.GetUserProfile(pctx, int(args.ID), grpcUrl)
 }
 
 func (u *userUsecase) DeleteUser(pctx context.Context, id int, authGrpcUrl, groupGrpcUrl string) error {
@@ -516,7 +528,7 @@ func (u *userUsecase) createFakeFriends(ctx context.Context, userID int32, total
 	return nil
 }
 
-func (u *userUsecase) EditName(ctx context.Context, userID int32, firstName, lastName string) (user.UserProfile, error) {
+func (u *userUsecase) EditName(ctx context.Context, userID int32, firstName, lastName, grpcUrl string) (user.UserProfile, error) {
 	var updatedProfile user.UserProfile
 
 	if firstName != "" && lastName == "" {
@@ -540,7 +552,7 @@ func (u *userUsecase) EditName(ctx context.Context, userID int32, firstName, las
 		}
 	}
 
-	updatedProfile, err := u.GetUserProfile(ctx, int(userID))
+	updatedProfile, err := u.GetUserProfile(ctx, int(userID), grpcUrl)
 	if err != nil {
 		return updatedProfile, err
 	}

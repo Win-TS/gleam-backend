@@ -217,7 +217,7 @@ CREATE TABLE public.groups (
     description character varying,
     photo_url character varying,
     tag_id integer NOT NULL,
-    frequency integer,
+    frequency integer NOT NULL,
     max_members integer DEFAULT 25 NOT NULL,
     group_type character varying DEFAULT 'social'::character varying NOT NULL,
     visibility boolean DEFAULT true NOT NULL,
@@ -761,7 +761,6 @@ COPY public.group_requests (group_id, member_id, description, created_at) FROM s
 
 COPY public.groups (group_id, group_name, group_creator_id, description, photo_url, tag_id, frequency, max_members, group_type, visibility, created_at) FROM stdin;
 1	ISE football club	1	Weekly football at BBB football club, ma join gunn	https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/groupphoto%2FMockGroupPhoto%2Ffootball.jpeg?alt=media&token=2ab15bda-2a4f-47e2-88c7-00c7a8597290	19	0	50	social	t	2024-04-18 22:57:06.773416
-2	Intania Badminton	2	Let's join our badminton squad from Engineering Faculty! We encourage 2 times a week!	https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/groupphoto%2FMockGroupPhoto%2Fbadminton.png?alt=media&token=2a532ca2-e441-4dd1-a1f5-b9692e2915e6	25	0	30	Private	t	2024-04-18 22:57:06.779553
 3	Coursera ganag	5	Enhance your soft skills with us!	https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/groupphoto%2FMockGroupPhoto%2Fonlinecourse.jpeg?alt=media&token=52d021cc-d775-4985-beea-226c5a7afd4f	43	0	30	social	t	2024-04-18 22:57:06.781807
 4	Code nerdyy	10	Commit the code 5 times a week and you will receive nerdy trophy from us	https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/groupphoto%2FMockGroupPhoto%2Fprogramming.png?alt=media&token=210e448e-6764-4a7b-8934-71380dc6c26f	46	0	30	social	t	2024-04-18 22:57:06.783464
 5	Midterm try hard gang	5	Study hard, no fail, no cry, no F, happy life	https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/groupphoto%2FMockGroupPhoto%2Fmidtermexam.jpeg?alt=media&token=4e7dbe16-8ff8-4db4-aed0-50349b46b969	51	0	30	social	t	2024-04-18 22:57:06.785748
@@ -770,6 +769,7 @@ COPY public.groups (group_id, group_name, group_creator_id, description, photo_u
 8	K-drama stands	4	Put down all the work and enjoy K-drama once a week!	https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/groupphoto%2FMockGroupPhoto%2Fseries.jpeg?alt=media&token=6758213e-394f-4df3-8d2c-f222080ffd8b	5	0	30	social	t	2024-04-18 22:57:06.790998
 9	Intania Music Club	6	Post your music here or you will be cursed by spotify devil	https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/groupphoto%2FMockGroupPhoto%2Fmusic.jpeg?alt=media&token=4a034376-5361-4cab-a09b-c59d3027083c	7	0	100	social	t	2024-04-18 22:57:06.793107
 10	Travelling & Hanging out	11	Share your beautiful journey here!	https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/groupphoto%2FMockGroupPhoto%2Ftravelling.png?alt=media&token=03b1961f-a6a9-4143-ae20-5038d79ca813	17	0	100	social	t	2024-04-18 22:57:06.795661
+2	Intania Badminton	2	Let's join our badminton squad from Engineering Faculty! We encourage 2 times a week!	https://firebasestorage.googleapis.com/v0/b/gleam-firebase-6925b.appspot.com/o/groupphoto%2FMockGroupPhoto%2Fbadminton.png?alt=media&token=2a532ca2-e441-4dd1-a1f5-b9692e2915e6	25	0	30	social	t	2024-04-18 22:57:06.779553
 \.
 
 

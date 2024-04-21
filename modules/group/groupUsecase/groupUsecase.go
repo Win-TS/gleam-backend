@@ -1410,8 +1410,14 @@ func (u *groupUsecase) GetAcceptorGroupRequests(ctx context.Context, userId int3
 
 func (u *groupUsecase) GetAcceptorGroupRequestsCount(ctx context.Context, userId int32) (groupdb.GetAcceptorGroupRequestsCountRow, error) {
 	count, err := u.store.GetAcceptorGroupRequestsCount(ctx, userId)
-	if err != nil {
+	if err != nil && err != sql.ErrNoRows {
 		return groupdb.GetAcceptorGroupRequestsCountRow{}, err
+	}
+	if err == sql.ErrNoRows {
+		return groupdb.GetAcceptorGroupRequestsCountRow{
+			MemberID:     userId,
+			RequestCount: 0,
+		}, nil
 	}
 	return count, nil
 }
@@ -1422,14 +1428,34 @@ func (u *groupUsecase) GetUserGroups(ctx context.Context, userId int32) (group.G
 		return group.GetUserGroupRes{}, err
 	}
 
-	social := make([]groupdb.GetUserGroupsRow, 0)
-	personal := make([]groupdb.GetUserGroupsRow, 0)
+	social := make([]group.GetUserGroupsModel, 0)
+	personal := make([]group.GetUserGroupsModel, 0)
 
 	for _, g := range groups {
-		if g.GroupType == "social" {
-			social = append(social, g)
+		streak, err := u.GetStreakByMemberIDandGroupID(ctx, groupdb.GetStreakByMemberIDandGroupIDParams{
+			MemberID: userId,
+			GroupID:  g.GroupID,
+		})
+		if err != nil && err != sql.ErrNoRows {
+			return group.GetUserGroupRes{}, err
+		}
+		var streakCount int32
+		if err == sql.ErrNoRows {
+			streakCount = 0
 		} else {
-			personal = append(personal, g)
+			streakCount = streak.TotalStreakCount
+		}
+		res := group.GetUserGroupsModel{
+			GroupID:    g.GroupID,
+			GroupName:  g.GroupName,
+			PhotoUrl:   g.PhotoUrl,
+			GroupType:  g.GroupType,
+			UserStreak: streakCount,
+		}
+		if g.GroupType == "social" {
+			social = append(social, res)
+		} else {
+			personal = append(personal, res)
 		}
 	}
 
@@ -1556,7 +1582,7 @@ func (u *groupUsecase) GetMaxStreakByMemberId(ctx context.Context, MemberId int3
 	if err == sql.ErrNoRows {
 		return 0, nil
 	}
-	
+
 	return streak, nil
 }
 

@@ -142,7 +142,15 @@ type (
 	}
 
 	GetUserGroupRes struct {
-		SocialGroups   []groupdb.GetUserGroupsRow `json:"social_groups"`
-		PersonalGroups []groupdb.GetUserGroupsRow `json:"personal_groups"`
+		SocialGroups   []GetUserGroupsModel `json:"social_groups"`
+		PersonalGroups []GetUserGroupsModel `json:"personal_groups"`
+	}
+
+	GetUserGroupsModel struct {
+		GroupID    int32          `json:"group_id"`
+		GroupName  string         `json:"group_name"`
+		PhotoUrl   sql.NullString `json:"photo_url"`
+		GroupType  string         `json:"group_type"`
+		UserStreak int32          `json:"user_streak"`
 	}
 )

@@ -457,7 +457,10 @@ func (h *userHttpHandler) AddFriend(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
 	}
 
-	// Dereference the pointer when passing it to AddFriend
+	if args.User_id1 == args.User_id2 {
+		return response.ErrResponse(c, http.StatusBadRequest, "Cannot add yourself as a friend")
+	}
+
 	createdFriend, err := h.userUsecase.AddFriend(ctx, *args)
 	if err != nil {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())

@@ -1762,7 +1762,7 @@ func (h *groupHttpHandler) GetAcceptorGroupRequestsCount(c echo.Context) error {
 		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
 	}
 
-	return response.SuccessResponse(c, http.StatusOK, groupRequestsCount)
+	return response.SuccessResponse(c, http.StatusOK, groupRequestsCount.RequestCount)
 }
 
 func (h *groupHttpHandler) GetUserGroups(c echo.Context) error {

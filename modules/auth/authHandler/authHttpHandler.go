@@ -22,6 +22,7 @@ type (
 		DeleteUser(c echo.Context) error
 		UpdatePassword(c echo.Context) error
 		VerifyToken(c echo.Context) error
+		ManualFirebaseSignup(c echo.Context) error
 	}
 
 	authHttpHandler struct {
@@ -129,4 +130,21 @@ func (h *authHttpHandler) VerifyToken(c echo.Context) error {
 	}
 
 	return response.SuccessResponse(c, http.StatusOK, authToken)
+}
+
+func (h *authHttpHandler) ManualFirebaseSignup(c echo.Context) error {
+	ctx := context.Background()
+	wrapper := request.ContextWrapper(c)
+
+	req := new(auth.RequestPayload)
+	if err := wrapper.Bind(req); err != nil {
+		return response.ErrResponse(c, http.StatusBadRequest, err.Error())
+	}
+
+	res, err := h.authUsecase.RegisterUserWithEmailPhoneAndPassword(ctx, req)
+	if err != nil {
+		return response.ErrResponse(c, http.StatusInternalServerError, err.Error())
+	}
+
+	return response.SuccessResponse(c, http.StatusCreated, res)
 }

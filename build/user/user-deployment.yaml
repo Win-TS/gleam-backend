@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-deployment
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: user
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: user
+    spec:
+      volumes:
+      - name: app-env
+        configMap:
+          name: app-env
+      containers:
+        - name: user
+          image: winthanatpong/gleam-api:latest
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+            - containerPort: 3000
+              protocol: TCP
+          volumeMounts:
+          - name: app-env
+            mountPath: /etc/env
+          env:
+          - name: APP_NAME
+            value: "user"
+          - name: DB_URL
+            value: ""
+          - name: DB_TYPE
+            value: "postgres"
+          - name: GRPC_AUTH_URL
+            value: "10.109.67.24:3000"
+          - name: GRPC_GROUP_URL
+            value: "10.100.57.217:3000"

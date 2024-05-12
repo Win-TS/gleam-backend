@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-deployment
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: auth
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: auth
+    spec:
+      volumes:
+      - name: app-env
+        configMap:
+          name: app-env
+      containers:
+        - name: auth
+          image: winthanatpong/gleam-api:latest
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+            - containerPort: 3000
+              protocol: TCP
+          volumeMounts:
+          - name: app-env
+            mountPath: /etc/env
+          env:
+          - name: APP_NAME
+            value: "auth"
+          - name: DB_URL
+            value: "gleam-firebase-6925b.firebaseapp.com"
+          - name: DB_TYPE
+            value: "firebase"
+          - name: GRPC_USER_URL
+            value: "10.110.132.215:3000"
+          - name: GRPC_GROUP_URL
+            value: "10.100.57.217:3000"

@@ -88,4 +88,28 @@ backupgroupdb:
 restoregroupdb:
 	cat backup/group-backup.sql | docker exec -i group-db psql -U root -d postgres   
 
-.PHONY: composeupdb composedowndb migrateuserdown migrateuserup createuserdb dropuserdb createusermigration runauth runuser composeupdb composedowndb migrateuserupdocker migrateuserdowndocker migrategroupupdocker migrategroupdowndocker genuserproto gengroupproto
+applyauthservice:
+	kubectl apply -f ./build/auth/auth-service.yaml
+
+applyuserservice:
+	kubectl apply -f ./build/user/user-service.yaml
+
+applygroupservice:
+	kubectl apply -f ./build/group/group-service.yaml
+
+createconfigmap:
+	kubectl create configmap app-env --from-file=./env/prod/.env
+
+applyingress:
+	kubectl apply -f ./build/gleam-api-ingress.yaml
+
+applyauthdeployment:
+	kubectl apply -f ./build/auth/auth-deployment.yaml
+
+applyuserdeployment:
+	kubectl apply -f ./build/user/user-deployment.yaml
+
+applygroupdeployment:
+	kubectl apply -f ./build/group/group-deployment.yaml
+
+.PHONY: composeupdb composedowndb migrateuserdown migrateuserup createuserdb dropuserdb createusermigration runauth runuser composeupdb composedowndb migrateuserupdocker migrateuserdowndocker migrategroupupdocker migrategroupdowndocker genuserproto gengroupproto genauthproto backupuserdb restoreuserdb backupgroupdb restoregroupdb applyauthservice applyuserservice applygroupservice createconfigmap applyingress applyauthdeployment applyuserdeployment applygroupdeployment

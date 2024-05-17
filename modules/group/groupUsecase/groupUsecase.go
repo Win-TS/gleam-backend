@@ -182,10 +182,13 @@ func (u *groupUsecase) CreateNewGroup(pctx context.Context, args groupdb.CreateG
 	if err != nil {
 		return groupdb.Group{}, err
 	}
+	_, err = u.CreateStreak(pctx, int32(newGroup.GroupID), int32(newGroup.GroupCreatorID))
+	if err != nil {
+		return groupdb.Group{}, err
+	}
 	return newGroup, nil
 }
 
-// จะดัก member ตรงนี้ด้วยมั้ย
 func (u *groupUsecase) SendRequestToJoinGroup(pctx context.Context, args groupdb.SendRequestToJoinGroupParams) (groupdb.GroupRequest, error) {
 	_, err := u.store.GetMemberInfo(pctx, groupdb.GetMemberInfoParams{
 		MemberID: args.MemberID,
